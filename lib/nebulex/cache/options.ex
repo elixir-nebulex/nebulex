@@ -186,6 +186,41 @@ defmodule Nebulex.Cache.Options do
     ]
   ]
 
+  # Observable options
+  observable_opts = [
+    id: [
+      type: :any,
+      required: false,
+      doc: """
+      A unique identifier for the event listener. An error will be returned if
+      another listener with the same ID already exists. Defaults to the event
+      listener function itself.
+      """
+    ],
+    filter: [
+      type: {:fun, 1},
+      type_doc: "`t:Nebulex.Event.filter/0`",
+      required: false,
+      doc: """
+      A function that may be used to check cache entry events prior to being
+      dispatched to event listeners.
+
+      A filter must not create side effects.
+      """
+    ],
+    metadata: [
+      type: {:or, [:keyword_list, {:map, :any, :any}]},
+      type_doc: "`t:Nebulex.Event.metadata/0`",
+      required: false,
+      default: [],
+      doc: """
+      The metadata is provided when registering the listener and added to the
+      event at invoking the listener and filter functions; the event must always
+      have a metadata field.
+      """
+    ]
+  ]
+
   # Compilation time options schema
   @compile_opts_schema NimbleOptions.new!(compile_opts)
 
@@ -223,6 +258,9 @@ defmodule Nebulex.Cache.Options do
 
   # Stream options schema
   @stream_opts_schema NimbleOptions.new!(stream_opts)
+
+  # Observable options schema
+  @observable_opts_schema NimbleOptions.new!(observable_opts)
 
   ## Convenience functions
 
@@ -312,6 +350,11 @@ defmodule Nebulex.Cache.Options do
     NimbleOptions.docs(@stream_opts_schema)
   end
 
+  @spec observable_options_docs() :: binary()
+  def observable_options_docs do
+    NimbleOptions.docs(@observable_opts_schema)
+  end
+
   # coveralls-ignore-stop
 
   ## Validation API
@@ -349,6 +392,16 @@ defmodule Nebulex.Cache.Options do
       |> NimbleOptions.validate!(@stream_opts_schema)
 
     Keyword.merge(opts, stream_opts)
+  end
+
+  @spec validate_observable_opts!(keyword()) :: keyword()
+  def validate_observable_opts!(opts) do
+    observable_opts =
+      opts
+      |> Keyword.take([:filter, :metadata])
+      |> NimbleOptions.validate!(@observable_opts_schema)
+
+    Keyword.merge(opts, observable_opts)
   end
 
   ## Validation helpers

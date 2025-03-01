@@ -1,10 +1,28 @@
-defmodule Nebulex.Adapters.Common.Info.Stats.TelemetryHandler do
-  # Telemetry handler for aggregating cache stats; it relies on the default
-  # `Nebulex.Adapters.Common.Info` implementation based on Erlang counters.
-  # See `Nebulex.Adapters.Common.Info.Stats`.
-  @moduledoc false
+defmodule Nebulex.Telemetry.CacheStatsCounterHandler do
+  @moduledoc """
+  Telemetry handler for aggregating cache stats; it relies on the default
+  `Nebulex.Adapters.Common.Info` implementation based on Erlang counters.
+  See `Nebulex.Adapters.Common.Info.Stats`.
+  """
 
   alias Nebulex.Adapters.Common.Info.Stats
+  alias Nebulex.Telemetry
+
+  ## API
+
+  @doc """
+  Attach a new Telemetry handler for handling cache stats.
+  """
+  @spec attach(counter :: Stats.counter(), telemetry_prefix :: [atom()]) ::
+          :ok | {:error, :already_exists}
+  def attach(counter_ref, telemetry_prefix) do
+    Telemetry.attach_many(
+      counter_ref,
+      [telemetry_prefix ++ [:command, :stop]],
+      &__MODULE__.handle_event/4,
+      counter_ref
+    )
+  end
 
   ## Handler
 

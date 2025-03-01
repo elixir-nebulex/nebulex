@@ -124,7 +124,8 @@ defmodule Nebulex.MixProject do
         group_for_function("KV API"),
         group_for_function("Query API"),
         group_for_function("Transaction API"),
-        group_for_function("Info API")
+        group_for_function("Info API"),
+        group_for_function("Observable API")
       ],
       groups_for_modules: [
         # Nebulex,
@@ -139,17 +140,27 @@ defmodule Nebulex.MixProject do
           Nebulex.Adapter,
           Nebulex.Adapter.KV,
           Nebulex.Adapter.Queryable,
+          Nebulex.Adapter.Transaction,
           Nebulex.Adapter.Info,
-          Nebulex.Adapter.Transaction
+          Nebulex.Adapter.Observable
+        ],
+        Events: [
+          Nebulex.Event.CacheEntryEvent
         ],
         "Built-in adapters": [
-          Nebulex.Adapters.Nil
+          Nebulex.Adapters.Nil,
+          Nebulex.Adapters.Nil.Options
         ],
         "Built-in info implementation": [
           Nebulex.Adapters.Common.Info,
           Nebulex.Adapters.Common.Info.Stats
         ],
+        "Telemetry handlers": [
+          Nebulex.Telemetry.CacheEntryHandler,
+          Nebulex.Telemetry.CacheStatsCounterHandler
+        ],
         Utilities: [
+          Nebulex.Telemetry,
           Nebulex.Time,
           Nebulex.Utils
         ]

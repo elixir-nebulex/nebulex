@@ -38,8 +38,7 @@ defmodule Nebulex.Adapters.Common.Info.Stats do
   [erl_counters]: https://erlang.org/doc/man/counters.html
   """
 
-  alias __MODULE__.TelemetryHandler
-  alias Nebulex.Telemetry
+  alias Nebulex.Telemetry.CacheStatsCounterHandler
 
   ## Types & Constants
 
@@ -55,6 +54,9 @@ defmodule Nebulex.Adapters.Common.Info.Stats do
 
   @typedoc "Stats type"
   @type stats() :: %{required(stat()) => integer()}
+
+  @typedoc "Type for the counter"
+  @type counter() :: :counters.counters_ref()
 
   # Supported stats
   @stats [
@@ -84,19 +86,10 @@ defmodule Nebulex.Adapters.Common.Info.Stats do
       Nebulex.Adapters.Common.Info.Stats.init([:telemetry, :prefix])
 
   """
-  @spec init(telemetry_prefix :: [atom()]) :: :counters.counters_ref()
+  @spec init(telemetry_prefix :: [atom()]) :: counter()
   def init(telemetry_prefix) do
-    stats_counter = :counters.new(7, [:write_concurrency])
-
-    _ =
-      Telemetry.attach_many(
-        stats_counter,
-        [telemetry_prefix ++ [:command, :stop]],
-        &TelemetryHandler.handle_event/4,
-        stats_counter
-      )
-
-    stats_counter
+    :counters.new(7, [:write_concurrency])
+    |> tap(&CacheStatsCounterHandler.attach(&1, telemetry_prefix))
   end
 
   @doc """
@@ -111,7 +104,7 @@ defmodule Nebulex.Adapters.Common.Info.Stats do
       Nebulex.Adapters.Common.Info.Stats.incr(stats_counter, [:misses, :deletions])
 
   """
-  @spec incr(:counters.counters_ref(), atom() | [atom()], integer()) :: :ok
+  @spec incr(counter(), atom() | [atom()], integer()) :: :ok
   def incr(counter, stats, incr \\ 1)
 
   def incr(ref, :hits, incr), do: :counters.add(ref, 1, incr)
@@ -131,7 +124,7 @@ defmodule Nebulex.Adapters.Common.Info.Stats do
       Nebulex.Adapters.Common.Info.Stats.count(stats_counter)
 
   """
-  @spec count(:counters.counters_ref()) :: stats()
+  @spec count(counter()) :: stats()
   def count(ref) do
     for s <- @stats, into: %{}, do: {s, count(ref, s)}
   end
@@ -144,7 +137,7 @@ defmodule Nebulex.Adapters.Common.Info.Stats do
       Nebulex.Adapters.Common.Info.Stats.count(stats_counter, :hits)
 
   """
-  @spec count(:counters.counters_ref(), stat()) :: integer()
+  @spec count(counter(), stat()) :: integer()
   def count(ref, stat)
 
   def count(ref, :hits), do: :counters.get(ref, 1)

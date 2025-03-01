@@ -1,4 +1,4 @@
-defmodule Nebulex.Cache.Impl do
+defmodule Nebulex.Cache.Helpers do
   @moduledoc false
 
   @doc """

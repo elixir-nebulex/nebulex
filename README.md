@@ -39,24 +39,18 @@ You need to add both Nebulex and the cache adapter as a dependency to your
 Cache | Nebulex Adapter | Dependency
 :-----| :---------------| :---------
 Nil (special adapter to disable caching) | [Nebulex.Adapters.Nil][nil] | Built-In
-Generational Local Cache | Nebulex.Adapters.Local | [nebulex_adapters_local][la]
-Partitioned | Nebulex.Adapters.Partitioned | [nebulex_adapters_partitioned][pa]
-Replicated | Nebulex.Adapters.Replicated | [nebulex_adapters_replicated][ra]
-Multilevel | Nebulex.Adapters.Multilevel | [nebulex_adapters_multilevel][ma]
+Generational Local Cache | Nebulex.Adapters.Local | [nebulex_local][la]
+Partitioned | Nebulex.Adapters.Partitioned | [nebulex_distributed][pa]
+Multilevel | Nebulex.Adapters.Multilevel | [nebulex_distributed][ma]
 Redis | NebulexRedisAdapter | [nebulex_redis_adapter][nbx_redis]
 Cachex | Nebulex.Adapters.Cachex | [nebulex_adapters_cachex][nbx_cachex]
-Distributed with Horde | Nebulex.Adapters.Horde | [nebulex_adapters_horde][nbx_horde]
-Multilevel with cluster broadcasting | NebulexLocalMultilevelAdapter | [nebulex_local_multilevel_adapter][nbx_local_multilevel]
 
 [nil]: http://hexdocs.pm/nebulex/Nebulex.Adapters.Nil.html
-[la]: https://github.com/elixir-nebulex/nebulex_adapters_local
-[pa]: https://github.com/elixir-nebulex/nebulex_adapters_partitioned
-[ra]: https://github.com/elixir-nebulex/nebulex_adapters_replicated
-[ma]: https://github.com/elixir-nebulex/nebulex_adapters_multilevel
-[nbx_redis]: https://github.com/cabol/nebulex_redis_adapter
-[nbx_cachex]: https://github.com/cabol/nebulex_adapters_cachex
-[nbx_horde]: https://github.com/eliasdarruda/nebulex_adapters_horde
-[nbx_local_multilevel]: https://github.com/slab/nebulex_local_multilevel_adapter
+[la]: http://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.html
+[pa]: http://hexdocs.pm/nebulex_distributed/Nebulex.Adapters.Partitioned.html
+[ma]: http://hexdocs.pm/nebulex_distributed/Nebulex.Adapters.Multilevel.html
+[nbx_redis]: https://hexdocs.pm/nebulex_redis_adapter/Nebulex.Adapters.Redis.html
+[nbx_cachex]: https://hexdocs.pm/nebulex_adapters_cachex/Nebulex.Adapters.Cachex.html
 
 For example, if you want to use the Nebulex Generational Local Cache
 (`Nebulex.Adapters.Local` adapter), add to your `mix.exs` file:
@@ -65,7 +59,7 @@ For example, if you want to use the Nebulex Generational Local Cache
 def deps do
   [
     {:nebulex, "~> 3.0"},
-    {:nebulex_adapters_local, "~> 3.0"},
+    {:nebulex_local, "~> 3.0"},
     {:decorator, "~> 1.4"},  #=> For Caching decorators (recommended adding it)
     {:telemetry, "~> 1.2"}   #=> For Telemetry events (recommended adding it)
   ]

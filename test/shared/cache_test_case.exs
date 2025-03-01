@@ -10,7 +10,8 @@ defmodule Nebulex.CacheTestCase do
     Nebulex.Cache.QueryableTest,
     Nebulex.Cache.QueryableExpirationTest,
     Nebulex.Cache.QueryableQueryErrorTest,
-    Nebulex.Cache.TransactionTest
+    Nebulex.Cache.TransactionTest,
+    Nebulex.Cache.ObservableTest
   ]
 
   defmacro __using__(opts) do

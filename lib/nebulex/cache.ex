@@ -295,6 +295,12 @@ defmodule Nebulex.Cache do
   @typedoc "The data type for the cache information"
   @type info_data() :: info_map() | info_item()
 
+  @typedoc "Proxy type to a cache event listener"
+  @type event_listener() :: Nebulex.Event.listener()
+
+  @typedoc "Proxy type to a cache event  filter"
+  @type event_filter() :: Nebulex.Event.filter()
+
   @typedoc "Proxy type for generic Nebulex error"
   @type nbx_error_reason() :: Nebulex.Error.t()
 
@@ -315,7 +321,7 @@ defmodule Nebulex.Cache do
 
   ## API
 
-  import __MODULE__.Impl
+  import __MODULE__.Helpers
 
   @doc false
   defmacro __using__(opts) do
@@ -334,6 +340,10 @@ defmodule Nebulex.Cache do
 
       if Nebulex.Adapter.Info in behaviours do
         unquote(info_defs())
+      end
+
+      if Nebulex.Adapter.Observable in behaviours do
+        unquote(event_defs())
       end
     end
   end
@@ -535,6 +545,20 @@ defmodule Nebulex.Cache do
     end
   end
 
+  defp event_defs do
+    quote do
+      alias Nebulex.Cache.Observable
+
+      defcacheapi register_event_listener(listener, opts \\ []), to: Observable
+
+      defcacheapi register_event_listener!(listener, opts \\ []), to: Observable
+
+      defcacheapi unregister_event_listener(id, opts \\ []), to: Observable
+
+      defcacheapi unregister_event_listener!(id, opts \\ []), to: Observable
+    end
+  end
+
   ## User callbacks
 
   @optional_callbacks init: 1
@@ -692,7 +716,7 @@ defmodule Nebulex.Cache do
 
       iex> MyCache.put("foo", "bar")
       :ok
-      iex>  MyCache.fetch("foo")
+      iex> MyCache.fetch("foo")
       {:ok, "bar"}
 
       iex> {:error, %Nebulex.KeyError{key: "bar"} = e} = MyCache.fetch("bar")
@@ -763,7 +787,7 @@ defmodule Nebulex.Cache do
 
       iex> MyCache.put("foo", "bar")
       :ok
-      iex>  MyCache.get("foo")
+      iex> MyCache.get("foo")
       {:ok, "bar"}
       iex> MyCache.get(:inexistent)
       {:ok, nil}
@@ -2497,4 +2521,160 @@ defmodule Nebulex.Cache do
   """
   @doc group: "Info API"
   @callback info!(dynamic_cache(), spec :: info_spec(), opts()) :: info_data()
+
+  ## Nebulex.Adapter.Observable
+
+  @optional_callbacks register_event_listener: 2,
+                      register_event_listener: 3,
+                      register_event_listener!: 2,
+                      register_event_listener!: 3,
+                      unregister_event_listener: 2,
+                      unregister_event_listener: 3,
+                      unregister_event_listener!: 2,
+                      unregister_event_listener!: 3
+
+  @doc """
+  Register a cache event listener `event_listener`.
+
+  Returns `:ok` if successful; `{:error, reason}` otherwise.
+
+  Listeners should be implemented with care. In particular, it is important
+  to consider their impact on performance and latency.
+
+  Listeners:
+
+    * are fired after the entry is mutated in the cache.
+    * block the calling process until the listener returns,
+      when the listener is invoked synchronously; depends on
+      the adapter's implementation.
+
+  Listeners follow the observer pattern. An exception raised by a listener does
+  not cause the cache operation to fail.
+
+  Listeners can only raise `Nebulex.Error` exception. Caching implementations
+  must catch any other exception from a listener, then wrap and reraise it as
+  a `Nebulex.Error` exception.
+
+  ## Options
+
+  #{Nebulex.Cache.Options.observable_options_docs()}
+
+  See the ["Shared options"](#module-shared-options) section in the module
+  documentation for more options.
+
+  ## Examples
+
+      iex> MyApp.Cache.register_event_listener(&MyApp.handle/1)
+      :ok
+      iex> MyApp.Cache.register_event_listener(&MyApp.handle/1,
+      ...>   filter: &MyApp.filter/1
+      ...> )
+      :ok
+      iex> MyApp.Cache.register_event_listener(&MyApp.handle/2,
+      ...>   filter: &MyApp.filter/2
+      ...>   metadata: [foo: :bar]
+      ...> )
+      :ok
+
+      # Register with `:id` (must be unregistered using the same `:id` value)
+      iex> MyApp.Cache.register_event_listener(&MyApp.handle/2,
+      ...>   id: :my_listener,
+      ...>   filter: &MyApp.filter/2
+      ...>   metadata: [foo: :bar]
+      ...> )
+      :ok
+
+  """
+  @doc group: "Observable API"
+  @callback register_event_listener(event_listener(), opts()) :: :ok | error_tuple()
+
+  @doc """
+  Same as `c:register_event_listener/2`, but the command is executed on the cache
+  instance given at the first argument `dynamic_cache`.
+
+  See the ["Dynamic caches"](#module-dynamic-caches) section in the
+  module documentation for more information.
+
+  ## Examples
+
+      MyApp.Cache.register_event_listener(MyCache1, &MyApp.handle/1)
+
+  """
+  @doc group: "Observable API"
+  @callback register_event_listener(dynamic_cache(), event_listener(), opts()) ::
+              :ok | error_tuple()
+
+  @doc """
+  Same as `c:register_event_listener/2` but raises an exception if an error
+  occurs.
+  """
+  @doc group: "Observable API"
+  @callback register_event_listener!(event_listener(), opts()) :: :ok
+
+  @doc """
+  Same as `c:register_event_listener/3` but raises an exception if an error
+  occurs.
+  """
+  @doc group: "Observable API"
+  @callback register_event_listener!(dynamic_cache(), event_listener(), opts()) :: :ok
+
+  @doc """
+  Un-register a cache event listener.
+
+  Returns `:ok` if successful; `{:error, reason}` otherwise.
+
+  ## Options
+
+  See the ["Shared options"](#module-shared-options) section in the module
+  documentation for more options.
+
+  ## Examples
+
+      # Register with default ID
+      iex> MyApp.Cache.register_event_listener(&MyApp.handle/1)
+      :ok
+      # Unregister with default ID
+      iex> MyApp.Cache.unregister_event_listener(&MyApp.handle/1)
+      :ok
+
+      # Register with `:id`
+      iex> MyApp.Cache.register_event_listener(&MyApp.handle/1, id: :listener)
+      :ok
+      # Unregister using the previously registered `:id`
+      iex> MyApp.Cache.unregister_event_listener(:listener)
+      :ok
+
+  """
+  @doc group: "Observable API"
+  @callback unregister_event_listener(id :: any(), opts()) :: :ok | error_tuple()
+
+  @doc """
+  Same as `c:unregister_event_listener/2`, but the command is executed on the
+  cache instance given at the first argument `dynamic_cache`.
+
+  See the ["Dynamic caches"](#module-dynamic-caches) section in the
+  module documentation for more information.
+
+  ## Examples
+
+      MyApp.Cache.unregister_event_listener(&MyApp.handle/1)
+
+  """
+  @doc group: "Observable API"
+  @callback unregister_event_listener(dynamic_cache(), id :: any(), opts()) ::
+              :ok | error_tuple()
+
+  @doc """
+  Same as `c:unregister_event_listener/2` but raises an exception if an error
+  occurs.
+  """
+  @doc group: "Observable API"
+  @callback unregister_event_listener!(id :: any(), opts()) :: :ok
+
+  @doc """
+  Same as `c:unregister_event_listener/3` but raises an exception if an error
+  occurs.
+  """
+  @doc group: "Observable API"
+  @callback unregister_event_listener!(dynamic_cache(), id :: any(), opts()) :: :ok
 end

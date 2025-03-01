@@ -37,6 +37,9 @@ defmodule Nebulex.TestAdapter do
   # Inherit default info implementation
   use Nebulex.Adapters.Common.Info
 
+  # Inherit default observable implementation
+  use Nebulex.Adapter.Observable
+
   import Nebulex.Utils
 
   alias Nebulex.Adapters.Common.Info.Stats

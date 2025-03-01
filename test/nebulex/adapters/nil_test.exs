@@ -144,6 +144,13 @@ defmodule Nebulex.Adapters.NilTest do
     end
   end
 
+  describe "observable" do
+    test "ok: registers/unregisters a listener", %{cache: cache} do
+      assert cache.register_event_listener(&__MODULE__.my_listener/1) == :ok
+      assert cache.unregister_event_listener(&__MODULE__.my_listener/1) == :ok
+    end
+  end
+
   ## Private Functions
 
   defp setup_cache(_config) do
@@ -160,5 +167,9 @@ defmodule Nebulex.Adapters.NilTest do
     # Perhaps the `pid` has terminated already (race-condition),
     # so we don't want to crash the test
     :exit, _ -> :ok
+  end
+
+  def my_listener(event) do
+    send(self(), event)
   end
 end

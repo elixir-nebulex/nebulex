@@ -6,8 +6,8 @@ inspired by [Ecto](https://github.com/elixir-ecto/ecto), taking advantage of
 its simplicity, flexibility and pluggable architecture. Same as Ecto,
 developers can provide their own cache (adapter) implementations.
 
-In this guide, we're going to learn some basics about Nebulex, such as insert,
-retrieve and destroy cache entries.
+In this guide, we're going to learn some basics about Nebulex, such as write,
+read and delete cache entries.
 
 ## Adding Nebulex to an application
 
@@ -31,13 +31,14 @@ file to this:
 defp deps do
   [
     {:nebulex, "~> 3.0"},
-    {:nebulex_adapters_local, "~> 3.0"},
-    #=> When using :shards as backend for local adapter
-    {:shards, "~> 1.1"},
+    #=> Use the official local cache adapter
+    {:nebulex_local, "~> 3.0"},
     #=> When using Caching decorators (recommended adding it)
     {:decorator, "~> 1.4"},
     #=> When using the Telemetry events (recommended adding it)
-    {:telemetry, "~> 1.0"}
+    {:telemetry, "~> 1.0"},
+    #=> When using :shards as backend for local adapter
+    {:shards, "~> 1.1"}
   ]
 end
 ```
@@ -45,15 +46,15 @@ end
 To give more flexibility and load only needed dependencies, Nebulex makes all
 dependencies optional, including the adapters. For example:
 
-  * For intensive workloads when using `Nebulex.Adapters.Local` adapter, you may
-    want to use `:shards` as the backend for partitioned ETS tables. In such a
-    case, you have to add `:shards` to the dependency list.
-
   * For enabling [declarative decorator-based caching][nbx_caching], you have
     to add `:decorator` to the dependency list.
 
   * For enabling Telemetry events dispatched by Nebulex, you have to add
     `:telemetry` to the dependency list. See [telemetry guide][telemetry].
+
+  * For intensive workloads when using `Nebulex.Adapters.Local` adapter, you may
+    want to use `:shards` as the backend for partitioned ETS tables. In such a
+    case, you have to add `:shards` to the dependency list.
 
 [nbx_caching]: http://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html
 [telemetry]: http://hexdocs.pm/nebulex/telemetry.html
@@ -92,28 +93,9 @@ config :blog, Blog.Cache,
   gc_cleanup_max_timeout: :timer.minutes(10)
 ```
 
-Assuming you want to use `:shards` as backend, uncomment the `backend:` option:
+If you want to use `:shards` as backend, uncomment the `backend:` option.
 
-```elixir
-config :blog, Blog.Cache,
-  # When using :shards as backend
-  backend: :shards,
-  # GC interval for pushing new generation: 12 hrs
-  gc_interval: :timer.hours(12),
-  # Max 1 million entries in cache
-  max_size: 1_000_000,
-  # Max 2 GB of memory
-  allocated_memory: 2_000_000_000,
-  # GC min timeout: 10 sec
-  gc_cleanup_min_timeout: :timer.seconds(10),
-  # GC max timeout: 10 min
-  gc_cleanup_max_timeout: :timer.minutes(10)
-```
-
-> By default, `partitions:` option is set to `System.schedulers_online()`.
-
-**NOTE:** For more information about the provided options, see the adapter's
-documentation.
+> See adapters docs for more information.
 
 And the `Blog.Cache` module is defined in `lib/blog/cache.ex` by our
 `mix nbx.gen.cache` command:
@@ -191,7 +173,8 @@ iex> Blog.Cache.put_all(users)
 As we saw previously, `put` creates a new entry in cache if it doesn't exist,
 or overrides it if it does exist (including the `:ttl`). However, there might
 be circumstances where we want to set the entry only if it doesn't exit or the
-other way around, this is where `put_new` and `replace` functions come in.
+other way around. For those cases you can use `put_new` and `replace` functions
+instead.
 
 Let's try `put_new` and `put_new!` functions:
 
@@ -289,10 +272,7 @@ nil
 iex> Blog.Cache.get!("unknown", "default")
 "default"
 
-iex> for key <- 1..3 do
-...>   user = Blog.Cache.get!(key)
-...>   user.first_name
-...> end
+iex> Enum.map(1..3, &(Blog.Cache.get!(&1).first_name))
 ["Galileo", "Charles", "Albert"]
 ```
 
@@ -559,24 +539,121 @@ iex> Enum.to_list(stream)
 _all_matched
 ```
 
-## Partitioned Cache
+## Cache Info API
+
+Since Nebulex v3, there is a new API for getting information about the cache
+(including stats).
+
+Although Nebulex suggests the adapters add information items like `:server`,
+`:memory`, and `:stats`, the adapters are free to add the information
+specification keys they want. Therefore, it is important to check the adapter
+documentation. For this example, we use the official local adapter that supports
+the suggested items.
+
+```elixir
+# Returns all information items
+iex> {:ok, info} = Blog.Cache.info()
+iex> info
+%{
+  server: %{
+    nbx_version: "3.0.0",
+    cache_module: "Blog.Cache",
+    cache_adapter: "Nebulex.Adapters.Local",
+    cache_name: "Blog.Cache",
+    cache_pid: #PID<0.111.0>
+  },
+  memory: %{
+    total: 1_000_000,
+    used: 0
+  },
+  stats: %{
+    deletions: 0,
+    evictions: 0,
+    expirations: 0,
+    hits: 0,
+    misses: 0,
+    updates: 0,
+    writes: 0
+  }
+}
+
+# Returns a single item
+iex> Blog.Cache.info!(:server)
+%{
+  nbx_version: "3.0.0",
+  cache_module: "Blog.Cache",
+  cache_adapter: "Nebulex.Adapters.Local",
+  cache_name: "Blog.Cache",
+  cache_pid: #PID<0.111.0>
+}
+
+# Returns the given items
+iex> Blog.Cache.info!([:server, :stats])
+%{
+  server: %{
+    nbx_version: "3.0.0",
+    cache_module: "Blog.Cache",
+    cache_adapter: "Nebulex.Adapters.Local",
+    cache_name: "Blog.Cache",
+    cache_pid: #PID<0.111.0>
+  },
+  stats: %{
+    deletions: 0,
+    evictions: 0,
+    expirations: 0,
+    hits: 0,
+    misses: 0,
+    updates: 0,
+    writes: 0
+  }
+}
+```
+
+## Cache events
+
+Since Nebulex v3, a new API is available for registering cache event handlers,
+which are invoked after an entry is mutated in the cache.
+
+```elixir
+defmodule Blog.CacheEventHandler do
+  def handle(event) do
+    IO.inspect(event)
+  end
+end
+
+iex> {:ok, id} = Blog.Cache.register_event_listener(&Blog.CacheEventHandler.handle/1)
+iex> Blog.Cache.put("event_test_key", "event_testvalue")
+:ok
+
+#=> %Nebulex.Event.CacheEntryEvent{
+#=>   cache: Blog.Cache,
+#=>   name: Blog.Cache,
+#=>   type: :inserted,
+#=>   target: {:key, "event_test_key"},
+#=>   command: :put
+#=> }
+```
+
+## Distributed cache topologies
+
+### Partitioned Cache
 
 Nebulex provides the adapter `Nebulex.Adapters.Partitioned`, which allows to
 set up a partitioned cache topology. First of all, we need to add
-`:nebulex_adapters_partitioned` to the dependencies in the `mix.exs`:
+`:nebulex_distrubuted` to the dependencies in the `mix.exs`:
 
 ```elixir
 defp deps do
   [
     {:nebulex, "~> 3.0"},
-    {:nebulex_adapters_local, "~> 3.0"},
-    {:nebulex_adapters_partitioned, "~> 3.0"},
-    #=> When using :shards as backend for local adapter
-    {:shards, "~> 1.0"},
+    {:nebulex_local, "~> 3.0"},
+    {:nebulex_distrubuted, "~> 3.0"},
     #=> When using Caching decorators (recommended adding it)
     {:decorator, "~> 1.4"},
     #=> When using the Telemetry events (recommended adding it)
-    {:telemetry, "~> 1.0"}
+    {:telemetry, "~> 1.0"},
+    #=> When using :shards as backend for local adapter
+    {:shards, "~> 1.0"}
   ]
 end
 ```
@@ -638,7 +715,7 @@ def start(_type, _args) do
 
 Now we are ready to start using our partitioned cache!
 
-### Timeout option
+#### Timeout option
 
 The `Nebulex.Adapters.Partitioned` supports `:timeout` option, it is a value in
 milliseconds for the command that will be executed.
@@ -656,30 +733,11 @@ To learn more about how partitioned cache works, please check
 `Nebulex.Adapters.Partitioned` documentation, and also it is recommended see the
 [partitioned cache example](https://github.com/cabol/nebulex_examples/tree/master/partitioned_cache)
 
-## Multilevel Cache
+### Multilevel Cache
 
 Nebulex also provides the adapter `Nebulex.Adapters.Multilevel`, which allows to
-setup a multi-level caching hierarchy.
-
-Same as any other adapter, we have to add `:nebulex_adapters_multilevel` to the
-dependencies in the `mix.exs`:
-
-```elixir
-defp deps do
-  [
-    {:nebulex, "~> 3.0"},
-    {:nebulex_adapters_local, "~> 3.0"},
-    {:nebulex_adapters_partitioned, "~> 3.0"},
-    {:nebulex_adapters_multilevel, "~> 3.0"},
-    #=> When using :shards as backend for local adapter
-    {:shards, "~> 1.0"},
-    #=> When using Caching decorators (recommended adding it)
-    {:decorator, "~> 1.4"},
-    #=> When using the Telemetry events (recommended adding it)
-    {:telemetry, "~> 1.0"}
-  ]
-end
-```
+setup a multi-level caching hierarchy. The adapter is also included in the
+`:nebulex_distrubuted` dependency.
 
 Let's set up the multilevel cache by using the `mix` task
 `mix nbx.gen.cache.multilevel`:

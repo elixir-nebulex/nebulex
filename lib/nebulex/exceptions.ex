@@ -16,6 +16,12 @@ defmodule Nebulex.Error do
 
     * `:transaction_aborted` - if a transaction execution fails and aborts.
 
+    * `:event_listener_already_exists` - if another cache entry listener with
+      the same ID already exists.
+
+    * `:event_listener_error` - if a cache entry event listener fails when
+      processing an event.
+
     * `t:Exception.t/0` - if the underlying adapter fails due to an exception.
 
     * `t:any/0` - the command fails with an adapter-specific error.
@@ -98,6 +104,23 @@ defmodule Nebulex.Error do
 
   def format_error(:transaction_aborted, metadata) do
     "transaction aborted"
+    |> maybe_format_metadata(metadata)
+  end
+
+  def format_error(:event_listener_already_exists, metadata) do
+    "another cache entry listener with the same ID already exists"
+    |> maybe_format_metadata(metadata)
+  end
+
+  def format_error(:event_listener_error, metadata) do
+    {original, metadata} = Keyword.pop!(metadata, :original)
+    {stacktrace, metadata} = Keyword.pop(metadata, :stacktrace, [])
+
+    """
+    cache entry event listener failed when processing an event.
+
+        #{Exception.format(:error, original, stacktrace) |> String.replace("\n", "\n    ")}
+    """
     |> maybe_format_metadata(metadata)
   end
 

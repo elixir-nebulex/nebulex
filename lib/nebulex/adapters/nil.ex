@@ -77,6 +77,9 @@ defmodule Nebulex.Adapters.Nil do
   # Inherit default info implementation
   use Nebulex.Adapters.Common.Info
 
+  # Inherit default observable implementation
+  use Nebulex.Adapter.Observable
+
   import Nebulex.Utils, only: [wrap_error: 2]
 
   alias __MODULE__.Options
