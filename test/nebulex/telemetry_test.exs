@@ -15,7 +15,7 @@ defmodule Nebulex.TelemetryTest do
 
   ## Shared constants
 
-  @prefix Telemetry.default_event_prefix()
+  @prefix Telemetry.default_prefix(Cache)
   @start @prefix ++ [:command, :start]
   @stop @prefix ++ [:command, :stop]
   @exception @prefix ++ [:command, :exception]

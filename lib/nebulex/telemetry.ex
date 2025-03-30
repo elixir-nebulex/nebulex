@@ -3,7 +3,7 @@ defmodule Nebulex.Telemetry do
   @moduledoc false
 
   # Inline common instructions
-  @compile {:inline, execute: 3, span: 3, attach_many: 4, detach: 1, default_event_prefix: 0}
+  @compile {:inline, execute: 3, span: 3, attach_many: 4, detach: 1}
 
   if Code.ensure_loaded?(:telemetry) do
     @doc false
@@ -31,6 +31,11 @@ defmodule Nebulex.Telemetry do
     def detach(_handler_id), do: :ok
   end
 
+  # sobelow_skip ["DOS.StringToAtom"]
   @doc false
-  def default_event_prefix, do: [:nebulex, :cache]
+  def default_prefix(cache) do
+    cache
+    |> Module.split()
+    |> Enum.map(&(&1 |> Macro.underscore() |> String.to_atom()))
+  end
 end

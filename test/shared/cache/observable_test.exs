@@ -229,6 +229,45 @@ defmodule Nebulex.Cache.ObservableTest do
         assert cache.unregister_event_listener!(listener) == :ok
       end
 
+      test "ok: events ignored due to cache name mismatch", %{
+        cache: cache,
+        name: name,
+        listener: listener
+      } do
+        {:ok, pid} = cache.start_link(name: :my_temp_observable_cache)
+
+        try do
+          assert cache.register_event_listener!(listener, id: :my_listener) == :ok
+
+          assert cache.register_event_listener!(:my_temp_observable_cache, listener,
+                   id: :my_listener
+                 ) == :ok
+
+          event1 =
+            CacheEntryEvent.new(
+              cache: cache,
+              name: name,
+              type: :inserted,
+              target: {:key, "test"},
+              command: :put
+            )
+
+          event2 = %{event1 | name: :my_temp_observable_cache}
+
+          assert cache.put("test", "test") == :ok
+          assert_receive ^event1
+          refute_receive ^event2
+
+          assert cache.put(:my_temp_observable_cache, "test", "test", []) == :ok
+          assert_receive ^event2
+          refute_receive ^event1
+        after
+          :ok = cache.unregister_event_listener!(:my_listener)
+          :ok = cache.unregister_event_listener!(:my_temp_observable_cache, :my_listener, [])
+          :ok = cache.stop(pid, [])
+        end
+      end
+
       test "error: listener is already registered", %{cache: cache, listener: listener} do
         :ok = cache.register_event_listener!(listener)
 
@@ -247,8 +286,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
         try do
           assert capture_log(fn -> cache.put!("some", "error") end) =~
-                   "Handler {#{inspect(unquote(__MODULE__))}, #{inspect(listener)}} " <>
-                     "has failed and has been detached"
+                   "has failed and has been detached"
         after
           assert cache.unregister_event_listener!(listener) == :ok
         end
@@ -260,8 +298,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
         try do
           assert capture_log(fn -> cache.put!("some", "error") end) =~
-                   "Handler {#{inspect(unquote(__MODULE__))}, #{inspect(listener)}} " <>
-                     "has failed and has been detached"
+                   "has failed and has been detached"
         after
           assert cache.unregister_event_listener!(listener) == :ok
         end

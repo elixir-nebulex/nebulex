@@ -67,16 +67,18 @@ defmodule Nebulex.Cache.Options do
     telemetry_prefix: [
       type: {:list, :atom},
       required: false,
-      default: [:nebulex, :cache],
       doc: """
       Nebulex emits cache events using the [Telemetry](`:telemetry`) library.
+      By default, the telemetry prefix is based on the module name, so if your
+      module is called `MyApp.Cache`, the prefix will be `[:my_app, :cache]`.
       See the ["Telemetry events"](#module-telemetry-events) section to see
       which events are emitted by Nebulex out-of-box.
 
-      Note that if you have multiple caches (or dynamic caches), since the
-      `:adapter_meta` property is available within the event metadata, you can
-      use the `:cache` or `:name` properties (or both) to distinguish between
-      caches. Alternatively, you can use different `:telemetry_prefix` values.
+      If you have multiple caches, keep the `:telemetry_prefix` consistent for
+      each cache and use the `:cache` property within the `:adapter_meta` coming
+      in the event metadata to distinguish between caches. For dynamic caches,
+      you should additionally use the `:name` property. Alternatively, you can
+      use different `:telemetry_prefix` values.
       """
     ],
     bypass_mode: [

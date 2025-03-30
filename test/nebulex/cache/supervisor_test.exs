@@ -124,7 +124,7 @@ defmodule Nebulex.Cache.SupervisorTest do
         {:ok, _} = Cache.start_link(name: :telemetry_test)
 
         assert_receive {[:nebulex, :cache, :init], _, %{cache: Cache, opts: opts}}
-        assert opts[:telemetry_prefix] == Telemetry.default_event_prefix()
+        assert opts[:telemetry_prefix] == Telemetry.default_prefix(Cache)
         assert opts[:name] == :telemetry_test
       end
     end

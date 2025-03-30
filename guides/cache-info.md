@@ -35,8 +35,7 @@ config :my_app, MyApp.Cache,
   gc_interval: :timer.hours(12),
   max_size: 1_000_000,
   allocated_memory: 1_000_000,
-  gc_cleanup_min_timeout: :timer.seconds(10),
-  gc_cleanup_max_timeout: :timer.minutes(10)
+  gc_memory_check_interval: :timer.seconds(10)
 ```
 
 Once you have set up the `MyApp.Cache` within the application's supervision
@@ -135,14 +134,14 @@ defmodule MyApp.Telemetry do
   defp metrics do
     [
       # Stats
-      last_value("nebulex.cache.info.stats.hits", tags: [:cache]),
-      last_value("nebulex.cache.info.stats.misses", tags: [:cache]),
-      last_value("nebulex.cache.info.stats.writes", tags: [:cache]),
-      last_value("nebulex.cache.info.stats.evictions", tags: [:cache]),
+      last_value("my_app.cache.info.stats.hits", tags: [:cache]),
+      last_value("my_app.cache.info.stats.misses", tags: [:cache]),
+      last_value("my_app.cache.info.stats.writes", tags: [:cache]),
+      last_value("my_app.cache.info.stats.evictions", tags: [:cache]),
 
       # Memory
-      last_value("nebulex.cache.info.memory.used", tags: [:cache]),
-      last_value("nebulex.cache.info.memory.total", tags: [:cache])
+      last_value("my_app.cache.info.memory.used", tags: [:cache]),
+      last_value("my_app.cache.info.memory.total", tags: [:cache])
     ]
   end
 
@@ -156,7 +155,7 @@ defmodule MyApp.Telemetry do
   def cache_stats do
     with {:ok, info} <- MyApp.Cache.info([:server, :stats]) do
       :telemetry.execute(
-        [:nebulex, :cache, :info, :stats],
+        [:my_app, :cache, :info, :stats],
         info.stats,
         %{cache: info.server[:cache_name]}
       )
@@ -168,7 +167,7 @@ defmodule MyApp.Telemetry do
   def cache_memory do
     with {:ok, info} <- MyApp.Cache.info([:server, :memory]) do
       :telemetry.execute(
-        [:nebulex, :cache, :info, :memory],
+        [:my_app, :cache, :info, :memory],
         info.memory,
         %{cache: info.server[:cache_name]}
       )
@@ -194,7 +193,7 @@ Now start an IEx session and you should see something like the following output:
 
 ```
 [Telemetry.Metrics.ConsoleReporter] Got new event!
-Event name: nebulex.cache.info.stats
+Event name: my_app.cache.info.stats
 All measurements: %{evictions: 2, hits: 1, misses: 2, writes: 2}
 All metadata: %{cache: MyApp.Cache}
 
@@ -215,7 +214,7 @@ With value: 2
 Tag values: %{cache: MyApp.Cache}
 
 [Telemetry.Metrics.ConsoleReporter] Got new event!
-Event name: nebulex.cache.info.memory
+Event name: my_app.cache.info.memory
 All measurements: %{total: 2000000, used: 0}
 All metadata: %{cache: MyApp.Cache}
 
@@ -241,7 +240,7 @@ defmodule MyApp.Cache do
 
   def dispatch_cache_size do
     :telemetry.execute(
-      [:nebulex, :cache, :size],
+      [:my_app, :cache, :size],
       %{value: count_all()},
       %{cache: __MODULE__, node: node()}
     )
@@ -271,17 +270,17 @@ Metrics:
 defp metrics do
   [
     # Stats
-    last_value("nebulex.cache.info.stats.hits", tags: [:cache]),
-    last_value("nebulex.cache.info.stats.misses", tags: [:cache]),
-    last_value("nebulex.cache.info.stats.writes", tags: [:cache]),
-    last_value("nebulex.cache.info.stats.evictions", tags: [:cache]),
+    last_value("my_app.cache.info.stats.hits", tags: [:cache]),
+    last_value("my_app.cache.info.stats.misses", tags: [:cache]),
+    last_value("my_app.cache.info.stats.writes", tags: [:cache]),
+    last_value("my_app.cache.info.stats.evictions", tags: [:cache]),
 
     # Memory
-    last_value("nebulex.cache.info.memory.used", tags: [:cache]),
-    last_value("nebulex.cache.info.memory.total", tags: [:cache]),
+    last_value("my_app.cache.info.memory.used", tags: [:cache]),
+    last_value("my_app.cache.info.memory.total", tags: [:cache]),
 
     # Nebulex custom Metrics
-    last_value("nebulex.cache.size.value", tags: [:cache, :node])
+    last_value("my_app.cache.size.value", tags: [:cache, :node])
   ]
 end
 ```
@@ -290,7 +289,7 @@ If you start an IEx session like previously, you should see the new metric too:
 
 ```
 [Telemetry.Metrics.ConsoleReporter] Got new event!
-Event name: nebulex.cache.size
+Event name: my_app.cache.size
 All measurements: %{value: 0}
 All metadata: %{cache: MyApp.Cache, node: :nonode@nohost}
 

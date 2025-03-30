@@ -32,7 +32,7 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
              handler_id,
              [telemetry_prefix ++ [:command, :stop]],
              &__MODULE__.handle_event/4,
-             %{listener: listener, filter: filter, meta: meta}
+             %{name: cache_name, listener: listener, filter: filter, meta: meta}
            ) do
       wrap_error Nebulex.Error,
         reason: :event_listener_already_exists,
@@ -55,6 +55,8 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
   ## Handler
 
   @doc false
+  def handle_event(event, measurements, metadata, config)
+
   def handle_event(
         _event,
         _measurements,
@@ -64,9 +66,13 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
           result: result,
           adapter_meta: %{cache: cache, name: name}
         },
-        %{meta: meta} = config
+        %{name: name, meta: meta} = config
       ) do
     do_handle(command, args, result, [cache: cache, name: name, metadata: meta], config)
+  end
+
+  def handle_event(_event, _measurements, _metadata, _config) do
+    :ignore
   end
 
   ## Private functions

@@ -25,11 +25,12 @@ information about the emitted events, their measurements, and metadata.
 ## Nebulex Metrics
 
 Assuming you have defined the cache `MyApp.Cache` with the default
-`:telemetry_prefix`, using `Telemetry.Metrics`, you can define a
-counter metric, which counts how many cache commands were completed:
+`:telemetry_prefix` (`[:my_app, :cache]`), using `Telemetry.Metrics`,
+you can define a counter metric, which counts how many cache commands
+were completed:
 
 ```elixir
-Telemetry.Metrics.counter("nebulex.cache.command.stop.duration")
+Telemetry.Metrics.counter("my_app.cache.command.stop.duration")
 ```
 
 or you could use a distribution metric to see how many commands were completed
@@ -37,7 +38,7 @@ in particular time buckets:
 
 ```elixir
 Telemetry.Metrics.distribution(
-  "nebulex.cache.command.stop.duration",
+  "my_app.cache.command.stop.duration",
   buckets: [100, 200, 300]
 )
 ```
@@ -49,7 +50,7 @@ or callback name? In this case, one could define a summary metric like so:
 
 ```elixir
 Telemetry.Metrics.summary(
-  "nebulex.cache.command.stop.duration",
+  "my_app.cache.command.stop.duration",
   unit: {:native, :millisecond},
   tags: [:command]
 )
@@ -62,7 +63,7 @@ Let's add another metric for the command event, this time to group by
 
 ```elixir
 Telemetry.Metrics.summary(
-  "nebulex.cache.command.stop.duration",
+  "my_app.cache.command.stop.duration",
   unit: {:native, :millisecond},
   tags: [:command, :cache, :name],
   tag_values:

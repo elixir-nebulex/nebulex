@@ -27,8 +27,7 @@ defmodule Nebulex.Cache do
         gc_interval: :timer.hours(12),
         max_size: 1_000_000,
         allocated_memory: 2_000_000_000,
-        gc_cleanup_min_timeout: :timer.seconds(10),
-        gc_cleanup_max_timeout: :timer.minutes(10)
+        gc_memory_check_interval: :timer.seconds(10)
 
   Most of the configuration that goes into the `config` is specific
   to the adapter. For this particular example, you can check
@@ -75,15 +74,16 @@ defmodule Nebulex.Cache do
   ### Cache command events
 
   When the option `:telemetry` is set to `true` (the default), Nebulex will
-  emit Telemetry span events for each cache command, and those will use the
-  `:telemetry_prefix` outlined above, which defaults to `[:nebulex, :cache]`.
+  emit Telemetry span events for each cache command. Those events will use
+  the `:telemetry_prefix` outlined in the options above which defaults to
+  `[:my_app, :cache]`.
 
   For instance, to receive all events published for the cache `MyApp.Cache`,
   one could define a module:
 
       defmodule MyApp.Telemetry do
         def handle_event(
-              [:nebulex, :cache, :command, event],
+              [:my_app, :cache, :command, event],
               measurements,
               metadata,
               config
@@ -107,9 +107,9 @@ defmodule Nebulex.Cache do
       :telemetry.attach_many(
         "my-app-handler-id",
         [
-          [:nebulex, :cache, :command, :start],
-          [:nebulex, :cache, :command, :stop],
-          [:nebulex, :cache, :command, :exception]
+          [:my_app, :cache, :command, :start],
+          [:my_app, :cache, :command, :stop],
+          [:my_app, :cache, :command, :exception]
         ],
         &MyApp.Telemetry.handle_event/4,
         :no_config
@@ -121,7 +121,7 @@ defmodule Nebulex.Cache do
   The following are the events you should expect from Nebulex. All examples
   below consider a cache named `MyApp.Cache`:
 
-  #### `[:nebulex, :cache, :command, :start]`
+  #### `[:my_app, :cache, :command, :start]`
 
   This event is emitted before a cache command is executed.
 
@@ -140,7 +140,7 @@ defmodule Nebulex.Cache do
     * `:extra_metadata` - Additional metadata through the runtime option
       `:telemetry_metadata.`
 
-  #### `[:nebulex, :cache, :command, :stop]`
+  #### `[:my_app, :cache, :command, :stop]`
 
   This event is emitted after a cache command is executed.
 
@@ -161,7 +161,7 @@ defmodule Nebulex.Cache do
       `:telemetry_metadata.`
     * `:result` - The command's result.
 
-  #### `[:nebulex, :cache, :command, :exception]`
+  #### `[:my_app, :cache, :command, :exception]`
 
   This event is emitted when an error or exception occurs during the
   cache command execution.
@@ -250,16 +250,8 @@ defmodule Nebulex.Cache do
 
   One of the goals of Nebulex is also to provide the ability to set up
   distributed cache topologies, but this feature will depend on the adapters.
-  However, there are available adapters already for this:
 
-    * `Nebulex.Adapters.Partitioned` - Partitioned cache topology.
-    * `Nebulex.Adapters.Replicated` - Replicated cache topology.
-    * `Nebulex.Adapters.Multilevel` - Multi-level distributed cache topology.
-
-  These adapters work more as wrappers for an existing local adapter and provide
-  the distributed topology on top of it. You can optionally set the adapter for
-  the primary cache storage with the option `:primary_storage_adapter`. Defaults
-  to `Nebulex.Adapters.Local`. See adapters documentation for information.
+  See ["Nebulex Distributed"](https://github.com/elixir-nebulex/nebulex_distributed).
   """
 
   @typedoc "Cache type"
@@ -2259,7 +2251,7 @@ defmodule Nebulex.Cache do
 
   ## Examples
 
-      iex> = MyCache.stream(MyCache1, nil, [])
+      iex> = MyCache.stream(MyCache1, [], [])
       {:ok, _stream}
 
   """
@@ -2597,7 +2589,7 @@ defmodule Nebulex.Cache do
 
   ## Examples
 
-      MyApp.Cache.register_event_listener(MyCache1, &MyApp.handle/1)
+      MyApp.Cache.register_event_listener(:my_cache, &MyApp.handle/1, [])
 
   """
   @doc group: "Observable API"
@@ -2657,7 +2649,7 @@ defmodule Nebulex.Cache do
 
   ## Examples
 
-      MyApp.Cache.unregister_event_listener(&MyApp.handle/1)
+      MyApp.Cache.unregister_event_listener(:my_cache, &MyApp.handle/1, [])
 
   """
   @doc group: "Observable API"

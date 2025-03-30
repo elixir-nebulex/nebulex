@@ -45,9 +45,10 @@ defmodule Nebulex do
   environment, usually defined in your `config/config.exs`:
 
       config :my_app, MyApp.MyCache,
-        gc_interval: :timer.hours(1),
-        backend: :shards,
-        partitions: 2
+        gc_interval: :timer.hours(12),
+        max_size: 1_000_000,
+        allocated_memory: 2_000_000_000,
+        gc_memory_check_interval: :timer.seconds(10)
 
   Each cache in Nebulex defines a `start_link/1` function that needs to be
   invoked before using the cache. In general, this function is not called

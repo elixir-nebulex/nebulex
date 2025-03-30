@@ -1,11 +1,19 @@
-# Nebulex :cyclone:
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./guides/images/nbx-logo-white.png" />
+  <source media="(prefers-color-scheme: light)" srcset="./guides/images/nbx-logo.png" />
+  <img src="./guides/images/nbx-logo.png" alt="Nebulex logo" />
+</picture>
+
 > In-memory and distributed caching toolkit for Elixir.
 
+---
+
 ![CI](https://github.com/cabol/nebulex/workflows/CI/badge.svg)
-[![Coverage Status](https://img.shields.io/coveralls/cabol/nebulex.svg)](https://coveralls.io/github/cabol/nebulex)
-[![Hex Version](https://img.shields.io/hexpm/v/nebulex.svg)](https://hex.pm/packages/nebulex)
-[![Docs](https://img.shields.io/badge/docs-hexpm-blue.svg)](https://hexdocs.pm/nebulex)
-[![License](https://img.shields.io/hexpm/l/nebulex.svg)](LICENSE)
+[![Codecov](https://codecov.io/gh/cabol/nebulex/branch/v3.0.0-dev/graph/badge.svg)](https://codecov.io/gh/cabol/nebulex/branch/v3.0.0-dev/graph/badge.svg)
+[![Hex.pm](https://img.shields.io/hexpm/v/nebulex.svg)](https://hex.pm/packages/nebulex)
+[![Documentation](https://img.shields.io/badge/Documentation-ff69b4)](https://hexdocs.pm/nebulex)
+
+## About
 
 Nebulex provides support for transparently adding caching into an existing
 Elixir application. Like [Ecto][ecto], the caching abstraction allows consistent
@@ -18,10 +26,6 @@ underlying caching implementations, such as [Redis][redis],
 [declarative decorator-based caching][nbx_caching],
 [cache usage patterns][cache_patterns], and
 [distributed cache topologies][cache_topologies], among others.
-
-See the [getting started guide](http://hexdocs.pm/nebulex/getting-started.html)
-and the [online documentation](http://hexdocs.pm/nebulex/Nebulex.html)
-for more information.
 
 [ecto]: https://github.com/elixir-ecto/ecto
 [cachex]: https://github.com/whitfin/cachex
@@ -93,7 +97,31 @@ defmodule MyApp.Cache do
 end
 ```
 
-## Quickstart example using caching decorators
+Don't forget to add `MyApp.Cache` to your application's supervision tree:
+
+```elixir
+def start(_type, _args) do
+  children = [
+    MyApp.Cache
+  ]
+
+  ...
+```
+
+Now you are ready to go!
+
+```elixir
+iex> MyApp.Cache.put("foo", "bar")
+:ok
+iex> MyApp.Cache.fetch("foo")
+{:ok, "bar"}
+```
+
+See the [getting started guide](http://hexdocs.pm/nebulex/getting-started.html)
+and the [online documentation](http://hexdocs.pm/nebulex/Nebulex.html)
+for more information.
+
+## A quickstart example using caching decorators
 
 Assuming you are using `Ecto` and you want to use declarative caching:
 

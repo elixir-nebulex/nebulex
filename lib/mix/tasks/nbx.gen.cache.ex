@@ -187,10 +187,8 @@ defmodule Mix.Tasks.Nbx.Gen.Cache do
     max_size: 1_000_000,
     # Max 2 GB of memory
     allocated_memory: 2_000_000_000,
-    # GC min timeout: 10 sec
-    gc_cleanup_min_timeout: :timer.seconds(10),
-    # GC max timeout: 10 min
-    gc_cleanup_max_timeout: :timer.minutes(10)
+    # GC interval for checking memory and maybe evict entries
+    gc_memory_check_interval: :timer.seconds(10)
   """)
 
   embed_template(:dist_config, """
@@ -204,10 +202,8 @@ defmodule Mix.Tasks.Nbx.Gen.Cache do
       max_size: 1_000_000,
       # Max 2 GB of memory
       allocated_memory: 2_000_000_000,
-      # GC min timeout: 10 sec
-      gc_cleanup_min_timeout: :timer.seconds(10),
-      # GC max timeout: 10 min
-      gc_cleanup_max_timeout: :timer.minutes(10)
+      # GC interval for checking memory and maybe evict entries
+      gc_memory_check_interval: :timer.seconds(10)
     ]
   """)
 

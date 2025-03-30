@@ -87,10 +87,8 @@ config :blog, Blog.Cache,
   max_size: 1_000_000,
   # Max 2 GB of memory
   allocated_memory: 2_000_000_000,
-  # GC min timeout: 10 sec
-  gc_cleanup_min_timeout: :timer.seconds(10),
-  # GC max timeout: 10 min
-  gc_cleanup_max_timeout: :timer.minutes(10)
+  # GC interval for checking memory and maybe evict entries
+  gc_memory_check_interval: :timer.seconds(10)
 ```
 
 If you want to use `:shards` as backend, uncomment the `backend:` option.
@@ -297,7 +295,7 @@ iex> initial = %{id: 1, first_name: "", last_name: ""}
 # using `get_and_update`
 iex> Blog.Cache.get_and_update(1, fn v ->
 ...>   if v, do: {v, %{v | first_name: "X"}}, else: {v, initial}
-...> iex> end)
+...> end)
 {:ok, {_old, _updated}}
 
 # using `update`
@@ -431,7 +429,6 @@ _fetched_entries
 
 # built-in queries in `Nebulex.Adapters.Local` adapter
 iex> Blog.Cache.get_all() #=> Equivalent to Blog.Cache.get_all(query: nil)
-iex> Blog.Cache.get_all(query: :expired)
 
 # if we are using `Nebulex.Adapters.Local` adapter, the stored entry
 # is a tuple `{:entry, key, value, touched, ttl}`, then the match spec
@@ -615,13 +612,13 @@ Since Nebulex v3, a new API is available for registering cache event handlers,
 which are invoked after an entry is mutated in the cache.
 
 ```elixir
-defmodule Blog.CacheEventHandler do
+defmodule Blog.Cache.EventHandler do
   def handle(event) do
     IO.inspect(event)
   end
 end
 
-iex> {:ok, id} = Blog.Cache.register_event_listener(&Blog.CacheEventHandler.handle/1)
+iex> {:ok, id} = Blog.Cache.register_event_listener(&Blog.Cache.EventHandler.handle/1)
 iex> Blog.Cache.put("event_test_key", "event_testvalue")
 :ok
 
@@ -653,7 +650,7 @@ defp deps do
     #=> When using the Telemetry events (recommended adding it)
     {:telemetry, "~> 1.0"},
     #=> When using :shards as backend for local adapter
-    {:shards, "~> 1.0"}
+    {:shards, "~> 1.1"}
   ]
 end
 ```
@@ -693,10 +690,8 @@ config :blog, Blog.PartitionedCache,
     max_size: 1_000_000,
     # Max 2 GB of memory
     allocated_memory: 2_000_000_000,
-    # GC min timeout: 10 sec
-    gc_cleanup_min_timeout: :timer.seconds(10),
-    # GC max timeout: 10 min
-    gc_cleanup_max_timeout: :timer.minutes(10)
+    # GC memory check interval
+    gc_memory_check_interval: :timer.seconds(10)
   ]
 ```
 

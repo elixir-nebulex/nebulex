@@ -14,13 +14,14 @@ defmodule Nebulex.MixProject do
       deps: deps(),
 
       # Testing
-      test_coverage: [tool: ExCoveralls],
+      test_coverage: [tool: ExCoveralls, export: "test-coverage"],
       preferred_cli_env: [
         check: :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
-        "coveralls.html": :test
+        "coveralls.html": :test,
+        "coveralls.json": :test
       ],
 
       # Dialyzer
@@ -60,7 +61,7 @@ defmodule Nebulex.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
-      {:stream_data, "~> 1.1", only: [:dev, :test]},
+      {:stream_data, "~> 1.2", only: [:dev, :test]},
       {:mimic, "~> 1.11", only: :test},
       {:doctor, "~> 0.22", only: [:dev, :test]},
 
@@ -69,13 +70,14 @@ defmodule Nebulex.MixProject do
       {:benchee_html, "~> 1.0", only: [:dev, :test]},
 
       # Docs
-      {:ex_doc, "~> 0.36", only: [:dev, :test], runtime: false}
+      {:ex_doc, "~> 0.37", only: [:dev, :test], runtime: false}
     ]
   end
 
   defp aliases do
     [
       check: [
+        "deps.unlock --check-unused",
         "compile --warnings-as-errors",
         "format --check-formatted",
         "credo --strict",
