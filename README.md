@@ -8,8 +8,8 @@
 
 ---
 
-![CI](https://github.com/cabol/nebulex/workflows/CI/badge.svg)
-[![Codecov](https://codecov.io/gh/cabol/nebulex/branch/v3.0.0-dev/graph/badge.svg)](https://codecov.io/gh/cabol/nebulex/branch/v3.0.0-dev/graph/badge.svg)
+![CI](https://github.com/elixir-nebulex/nebulex/workflows/CI/badge.svg)
+[![Codecov](https://codecov.io/gh/elixir-nebulex/nebulex/branch/v3.0.0-dev/graph/badge.svg)](https://codecov.io/gh/elixir-nebulex/nebulex/branch/v3.0.0-dev/graph/badge.svg)
 [![Hex.pm](https://img.shields.io/hexpm/v/nebulex.svg)](https://hex.pm/packages/nebulex)
 [![Documentation](https://img.shields.io/badge/Documentation-ff69b4)](https://hexdocs.pm/nebulex)
 
@@ -207,7 +207,7 @@ defmodule MyApp.Accounts do
 end
 ```
 
-See more [Nebulex examples](https://github.com/cabol/nebulex_examples).
+See more [Nebulex examples](https://github.com/elixir-nebulex/nebulex_examples).
 
 ## Important links
 
@@ -216,7 +216,7 @@ See more [Nebulex examples](https://github.com/cabol/nebulex_examples).
 * [Migrating to v3.x](http://hexdocs.pm/nebulex/migrating-to-v3.html)
 * [Cache Usage Patterns](http://hexdocs.pm/nebulex/cache-usage-patterns.html)
 * [Instrumenting the Cache with Telemetry](http://hexdocs.pm/nebulex/telemetry.html)
-* [Examples](https://github.com/cabol/nebulex_examples)
+* [Examples](https://github.com/elixir-nebulex/nebulex_examples)
 
 ## Testing
 
@@ -255,8 +255,8 @@ $ mix run benchmarks/benchmark.exs
 
 Contributions to Nebulex are very welcome and appreciated!
 
-Use the [issue tracker](https://github.com/cabol/nebulex/issues) for bug reports
-or feature requests. Open a [pull request](https://github.com/cabol/nebulex/pulls)
+Use the [issue tracker](https://github.com/elixir-nebulex/nebulex/issues) for bug reports
+or feature requests. Open a [pull request](https://github.com/elixir-nebulex/nebulex/pulls)
 when you are ready to contribute.
 
 When submitting a pull request you should not update the [CHANGELOG.md](CHANGELOG.md),

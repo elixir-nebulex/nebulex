@@ -3,8 +3,8 @@
 This guide will walk you through creating a custom Nebulex adapter. We will
 start by creating a new project, making tests pass, and then implementing a
 simple in-memory adapter. It will be roughly based on
-[`NebulexRedisAdapter`](https://github.com/cabol/nebulex_redis_adapter/) so you
-can consult this repo as an example.
+[`NebulexRedisAdapter`](https://github.com/elixir-nebulex/nebulex_redis_adapter/)
+so you can consult this repo as an example.
 
 ## Mix Project
 
@@ -67,7 +67,7 @@ defmodule NebulexMemoryAdapter.MixProject do
     [
       "nbx.setup": [
         "cmd rm -rf nebulex",
-        "cmd git clone --depth 1 --branch v#{@nbx_vsn} https://github.com/cabol/nebulex"
+        "cmd git clone --depth 1 --branch v#{@nbx_vsn} https://github.com/elixir-nebulex/nebulex"
       ]
     ]
   end
