@@ -1,4 +1,4 @@
-# Creating New Adapter
+# Creating a new adapter
 
 This guide will walk you through creating a custom Nebulex adapter. We will
 start by creating a new project, making tests pass, and then implementing a

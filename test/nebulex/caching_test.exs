@@ -674,6 +674,12 @@ defmodule Nebulex.CachingTest do
       assert Cache.get!(key) == {1, 2}
     end
 
+    test "cacheable annotation (key generator with arity 0)" do
+      refute Cache.get!(1)
+      assert get_with_keygen_arity_0(1) == 1
+      assert Cache.get!(:get_with_keygen_arity_0) == 1
+    end
+
     test "cacheable annotation with multiple function clauses and pattern-matching " do
       key = default_hash(:cacheable, :get_with_keygen2, 3, [1, 2])
 
@@ -846,7 +852,7 @@ defmodule Nebulex.CachingTest do
     {x, y * 2}
   end
 
-  @decorate cacheable(cache: Cache, opts: [ttl: 1000])
+  @decorate cacheable(cache: &__MODULE__.target_cache/0, opts: [ttl: 1000])
   def get_with_opts(x) do
     x
   end
@@ -960,6 +966,11 @@ defmodule Nebulex.CachingTest do
 
   ## Custom key generation
 
+  @decorate cacheable(key: fn -> :get_with_keygen_arity_0 end)
+  def get_with_keygen_arity_0(x) do
+    x
+  end
+
   @decorate cacheable(key: &:erlang.phash2/1)
   def get_with_keygen(x, y) do
     {x, y}
@@ -1044,7 +1055,7 @@ defmodule Nebulex.CachingTest do
 
   ## Runtime target cache
 
-  @decorate cacheable(cache: &target_cache/1, key: var)
+  @decorate cacheable(cache: &__MODULE__.target_cache/1, key: var)
   def get_fn_cache(var) do
     var
   end
@@ -1104,6 +1115,8 @@ defmodule Nebulex.CachingTest do
 
   # Custom key-generator function
   def generate_key(arg), do: arg
+
+  def target_cache, do: Cache
 
   def target_cache(arg) do
     _ = send(self(), arg)

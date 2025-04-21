@@ -573,11 +573,11 @@ if Code.ensure_loaded?(Decorator.Define) do
       * A dynamic cache spec created with the macro
         [`dynamic_cache/2`](`Nebulex.Caching.dynamic_cache/2`).
       * An anonymous function to call to resolve the cache value in runtime.
-        The function receives the decorator context as an argument and must
-        return either a cache module or a dynamic cache.
+        The function optionally receives the decorator context as an argument
+        and must return either a cache module or a dynamic cache.
 
     """
-    @type cache() :: cache_value() | (context() -> cache_value())
+    @type cache() :: cache_value() | (-> cache_value()) | (context() -> cache_value())
 
     @typedoc """
     The type for the `:key` option value.
@@ -586,7 +586,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     the value can be:
 
       * An anonymous function to call to generate the key in runtime.
-        The function receives the decorator context as an argument
+        The function optionally receives the decorator context as an argument
         and must return the key for caching.
       * The tuple `{:in, keys}`, where `keys` is a list with the keys to evict
         or update. This option is allowed for `cache_evict` and `cache_put`
@@ -594,7 +594,7 @@ if Code.ensure_loaded?(Decorator.Define) do
       * Any term.
 
     """
-    @type key() :: (context() -> any()) | {:in, [any()]} | any()
+    @type key() :: (-> any()) | (context() -> any()) | {:in, [any()]} | any()
 
     @typedoc "Type for on_error action"
     @type on_error() :: :nothing | :raise
@@ -1163,7 +1163,7 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     defp caching_action(decorator, attrs, block, context) do
       # Get options defined via the __using__ macro
-      use_opts = Module.get_attribute(context.module, :__use_caching_opts__, [])
+      use_opts = Module.get_attribute(context.module, :__caching_opts__, [])
 
       # Build decorator context
       context = decorator_context(decorator, context)
@@ -1590,6 +1590,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     def eval_cache(cache, _ctx) when is_atom(cache), do: cache
     def eval_cache(dynamic_cache() = cache, _ctx), do: cache
     def eval_cache(cache, ctx) when is_function(cache, 1), do: cache.(ctx)
+    def eval_cache(cache, _ctx) when is_function(cache, 0), do: cache.()
     def eval_cache(cache, _ctx), do: raise_invalid_cache(cache)
 
     @doc """
@@ -1603,6 +1604,10 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     def eval_key(_cache, key, ctx) when is_function(key, 1) do
       key.(ctx)
+    end
+
+    def eval_key(_cache, key, _ctx) when is_function(key, 0) do
+      key.()
     end
 
     def eval_key(_cache, key, _ctx) do

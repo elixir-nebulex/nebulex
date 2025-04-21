@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Nbx do
 
   alias Mix.Tasks.Help
 
-  @doc false
+  @impl true
   def run(args) do
     {_opts, args} = OptionParser.parse!(args, strict: [])
 
@@ -27,11 +27,6 @@ defmodule Mix.Tasks.Nbx do
 
     Mix.shell().info("Nebulex v#{Nebulex.vsn()}")
     Mix.shell().info("In-Process and Distributed Cache Toolkit for Elixir.")
-
-    Mix.shell().info(
-      "Easily craft and deploy distributed cache topologies and cache usage patterns."
-    )
-
     Mix.shell().info("\nAvailable tasks:\n")
     Help.run(["--search", "nbx."])
   end

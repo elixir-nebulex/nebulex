@@ -67,11 +67,9 @@ defmodule Nebulex.Caching.Options do
       type_doc: "`t:cache/0`",
       required: true,
       doc: """
-      The cache to use (see `t:cache/0` for possible values). If configured,
-      it overrides the [default or global cache](#module-default-cache).
-      The decorator uses the given `cache`. If configured, it overrides the
-      [default or global cache](#module-default-cache). See `t:cache/0` for
-      possible values.
+      The cache to use. If configured, it overrides the
+      [default or global cache](#module-default-cache).
+      See `t:cache/0` for possible values.
 
       Raises an exception if the `:cache` option is not provided in the
       decorator declaration and is not configured when defining the
@@ -93,7 +91,7 @@ defmodule Nebulex.Caching.Options do
       The `:key` option admits the following values:
 
         * An anonymous function to call to generate the key in runtime.
-          The function receives the decorator context as an argument
+          The function optionally receives the decorator context as an argument
           and must return the key for caching.
         * The tuple `{:in, keys}`, where `keys` is a list with the keys to
           evict or update. This option is allowed for `cache_evict` and

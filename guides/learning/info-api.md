@@ -1,4 +1,4 @@
-# Cache Info
+# Info API
 
 Since Nebulex v3, the adapter's Info API is introduced. This is a more generic
 API to get information about the cache, including the stats. Adapters are

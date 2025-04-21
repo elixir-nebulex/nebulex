@@ -66,11 +66,12 @@ defmodule Nebulex.MixProject do
       {:doctor, "~> 0.22", only: [:dev, :test]},
 
       # Benchmark Test
-      {:benchee, "~> 1.3", only: [:dev, :test]},
+      {:benchee, "~> 1.4", only: [:dev, :test]},
       {:benchee_html, "~> 1.0", only: [:dev, :test]},
 
       # Docs
-      {:ex_doc, "~> 0.37", only: [:dev, :test], runtime: false}
+      {:ex_doc, "~> 0.37", only: [:dev, :test], runtime: false},
+      {:makeup_diff, "~> 0.1", only: [:dev, :test], runtime: false}
     ]
   end
 
@@ -107,19 +108,15 @@ defmodule Nebulex.MixProject do
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/nebulex",
       source_url: @source_url,
-      extras: [
-        "guides/getting-started.md",
-        "guides/migrating-to-v3.md",
-        "guides/cache-usage-patterns.md",
-        "guides/telemetry.md",
-        "guides/creating-new-adapter.md",
-        "guides/cache-info.md"
-      ],
+      extra_section: "GUIDES",
+      extras: extras(),
+      groups_for_extras: groups_for_extras(),
       groups_for_docs: [
         # Caching decorators
         group_for_function("Decorator API"),
         group_for_function("Decorator Helpers"),
         group_for_function("Internal API"),
+
         # Cache API
         group_for_function("User callbacks"),
         group_for_function("Runtime API"),
@@ -132,6 +129,8 @@ defmodule Nebulex.MixProject do
       groups_for_modules: [
         # Nebulex,
         # Nebulex.Cache,
+        # Nebulex.Event,
+        # Nebulex.Event.CacheEntryEvent,
 
         "Caching decorators": [
           Nebulex.Caching,
@@ -145,9 +144,6 @@ defmodule Nebulex.MixProject do
           Nebulex.Adapter.Transaction,
           Nebulex.Adapter.Info,
           Nebulex.Adapter.Observable
-        ],
-        Events: [
-          Nebulex.Event.CacheEntryEvent
         ],
         "Built-in adapters": [
           Nebulex.Adapters.Nil,
@@ -167,6 +163,31 @@ defmodule Nebulex.MixProject do
           Nebulex.Utils
         ]
       ]
+    ]
+  end
+
+  defp extras do
+    [
+      # Introduction
+      "guides/introduction/getting-started.md",
+      "guides/introduction/nbx-adapters.md",
+
+      # Learning
+      "guides/learning/cache-usage-patterns.md",
+      "guides/learning/info-api.md",
+      "guides/learning/telemetry.md",
+      "guides/learning/creating-new-adapter.md",
+
+      # Upgrading
+      "guides/upgrading/v3.0.md"
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      Introduction: ~r{guides/introduction/[^\/]+\.md},
+      Learning: ~r{guides/learning/[^\/]+\.md},
+      Upgrading: ~r{guides/upgrading/.*}
     ]
   end
 

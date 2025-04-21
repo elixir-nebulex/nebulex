@@ -1,4 +1,4 @@
-# Cache Usage Patterns via Nebulex.Caching.Decorators
+# Cache usage patterns with caching decorators
 
 There are several common access patterns when using a cache. **Nebulex**
 supports most of these patterns by means of

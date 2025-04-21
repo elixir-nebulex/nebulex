@@ -33,42 +33,41 @@ underlying caching implementations, such as [Redis][redis],
 [memcached]: https://memcached.org/
 [nbx_caching]: http://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html
 [cache_patterns]: http://hexdocs.pm/nebulex/cache-usage-patterns.html
-[cache_topologies]: https://docs.oracle.com/middleware/1221/coherence/develop-applications/cache_intro.htm
+[cache_topologies]: https://docs.oracle.com/en/middleware/fusion-middleware/coherence/14.1.2/develop-applications/introduction-coherence-caches.html
+
+---
+
+> [!NOTE]
+>
+> This README refers to the main branch of Nebulex, not the latest released
+> version on Hex. Please reference the [getting started guide][getting_started]
+> and the [official documentation][docs] for the latest stable release.
+
+[getting_started]: http://hexdocs.pm/nebulex/getting-started.html
+[docs]: http://hexdocs.pm/nebulex/Nebulex.html
+
+---
 
 ## Usage
 
 You need to add both Nebulex and the cache adapter as a dependency to your
-`mix.exs` file. The supported caches and their adapters are:
-
-Cache | Nebulex Adapter | Dependency
-:-----| :---------------| :---------
-Nil (special adapter to disable caching) | [Nebulex.Adapters.Nil][nil] | Built-In
-Generational Local Cache | Nebulex.Adapters.Local | [nebulex_local][la]
-Partitioned | Nebulex.Adapters.Partitioned | [nebulex_distributed][pa]
-Multilevel | Nebulex.Adapters.Multilevel | [nebulex_distributed][ma]
-Redis | NebulexRedisAdapter | [nebulex_redis_adapter][nbx_redis]
-Cachex | Nebulex.Adapters.Cachex | [nebulex_adapters_cachex][nbx_cachex]
-
-[nil]: http://hexdocs.pm/nebulex/Nebulex.Adapters.Nil.html
-[la]: http://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.html
-[pa]: http://hexdocs.pm/nebulex_distributed/Nebulex.Adapters.Partitioned.html
-[ma]: http://hexdocs.pm/nebulex_distributed/Nebulex.Adapters.Multilevel.html
-[nbx_redis]: https://hexdocs.pm/nebulex_redis_adapter/Nebulex.Adapters.Redis.html
-[nbx_cachex]: https://hexdocs.pm/nebulex_adapters_cachex/Nebulex.Adapters.Cachex.html
-
-For example, if you want to use the Nebulex Generational Local Cache
-(`Nebulex.Adapters.Local` adapter), add to your `mix.exs` file:
+`mix.exs` file. For example, if you want to use the Nebulex Generational
+Local Cache (`Nebulex.Adapters.Local` adapter), add to your `mix.exs` file:
 
 ```elixir
 def deps do
   [
-    {:nebulex, "~> 3.0"},
-    {:nebulex_local, "~> 3.0"},
-    {:decorator, "~> 1.4"},  #=> For Caching decorators (recommended adding it)
-    {:telemetry, "~> 1.2"}   #=> For Telemetry events (recommended adding it)
+    {:nebulex, "~> 3.0.0-rc.1"},
+    {:nebulex_local, "~> 3.0"},  #=> Generational local cache adapter
+    {:decorator, "~> 1.4"},      #=> For Caching decorators (recommended)
+    {:telemetry, "~> 1.2"}       #=> For Telemetry events (recommended)
   ]
 end
 ```
+
+> Check out out the [Nebulex adapters][nbx_adapters] guide for more information.
+
+[nbx_adapters]: http://hexdocs.pm/nebulex/nbx-adapters.html
 
 To give more flexibility and load only needed dependencies, Nebulex makes all
 dependencies optional. For example:
@@ -117,8 +116,8 @@ iex> MyApp.Cache.fetch("foo")
 {:ok, "bar"}
 ```
 
-See the [getting started guide](http://hexdocs.pm/nebulex/getting-started.html)
-and the [online documentation](http://hexdocs.pm/nebulex/Nebulex.html)
+See the [getting started guide][getting_started]
+and the [online documentation][docs]
 for more information.
 
 ## A quickstart example using caching decorators
@@ -213,7 +212,7 @@ See more [Nebulex examples](https://github.com/elixir-nebulex/nebulex_examples).
 
 * [Getting Started](http://hexdocs.pm/nebulex/getting-started.html)
 * [Documentation](http://hexdocs.pm/nebulex/Nebulex.html)
-* [Migrating to v3.x](http://hexdocs.pm/nebulex/migrating-to-v3.html)
+* [Upgrading to v3.0](http://hexdocs.pm/nebulex/v3-0.html)
 * [Cache Usage Patterns](http://hexdocs.pm/nebulex/cache-usage-patterns.html)
 * [Instrumenting the Cache with Telemetry](http://hexdocs.pm/nebulex/telemetry.html)
 * [Examples](https://github.com/elixir-nebulex/nebulex_examples)

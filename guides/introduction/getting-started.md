@@ -1,4 +1,4 @@
-# Getting Started
+# Getting started
 
 This guide is an introduction to [Nebulex](https://github.com/elixir-nebulex/nebulex),
 a local and distributed caching toolkit for Elixir. Nebulex API is pretty much
@@ -79,15 +79,15 @@ first bit of configuration is in `config/config.exs`:
 
 ```elixir
 config :blog, Blog.Cache,
-  # When using :shards as backend
+  # Sets :shards as backend (defaults to :ets)
   # backend: :shards,
-  # GC interval for pushing new generation: 12 hrs
+  # GC interval for pushing a new generation (e.g., 12 hrs)
   gc_interval: :timer.hours(12),
-  # Max 1 million entries in cache
+  # Max number of entries (e.g, 1 million)
   max_size: 1_000_000,
-  # Max 2 GB of memory
+  # Max memory size in bytes (e.g., 2GB)
   allocated_memory: 2_000_000_000,
-  # GC interval for checking memory and maybe evict entries
+  # GC interval for checking memory and maybe evict entries (e.g., 10 sec)
   gc_memory_check_interval: :timer.seconds(10)
 ```
 

@@ -55,7 +55,7 @@ if Code.ensure_loaded?(Decorator.Define) do
           |> Options.validate_use_opts!()
 
         # Set the __using__ macro options so they can be used in the decorators
-        :ok = Module.put_attribute(__MODULE__, :__use_caching_opts__, opts)
+        :ok = Module.put_attribute(__MODULE__, :__caching_opts__, opts)
 
         use Nebulex.Caching.Decorators
 
