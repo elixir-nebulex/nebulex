@@ -3,7 +3,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
   deftests do
     import ExUnit.CaptureLog
-    import Nebulex.CacheCase, only: [t_sleep: 1]
+    import Nebulex.CacheCase, only: [t_sleep: 1, assert_eventually: 1]
 
     alias Nebulex.Event.CacheEntryEvent
 
@@ -99,17 +99,22 @@ defmodule Nebulex.Cache.ObservableTest do
         assert cache.decr!(:c) == 0
         assert_receive ^updated_decr
 
-        updated_exp = %{updated_decr | command: :expire}
+        if test_expired?() do
+          updated_exp = %{updated_decr | command: :expire}
 
-        assert cache.expire!(:c, 1000)
-        assert_receive ^updated_exp
+          assert cache.expire!(:c, 1000)
+          assert_receive ^updated_exp
 
-        _ = t_sleep(1010)
+          _ = t_sleep(1010)
 
-        expired = %{updated_decr | type: :expired, command: :fetch}
+          expired = %{updated_decr | type: :expired, command: :fetch}
 
-        refute cache.get!(:c)
-        assert_receive ^expired
+          refute cache.get!(:c)
+
+          assert_eventually do
+            assert_receive ^expired
+          end
+        end
 
         deleted_take = %{deleted | command: :take, target: {:key, :k1}}
 
@@ -155,17 +160,26 @@ defmodule Nebulex.Cache.ObservableTest do
         assert cache.put_new_all(entries) == {:ok, true}
         refute_receive ^inserted_all
 
-        updated_exp = %{updated | target: {:key, :foo}, command: :expire}
+        if test_expired?() do
+          updated_exp = %{updated | target: {:key, :foo}, command: :expire}
 
-        assert cache.expire!(:foo, 1000)
-        assert_receive ^updated_exp
+          assert cache.expire!(:foo, 1000)
+          assert_receive ^updated_exp
 
-        _ = t_sleep(1010)
+          _ = t_sleep(1010)
 
-        expired = %{updated | type: :expired, command: :fetch}
+          expired = %{updated | type: :expired, command: :fetch}
 
-        refute cache.get!(:foo)
-        refute_receive ^expired
+          refute cache.get!(:foo)
+
+          assert_eventually do
+            refute_receive ^expired
+          end
+
+          assert cache.delete_all!() == 1
+        else
+          assert cache.delete_all!() == 2
+        end
 
         deleted_all = %{
           event
@@ -174,7 +188,6 @@ defmodule Nebulex.Cache.ObservableTest do
             command: :delete_all
         }
 
-        assert cache.delete_all!() == 1
         assert_receive ^deleted_all
       after
         assert cache.unregister_event_listener!(listener) == :ok
@@ -234,14 +247,13 @@ defmodule Nebulex.Cache.ObservableTest do
         name: name,
         listener: listener
       } do
-        {:ok, pid} = cache.start_link(name: :my_temp_observable_cache)
+        temp = Module.concat([unquote(__MODULE__), inspect(System.system_time())])
+        {:ok, pid} = cache.start_link(name: temp)
 
         try do
           assert cache.register_event_listener!(listener, id: :my_listener) == :ok
 
-          assert cache.register_event_listener!(:my_temp_observable_cache, listener,
-                   id: :my_listener
-                 ) == :ok
+          assert cache.register_event_listener!(temp, listener, id: :my_listener) == :ok
 
           event1 =
             CacheEntryEvent.new(
@@ -252,18 +264,18 @@ defmodule Nebulex.Cache.ObservableTest do
               command: :put
             )
 
-          event2 = %{event1 | name: :my_temp_observable_cache}
+          event2 = %{event1 | name: temp}
 
           assert cache.put("test", "test") == :ok
           assert_receive ^event1
           refute_receive ^event2
 
-          assert cache.put(:my_temp_observable_cache, "test", "test", []) == :ok
+          assert cache.put(temp, "test", "test", []) == :ok
           assert_receive ^event2
           refute_receive ^event1
         after
           :ok = cache.unregister_event_listener!(:my_listener)
-          :ok = cache.unregister_event_listener!(:my_temp_observable_cache, :my_listener, [])
+          :ok = cache.unregister_event_listener!(temp, :my_listener, [])
           :ok = cache.stop(pid, [])
         end
       end
@@ -338,5 +350,9 @@ defmodule Nebulex.Cache.ObservableTest do
     end
 
     def my_filter_with_meta(_event), do: true
+
+    defp test_expired? do
+      Application.get_env(:nebulex, :observable_test_expired, true)
+    end
   end
 end

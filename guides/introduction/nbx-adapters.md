@@ -1,15 +1,15 @@
 # Official adapters
 
-Currently we officially support the folloawing adapters:
+Currently we officially support the following adapters:
 
-Cache | Nebulex Adapter | Dependency
-:-----| :---------------| :---------
-Nil (special adapter to disable caching) | [Nebulex.Adapters.Nil][nil] | Built-In
-Generational Local Cache | Nebulex.Adapters.Local | [nebulex_local][la]
-Partitioned | Nebulex.Adapters.Partitioned | [nebulex_distributed][pa]
-Multilevel | Nebulex.Adapters.Multilevel | [nebulex_distributed][ma]
-Redis | NebulexRedisAdapter | [nebulex_redis_adapter][nbx_redis]
-Cachex | Nebulex.Adapters.Cachex | [nebulex_adapters_cachex][nbx_cachex]
+| Cache | Nebulex Adapter | Dependency |
+|:------|:----------------|:-----------|
+| Nil (special adapter to disable caching) | [Nebulex.Adapters.Nil][nil] | Built-In |
+| Generational Local Cache | [Nebulex.Adapters.Local][la] | [nebulex_local][la] |
+| Partitioned | [Nebulex.Adapters.Partitioned][pa] | [nebulex_distributed][pa] |
+| Multilevel | [Nebulex.Adapters.Multilevel][ma] | [nebulex_distributed][ma] |
+| Redis | [Nebulex.Adapters.Redis][nbx_redis] | [nebulex_redis_adapter][nbx_redis] |
+| Cachex | [Nebulex.Adapters.Cachex][nbx_cachex] | [nebulex_adapters_cachex][nbx_cachex] |
 
 [nil]: http://hexdocs.pm/nebulex/Nebulex.Adapters.Nil.html
 [la]: http://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.html

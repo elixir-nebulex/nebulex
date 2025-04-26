@@ -1,13 +1,13 @@
 # Getting started
 
-This guide is an introduction to [Nebulex](https://github.com/elixir-nebulex/nebulex),
-a local and distributed caching toolkit for Elixir. Nebulex API is pretty much
-inspired by [Ecto](https://github.com/elixir-ecto/ecto), taking advantage of
-its simplicity, flexibility and pluggable architecture. Same as Ecto,
-developers can provide their own cache (adapter) implementations.
+This guide is an introduction to [Nebulex][nbx_repo], a local and distributed
+caching toolkit for Elixir. Nebulex API is pretty much inspired by
+[Ecto](https://github.com/elixir-ecto/ecto), taking advantage of its simplicity,
+flexibility and pluggable architecture. Same as Ecto, developers can provide
+their own cache (adapter) implementations. In this guide, we're going to learn
+some basics about Nebulex, such as write, read and delete cache entries.
 
-In this guide, we're going to learn some basics about Nebulex, such as write,
-read and delete cache entries.
+[nbx_repo]: https://github.com/elixir-nebulex/nebulex
 
 ## Adding Nebulex to an application
 
@@ -18,7 +18,7 @@ mix new blog --sup
 ```
 
 The `--sup` option ensures that this application has
-[a supervision tree](http://elixir-lang.org/getting-started/mix-otp/supervisor-and-application.html),
+[a supervision tree](https://hexdocs.pm/elixir/supervisor-and-application.html),
 which will be needed by Nebulex later on.
 
 To add Nebulex to this application, there are a few steps that we need to take.
@@ -31,13 +31,13 @@ file to this:
 defp deps do
   [
     {:nebulex, "~> 3.0"},
-    #=> Use the official local cache adapter
+    # Use the official local cache adapter
     {:nebulex_local, "~> 3.0"},
-    #=> When using Caching decorators (recommended adding it)
+    # Required for caching decorators (recommended)
     {:decorator, "~> 1.4"},
-    #=> When using the Telemetry events (recommended adding it)
+    # Required for telemetry events (recommended)
     {:telemetry, "~> 1.0"},
-    #=> When using :shards as backend for local adapter
+    # Required for :shards backend in local adapter
     {:shards, "~> 1.1"}
   ]
 end
@@ -56,7 +56,7 @@ dependencies optional, including the adapters. For example:
     want to use `:shards` as the backend for partitioned ETS tables. In such a
     case, you have to add `:shards` to the dependency list.
 
-[nbx_caching]: http://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html
+[nbx_caching]: http://hexdocs.pm/nebulex/Nebulex.Caching.html
 [telemetry]: http://hexdocs.pm/nebulex/telemetry.html
 
 To install these dependencies, we will run this command:
@@ -231,7 +231,7 @@ false
 
 ## Retrieving entries
 
-Let’s start off with fetching data by the key, which is the most basic and
+Let's start off with fetching data by the key, which is the most basic and
 common operation to retrieve data from a cache.
 
 ```elixir
@@ -331,7 +331,7 @@ iex> Blog.Cache.incr!(:my_counter)
 
 ## Deleting entries
 
-We’ve now covered inserting, reading and updating entries. Now let's see how to
+We've now covered inserting, reading and updating entries. Now let's see how to
 delete an entry using Nebulex.
 
 ```elixir
@@ -637,19 +637,21 @@ iex> Blog.Cache.put("event_test_key", "event_testvalue")
 
 Nebulex provides the adapter `Nebulex.Adapters.Partitioned`, which allows to
 set up a partitioned cache topology. First of all, we need to add
-`:nebulex_distrubuted` to the dependencies in the `mix.exs`:
+`:nebulex_distributed` to the dependencies in the `mix.exs`:
 
 ```elixir
 defp deps do
   [
     {:nebulex, "~> 3.0"},
+    # Use the official local cache adapter
     {:nebulex_local, "~> 3.0"},
-    {:nebulex_distrubuted, "~> 3.0"},
-    #=> When using Caching decorators (recommended adding it)
+    # Use the official distributed cache adapters
+    {:nebulex_distributed, "~> 3.0"},
+    # Required for caching decorators (recommended)
     {:decorator, "~> 1.4"},
-    #=> When using the Telemetry events (recommended adding it)
+    # Required for telemetry events (recommended)
     {:telemetry, "~> 1.0"},
-    #=> When using :shards as backend for local adapter
+    # Required for :shards backend in local adapter
     {:shards, "~> 1.1"}
   ]
 end
@@ -726,13 +728,13 @@ iex> Blog.PartitionedCache.put("foo", "bar", timeout: 10)
 
 To learn more about how partitioned cache works, please check
 `Nebulex.Adapters.Partitioned` documentation, and also it is recommended see the
-[partitioned cache example](https://github.com/elixir-nebulex/nebulex_examples/tree/master/partitioned_cache)
+[partitioned cache example](https://github.com/elixir-nebulex/nebulex_examples/tree/main/partitioned_cache).
 
 ### Multilevel Cache
 
 Nebulex also provides the adapter `Nebulex.Adapters.Multilevel`, which allows to
 setup a multi-level caching hierarchy. The adapter is also included in the
-`:nebulex_distrubuted` dependency.
+`:nebulex_distributed` dependency.
 
 Let's set up the multilevel cache by using the `mix` task
 `mix nbx.gen.cache.multilevel`:
@@ -828,7 +830,7 @@ iex> Blog.NearCache.get!("foo")
 
 To learn more about how multilevel-cache works, please check
 `Nebulex.Adapters.Multilevel` documentation, and also it is recommended see the
-[near cache example](https://github.com/elixir-nebulex/nebulex_examples/tree/master/near_cache)
+[near cache example](https://github.com/elixir-nebulex/nebulex_examples/tree/main/near_cache).
 
 ## Next
 

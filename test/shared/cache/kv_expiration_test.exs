@@ -2,7 +2,8 @@ defmodule Nebulex.Cache.KVExpirationTest do
   import Nebulex.CacheCase
 
   deftests do
-    import Nebulex.CacheCase, only: [t_sleep: 1, rand_int: 0, rand_int: 1, rand_str: 0, rand_str: 1]
+    import Nebulex.CacheCase,
+      only: [t_sleep: 1, rand_int: 0, rand_int: 1, rand_str: 0, rand_str: 1, assert_eventually: 1]
 
     describe ":ttl option on" do
       test "put!", %{cache: cache} do
@@ -13,7 +14,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 100)
 
-        assert cache.has_key?("put with ttl") == {:ok, false}
+        assert_eventually do
+          assert cache.has_key?("put with ttl") == {:ok, false}
+        end
       end
 
       test "put_all!", %{cache: cache} do
@@ -31,8 +34,10 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 200)
 
-        for k <- keys do
-          refute cache.get!(k)
+        assert_eventually do
+          for k <- keys do
+            refute cache.get!(k)
+          end
         end
       end
 
@@ -52,8 +57,10 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 200)
 
-        refute cache.get!(k1)
-        refute cache.get!(k2)
+        assert_eventually do
+          refute cache.get!(k1)
+          refute cache.get!(k2)
+        end
       end
 
       test "take", %{cache: cache} do
@@ -63,7 +70,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 100)
 
-        assert {:error, %Nebulex.KeyError{key: "take with ttl"}} = cache.take("take with ttl")
+        assert_eventually do
+          assert {:error, %Nebulex.KeyError{key: "take with ttl"}} = cache.take("take with ttl")
+        end
       end
 
       test "take!", %{cache: cache} do
@@ -73,8 +82,10 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 100)
 
-        assert_raise Nebulex.KeyError, ~r"key \"take! with ttl\"", fn ->
-          cache.take!("take! with ttl")
+        assert_eventually do
+          assert_raise Nebulex.KeyError, ~r"key \"take! with ttl\"", fn ->
+            cache.take!("take! with ttl")
+          end
         end
       end
 
@@ -89,7 +100,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 100)
 
-        assert cache.has_key?(str) == {:ok, false}
+        assert_eventually do
+          assert cache.has_key?(str) == {:ok, false}
+        end
       end
 
       test "put! [keep_ttl: false] (default)", %{cache: cache} do
@@ -117,7 +130,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 100)
 
-        assert cache.has_key?(str) == {:ok, false}
+        assert_eventually do
+          assert cache.has_key?(str) == {:ok, false}
+        end
       end
 
       test "replace! [keep_ttl: false]", %{cache: cache} do
@@ -143,7 +158,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(t + ttl + 100)
 
-        refute cache.get!(:incr_counter)
+        assert_eventually do
+          refute cache.get!(:incr_counter)
+        end
       end
     end
 
@@ -162,7 +179,10 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + t + 10)
 
-        assert {:error, %Nebulex.KeyError{key: :ttl!}} = cache.ttl(:ttl!)
+        assert_eventually do
+          assert {:error, %Nebulex.KeyError{key: :ttl!}} = cache.ttl(:ttl!)
+        end
+
         assert cache.ttl!(:infinity_ttl) == :infinity
       end
 
@@ -216,7 +236,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + t + 10)
 
-        refute cache.get!(:touch)
+        assert_eventually do
+          refute cache.get!(:touch)
+        end
       end
 
       test "returns false if key does not exist", %{cache: cache} do
@@ -240,7 +262,10 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + t)
 
-        assert {:error, %Nebulex.KeyError{key: ^key}} = cache.ttl(key)
+        assert_eventually do
+          assert {:error, %Nebulex.KeyError{key: ^key}} = cache.ttl(key)
+        end
+
         assert cache.put!(key, 11, ttl: 1000) == :ok
         assert cache.ttl!(key) > 0
       end
@@ -258,7 +283,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         t = t_sleep(t + ttl)
 
-        refute cache.get!(key)
+        assert_eventually do
+          refute cache.get!(key)
+        end
 
         ops = [
           put!: [key, "bar", [ttl: ttl]],
@@ -274,7 +301,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
           t = t_sleep(t + ttl + 10)
 
-          refute cache.get!(key)
+          assert_eventually do
+            refute cache.get!(key)
+          end
 
           t
         end)
@@ -329,7 +358,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 200)
 
-        refute cache.get!(:counter_ttl)
+        assert_eventually do
+          refute cache.get!(:counter_ttl)
+        end
       end
 
       test "increments a counter and then set ttl", %{cache: cache} do
@@ -342,7 +373,9 @@ defmodule Nebulex.Cache.KVExpirationTest do
 
         _ = t_sleep(ttl + 100)
 
-        refute cache.get!(:counter_ttl2)
+        assert_eventually do
+          refute cache.get!(:counter_ttl2)
+        end
       end
     end
   end

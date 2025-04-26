@@ -14,7 +14,7 @@ defmodule Nebulex.Cache.QueryableExpirationTest do
         assert cache.get_all!(select: :key) |> :lists.usort() == keys
         assert cache.stream!(select: :key) |> Enum.to_list() |> :lists.usort() == keys
 
-        wait_until fn ->
+        assert_eventually do
           assert cache.get_all!(select: :key) |> :lists.usort() == [:exp1, :exp2]
 
           assert stream = cache.stream!(select: :key)
@@ -31,7 +31,7 @@ defmodule Nebulex.Cache.QueryableExpirationTest do
         assert cache.get_all!(in: keys, select: :key) |> :lists.usort() == keys
         assert cache.stream!(in: keys, select: :key) |> Enum.to_list() |> :lists.usort() == keys
 
-        wait_until fn ->
+        assert_eventually do
           assert cache.get_all!(in: keys, select: :key) |> :lists.usort() == [:exp_a, :exp_b]
 
           assert stream = cache.stream!(in: keys, select: :key)
@@ -47,7 +47,7 @@ defmodule Nebulex.Cache.QueryableExpirationTest do
         assert cache.delete_all!(in: [:del_exp_a]) == 1
         assert cache.count_all!() == 2
 
-        wait_until fn ->
+        assert_eventually do
           assert cache.get_all!(select: :key) |> :lists.usort() == [:del_exp_b]
         end
       end

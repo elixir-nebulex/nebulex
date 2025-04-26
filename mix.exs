@@ -16,12 +16,12 @@ defmodule Nebulex.MixProject do
       # Testing
       test_coverage: [tool: ExCoveralls, export: "test-coverage"],
       preferred_cli_env: [
-        check: :test,
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test,
-        "coveralls.json": :test
+        "coveralls.json": :test,
+        "test.ci": :test
       ],
 
       # Dialyzer
@@ -77,7 +77,8 @@ defmodule Nebulex.MixProject do
 
   defp aliases do
     [
-      check: [
+      bench: "run benchmarks/benchmark.exs",
+      "test.ci": [
         "deps.unlock --check-unused",
         "compile --warnings-as-errors",
         "format --check-formatted",
@@ -98,7 +99,8 @@ defmodule Nebulex.MixProject do
       links: %{
         "Changelog" => "#{@source_url}/blob/master/CHANGELOG.md",
         "GitHub" => @source_url
-      }
+      },
+      files: ~w(lib .formatter.exs mix.exs README* CHANGELOG* LICENSE*)
     ]
   end
 

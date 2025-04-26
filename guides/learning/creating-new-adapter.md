@@ -3,7 +3,7 @@
 This guide will walk you through creating a custom Nebulex adapter. We will
 start by creating a new project, making tests pass, and then implementing a
 simple in-memory adapter. It will be roughly based on
-[`NebulexRedisAdapter`](https://github.com/elixir-nebulex/nebulex_redis_adapter/)
+[`Nebulex.Adapters.Redis`](https://github.com/elixir-nebulex/nebulex_redis_adapter/)
 so you can consult this repo as an example.
 
 ## Mix Project

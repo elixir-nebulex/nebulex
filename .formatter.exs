@@ -32,7 +32,10 @@ locals_without_parens = [
   wait_until: 2,
   wait_until: 3,
   assert_error_module: 2,
-  assert_error_reason: 2
+  assert_error_reason: 2,
+  assert_eventually: 1,
+  assert_eventually: 2,
+  assert_eventually: 3
 ]
 
 [

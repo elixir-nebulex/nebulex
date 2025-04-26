@@ -1,32 +1,31 @@
 # Cache usage patterns with caching decorators
 
-There are several common access patterns when using a cache. **Nebulex**
-supports most of these patterns by means of
-[Nebulex.Caching.Decorators][nbx_caching].
+Nebulex supports several common cache access patterns via
+[caching decorators][nbx_caching].
 
 [nbx_caching]: http://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html
 
-> Most of the following documentation about caching patterns it based on
-  [EHCache Docs][EHCache]
+> The following documentation about caching patterns is based on
+> [EHCache Docs][EHCache]
 
-[EHCache]: https://github.com/ehcache/ehcache3/blob/master/docs/src/docs/asciidoc/user/caching-patterns.adoc
+[EHCache]: https://www.ehcache.org/documentation/3.10/caching-patterns.html
 
 ## Cache-aside
 
-With the cache-aside pattern, application code uses the cache directly.
+The cache-aside pattern involves direct cache usage in application code.
 
-This means that application code which accesses the system-of-record (SoR)
-should consult the cache first, and if the cache contains the data, then return
-the data directly from the cache, bypassing the SoR. Otherwise, the application
-code must fetch the data from the system-of-record, store the data in the cache,
-and then return it. When data is written, the cache must be updated along with
-the system-of-record.
+When accessing the system-of-record (SoR), the application first checks the
+cache. If the data exists in the cache, it's returned directly, bypassing the
+SoR. Otherwise, the application fetches the data from the SoR, stores it in the
+cache, and then returns it. When writing data, both the cache and SoR must be
+updated.
 
 ### Reading values
 
 ```elixir
-with {:error, _reason_} <- MyCache.fetch(key) do
-  value = SoR.get(key) # maybe Ecto.Repo
+# Check cache first, then fall back to SoR
+with {:error, _reason} <- MyCache.fetch(key) do
+  value = SoR.get(key)  # e.g., Ecto.Repo
   MyCache.put(key, value)
   value
 end
@@ -35,18 +34,17 @@ end
 ### Writing values
 
 ```elixir
+# Update both cache and SoR
 MyCache.put(key, value)
-SoR.insert(key, value) # maybe Ecto.Repo
+SoR.insert(key, value)  # e.g., Ecto.Repo
 ```
 
-As you may have noticed, this is the default behavior for most of the caches,
-we have to interact directly with the cache as well as the SoR (most likely the
-Database).
+This is the default behavior for most caches, requiring direct interaction with
+both the cache and the SoR (typically a database).
 
 ## Cache-as-SoR
 
-The cache-as-SoR pattern implies using the cache as though it were the
-primary system-of-record (SoR).
+The cache-as-SoR pattern uses the cache as the primary system-of-record (SoR).
 
 The pattern delegates SoR reading and writing activities to the cache, so that
 application code is (at least directly) absolved of this responsibility.

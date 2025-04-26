@@ -87,6 +87,29 @@ defmodule Nebulex.CacheCase do
   end
 
   @doc false
+  defmacro assert_eventually(retries \\ 50, delay \\ 100, expr) do
+    quote do
+      unquote(__MODULE__).wait_until(unquote(retries), unquote(delay), fn ->
+        unquote(expr)
+      end)
+    end
+  end
+
+  @doc false
+  def wait_until(retries \\ 50, delay \\ 100, fun)
+
+  def wait_until(1, _delay, fun), do: fun.()
+
+  def wait_until(retries, delay, fun) when retries > 1 do
+    fun.()
+  rescue
+    _ ->
+      :ok = Process.sleep(delay)
+
+      wait_until(retries - 1, delay, fun)
+  end
+
+  @doc false
   def t_sleep(timeout) do
     if Application.get_env(:nebulex, :sleep_mock, false) do
       Nebulex.Time
@@ -124,20 +147,6 @@ defmodule Nebulex.CacheCase do
 
       safe_stop(pid)
     end
-  end
-
-  @doc false
-  def wait_until(retries \\ 50, delay \\ 100, fun)
-
-  def wait_until(1, _delay, fun), do: fun.()
-
-  def wait_until(retries, delay, fun) when retries > 1 do
-    fun.()
-  rescue
-    _ ->
-      :ok = Process.sleep(delay)
-
-      wait_until(retries - 1, delay, fun)
   end
 
   @doc false

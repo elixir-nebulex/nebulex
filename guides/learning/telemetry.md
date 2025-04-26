@@ -1,52 +1,54 @@
 # Telemetry
 
-This guide is not focused on explaining `:telemetry` itself, how it works, how
-to configure it, and so on. Instead, we will show you how to instrument and
-report on Cache Telemetry events in your application when using Nebulex.
-
-For more information about `:telemetry`, you can check the
-[documentation][telemetry], or the [Phoenix Telemetry][phx_telemetry]
-guide is also recommended.
+This guide explains how to instrument and monitor cache telemetry events in your
+Nebulex application. For general information about `:telemetry`, see the
+[official documentation][telemetry] or the [Phoenix Telemetry guide][phx_telemetry].
 
 [telemetry]: https://github.com/beam-telemetry/telemetry
 [phx_telemetry]: https://hexdocs.pm/phoenix/telemetry.html
 
 ## Telemetry Events
 
-Many Elixir libraries (including Nebulex) are already using the `:telemetry`
-package as a way to give users more insight into the behavior of their
-applications, by emitting events at key moments in the application lifecycle.
+Many Elixir libraries, including Nebulex, use `:telemetry` to provide insights
+into application behavior by emitting events at key lifecycle moments.
 
-See ["Telemetry Events"][nbx_telemetry_events] documentation for more
-information about the emitted events, their measurements, and metadata.
+For detailed information about emitted events, measurements, and metadata, see
+the [Telemetry Events documentation][nbx_telemetry_events].
 
 [nbx_telemetry_events]: https://hexdocs.pm/nebulex/Nebulex.Cache.html#module-telemetry-events
 
 ## Nebulex Metrics
 
 Assuming you have defined the cache `MyApp.Cache` with the default
-`:telemetry_prefix` (`[:my_app, :cache]`), using `Telemetry.Metrics`,
-you can define a counter metric, which counts how many cache commands
-were completed:
+`:telemetry_prefix` (`[:my_app, :cache]`), you can use `Telemetry.Metrics`
+to define various metrics.
+
+### Counter Metric
+
+Count the number of completed cache commands:
 
 ```elixir
 Telemetry.Metrics.counter("my_app.cache.command.stop.duration")
 ```
 
-or you could use a distribution metric to see how many commands were completed
-in particular time buckets:
+### Distribution Metric
+
+Track command completion times in specific buckets:
 
 ```elixir
 Telemetry.Metrics.distribution(
   "my_app.cache.command.stop.duration",
-  buckets: [100, 200, 300]
+  buckets: [100, 200, 300]  # Duration in milliseconds
 )
 ```
 
-So far, these metrics are only helpful to be able to see just the total number
-of executed cache commands. What if you wanted to see the average command
-duration, minimum and maximum, or percentiles, but aggregated per command
-or callback name? In this case, one could define a summary metric like so:
+### Summary Metric
+
+For more detailed analysis, you can define a summary metric to track:
+- Average command duration
+- Minimum and maximum execution times
+- Percentiles
+- Aggregation by command or callback name
 
 ```elixir
 Telemetry.Metrics.summary(

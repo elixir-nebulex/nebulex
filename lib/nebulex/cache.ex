@@ -54,7 +54,7 @@ defmodule Nebulex.Cache do
 
   ## Telemetry events
 
-  There are two types of telemetry events. The emitted by Nebulex and the ones
+  There are two types of telemetry events. The ones emitted by Nebulex and the ones
   that are adapter specific. The ones emitted by Nebulex are divided into two
   categories: cache lifecycle events and cache command events. Let us take a
   closer look at each of them.
@@ -86,17 +86,26 @@ defmodule Nebulex.Cache do
               [:my_app, :cache, :command, event],
               measurements,
               metadata,
-              config
+              _config
             ) do
           case event do
             :start ->
               # Handle start event ...
+              IO.puts("Cache command started: \#{inspect(metadata.command)}")
+              IO.puts("Arguments: \#{inspect(metadata.args)}")
 
             :stop ->
               # Handle stop event ...
+              duration = measurements.duration
+              IO.puts("Cache command completed: \#{inspect(metadata.command)}")
+              IO.puts("Duration: \#{duration} native units")
+              IO.puts("Result: \#{inspect(metadata.result)}")
 
             :exception ->
               # Handle exception event ...
+              IO.puts("Cache command failed: \#{inspect(metadata.command)}")
+              IO.puts("Error: \#{inspect(metadata.reason)}")
+              IO.puts("Stacktrace: \#{inspect(metadata.stacktrace)}")
           end
         end
       end
@@ -140,6 +149,18 @@ defmodule Nebulex.Cache do
     * `:extra_metadata` - Additional metadata through the runtime option
       `:telemetry_metadata.`
 
+  Example event data:
+
+      %{
+        measurements: %{system_time: 1_678_123_456_789},
+        metadata: %{
+          adapter_meta: %{...},
+          command: :put,
+          args: ["key", "value", [ttl: :timer.seconds(10)]],
+          extra_metadata: %{user_id: 123}
+        }
+      }
+
   #### `[:my_app, :cache, :command, :stop]`
 
   This event is emitted after a cache command is executed.
@@ -160,6 +181,19 @@ defmodule Nebulex.Cache do
     * `:extra_metadata` - Additional metadata through the runtime option
       `:telemetry_metadata.`
     * `:result` - The command's result.
+
+  Example event data:
+
+      %{
+        measurements: %{duration: 1_234_567},
+        metadata: %{
+          adapter_meta: %{...},
+          command: :put,
+          args: ["key", "value", [ttl: :timer.seconds(10)]],
+          extra_metadata: %{user_id: 123},
+          result: :ok
+        }
+      }
 
   #### `[:my_app, :cache, :command, :exception]`
 
@@ -184,6 +218,21 @@ defmodule Nebulex.Cache do
     * `:kind` - The type of the error: `:error`, `:exit`, or `:throw`.
     * `:reason` - The reason of the error.
     * `:stacktrace` - Exception's stack trace.
+
+  Example event data:
+
+      %{
+        measurements: %{duration: 1_234_567},
+        metadata: %{
+          adapter_meta: %{...},
+          command: :put,
+          args: ["key", "value", [ttl: :timer.seconds(10)]],
+          extra_metadata: %{user_id: 123},
+          kind: :error,
+          reason: %Nebulex.KeyError{key: "key", reason: :not_found},
+          stacktrace: [...]
+        }
+      }
 
   ### Adapter-specific events
 
@@ -711,6 +760,7 @@ defmodule Nebulex.Cache do
       iex> MyCache.fetch("foo")
       {:ok, "bar"}
 
+      # Key not found error
       iex> {:error, %Nebulex.KeyError{key: "bar"} = e} = MyCache.fetch("bar")
       iex> e.reason
       :not_found
@@ -781,9 +831,9 @@ defmodule Nebulex.Cache do
       :ok
       iex> MyCache.get("foo")
       {:ok, "bar"}
-      iex> MyCache.get(:inexistent)
+      iex> MyCache.get(:nonexistent)
       {:ok, nil}
-      iex> MyCache.get(:inexistent, :default)
+      iex> MyCache.get(:nonexistent, :default)
       {:ok, :default}
 
   """
@@ -841,7 +891,7 @@ defmodule Nebulex.Cache do
 
   Putting entries with specific time-to-live:
 
-      iex> MyCache.put("foo", "bar", ttl: 10_000)
+      iex> MyCache.put("foo", "bar", ttl: :timer.seconds(10))
       :ok
       iex> MyCache.put("foo", "bar", ttl: :timer.hours(1))
       :ok
@@ -910,7 +960,7 @@ defmodule Nebulex.Cache do
 
       iex> MyCache.put_new("foo", "bar")
       {:ok, true}
-      iex> MyCache.put_new("foo", "bar", ttt: :timer.hours(1))
+      iex> MyCache.put_new("foo", "bar", ttl: :timer.hours(1))
       {:ok, false}
 
   """
@@ -928,7 +978,7 @@ defmodule Nebulex.Cache do
 
       iex> MyCache.put_new(MyCache1, "foo", "bar", [])
       {:ok, true}
-      iex> MyCache.put_new(MyCache1, "foo", "bar", ttt: :timer.hours(1))
+      iex> MyCache.put_new(MyCache1, "foo", "bar", ttl: :timer.hours(1))
       {:ok, false}
 
   """
@@ -942,7 +992,7 @@ defmodule Nebulex.Cache do
 
       iex> MyCache.put_new!("foo", "bar")
       true
-      iex> MyCache.put_new!("foo", "bar", ttt: :timer.hours(1))
+      iex> MyCache.put_new!("foo", "bar", ttl: :timer.hours(1))
       false
 
   """
@@ -983,7 +1033,7 @@ defmodule Nebulex.Cache do
 
   Update current value and TTL:
 
-      iex> MyCache.replace("foo", "bar3", ttl: 10_000)
+      iex> MyCache.replace("foo", "bar3", ttl: :timer.seconds(10))
       {:ok, true}
 
   To keep the current TTL:
@@ -1142,7 +1192,7 @@ defmodule Nebulex.Cache do
 
       iex> MyCache.put_new_all(MyCache1, [apples: 3, bananas: 1], [])
       {:ok, true}
-      iex> MyCache.put_new_all(MyCache1, %{apples: 3, oranges: 1}, ttl: 10_000)
+      iex> MyCache.put_new_all(MyCache1, %{apples: 3, oranges: 1}, ttl: :timer.seconds(10))
       {:ok, false}
 
   """
@@ -1188,7 +1238,7 @@ defmodule Nebulex.Cache do
       :ok
       iex> MyCache.get!(:a)
       nil
-      iex> MyCache.delete(:inexistent)
+      iex> MyCache.delete(:nonexistent)
       :ok
 
   """
@@ -1353,7 +1403,7 @@ defmodule Nebulex.Cache do
 
   ## Examples
 
-      iex> MyCache.put(:a, 1, ttl: 5000)
+      iex> MyCache.put(:a, 1, ttl: :timer.seconds(5))
       :ok
       iex> MyCache.put(:b, 2)
       :ok
@@ -1379,7 +1429,7 @@ defmodule Nebulex.Cache do
 
   ## Examples
 
-      iex> MyCache.put(:a, 1, ttl: 5000)
+      iex> MyCache.put(:a, 1, ttl: :timer.seconds(5))
       :ok
       iex> MyCache.ttl(MyCache1, :a, [])
       {:ok, _remaining_ttl}
@@ -1393,7 +1443,7 @@ defmodule Nebulex.Cache do
 
   ## Examples
 
-      iex> MyCache.put(:a, 1, ttl: 5000)
+      iex> MyCache.put(:a, 1, ttl: :timer.seconds(5))
       :ok
       iex> MyCache.ttl!(:a)
       _remaining_ttl
@@ -1563,7 +1613,7 @@ defmodule Nebulex.Cache do
       {:ok, 12}
 
       # Initialize the counter with a TTL
-      iex> MyCache.incr(:new_counter, 10, ttl: 1000)
+      iex> MyCache.incr(:new_counter, 10, ttl: :timer.seconds(1))
       {:ok, 10}
 
   """
@@ -2229,7 +2279,7 @@ defmodule Nebulex.Cache do
       iex> Enum.to_list(stream)
       [1, 2, 3]
 
-  Stream only the resquested keys (lazy bulk-fetch):
+  Stream only the requested keys (lazy bulk-fetch):
 
       iex> {:ok, stream} = MyCache.stream(in: [:a, :b, :d])
       iex> Enum.to_list(stream)

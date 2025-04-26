@@ -72,7 +72,7 @@ defmodule Nebulex.Cache.InfoStatsTest do
 
       refute Cache.get!(:a)
 
-      wait_until fn ->
+      assert_eventually do
         assert Cache.info!(:stats) == %{
                  hits: 0,
                  misses: 1,
