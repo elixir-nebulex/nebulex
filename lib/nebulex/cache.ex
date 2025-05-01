@@ -124,7 +124,7 @@ defmodule Nebulex.Cache do
         :no_config
       )
 
-  See the [telemetry documentation](http://hexdocs.pm/nebulex/telemetry.html)
+  See the [telemetry documentation](http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html)
   for more information.
 
   The following are the events you should expect from Nebulex. All examples

@@ -21,14 +21,14 @@ defmodule Nebulex do
       patterns such as **Read-through**, **Write-through**, **Cache-as-SoR**,
       etc. See the [Cache Usage Patterns][cache-patterns] guide.
 
-  [cache-patterns]: http://hexdocs.pm/nebulex/cache-usage-patterns.html
+  [cache-patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.1/cache-usage-patterns.html
 
   The following sections will provide an overview of those components and their
   usage. Feel free to access their respective module documentation for more
   specific examples, options, and configurations.
 
   If you want to check a sample application using Nebulex quickly, please check
-  the [getting started guide](http://hexdocs.pm/nebulex/getting-started.html).
+  the [getting started guide](http://hexdocs.pm/nebulex/3.0.0-rc.1/getting-started.html).
 
   ## Caches
 
@@ -74,7 +74,7 @@ defmodule Nebulex do
 
   ## Declarative decorator-based caching
 
-  See [Nebulex.Caching](http://hexdocs.pm/nebulex/Nebulex.Caching.html).
+  See [Nebulex.Caching](http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.html).
   """
 
   ## API

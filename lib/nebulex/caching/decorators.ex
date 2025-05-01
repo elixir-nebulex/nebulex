@@ -130,7 +130,7 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     > See ["Dynamic caches"][dynamic-caches] for more information.
 
-    [dynamic-caches]: http://hexdocs.pm/nebulex/Nebulex.Cache.html#module-dynamic-caches
+    [dynamic-caches]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Cache.html#module-dynamic-caches
 
     ### Anonymous function
 
@@ -459,7 +459,7 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Further readings
 
-      * [Cache Usage Patterns Guide](http://hexdocs.pm/nebulex/cache-usage-patterns.html).
+      * [Cache Usage Patterns Guide](http://hexdocs.pm/nebulex/3.0.0-rc.1/cache-usage-patterns.html).
 
     """
 

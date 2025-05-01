@@ -15,7 +15,7 @@ into application behavior by emitting events at key lifecycle moments.
 For detailed information about emitted events, measurements, and metadata, see
 the [Telemetry Events documentation][nbx_telemetry_events].
 
-[nbx_telemetry_events]: http://hexdocs.pm/nebulex/Nebulex.Cache.html#module-telemetry-events
+[nbx_telemetry_events]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Cache.html#module-telemetry-events
 
 ## Nebulex Metrics
 

@@ -3,7 +3,7 @@
 Nebulex supports several common cache access patterns via
 [caching decorators][nbx_caching].
 
-[nbx_caching]: http://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html
+[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.Decorators.html
 
 > The following documentation about caching patterns is based on
 > [EHCache Docs][EHCache]

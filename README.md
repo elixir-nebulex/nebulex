@@ -119,8 +119,12 @@ iex> MyApp.Cache.fetch("foo")
 {:ok, "bar"}
 ```
 
-For more detailed information, see the [getting started guide][getting_started]
-and [online documentation][docs].
+For more detailed information, see the
+[getting started guide][getting_started-rc1] and
+[online documentation][docs-rc1].
+
+[getting_started-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.1/getting-started.html
+[docs-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.html
 
 ## A quickstart example using caching decorators
 
