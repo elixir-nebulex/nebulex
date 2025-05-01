@@ -3,10 +3,10 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   nebulex_test:
@@ -18,32 +18,28 @@ jobs:
     strategy:
       matrix:
         include:
-          - elixir: 1.17.x
+          - elixir: 1.18.x
             otp: 27.x
             os: 'ubuntu-latest'
+            lint: true
             style: true
             coverage: true
             sobelow: true
             dialyzer: true
-            doctor: true
+            docs: true
           - elixir: 1.17.x
-            otp: 26.x
+            otp: 27.x
             os: 'ubuntu-latest'
-          - elixir: 1.16.x
-            otp: 26.x
-            os: 'ubuntu-latest'
-          - elixir: 1.15.x
+          - elixir: 1.17.x
             otp: 25.x
             os: 'ubuntu-latest'
           - elixir: 1.14.x
             otp: 24.x
             os: 'ubuntu-latest'
-          - elixir: 1.12.x
-            otp: 23.x
-            os: 'ubuntu-20.04'
 
     env:
       GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+      CODECOV_TOKEN: '${{ secrets.CODECOV_TOKEN }}'
       MIX_ENV: test
 
     steps:
@@ -83,29 +79,40 @@ jobs:
           mix deps.get
         if: ${{ steps.mix-cache.outputs.cache-hit != 'true' }}
 
-      - name: Compile code
+      - name: Compile deps
+        run: mix deps.compile
+
+      - name: Check unused dependencies
+        run: mix deps.unlock --check-unused
+        if: ${{ matrix.lint }}
+
+      - name: Compile lint
         run: mix compile --warnings-as-errors
+        if: ${{ matrix.lint }}
 
       - name: Run style and code consistency checks
         run: |
           mix format --check-formatted
           mix credo --strict
-        if: ${{ matrix.style }}
+        if: ${{ matrix.lint }}
 
       - name: Run tests
-        run: |
-          epmd -daemon
-          mix test --trace
+        run: mix test
         if: ${{ !matrix.coverage }}
 
       - name: Run tests with coverage
-        run: |
-          epmd -daemon
-          mix coveralls.github
+        run: mix coveralls.json
+        if: ${{ matrix.coverage }}
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          flags: unittests-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}
         if: ${{ matrix.coverage }}
 
       - name: Run sobelow
-        run: mix sobelow --exit --skip
+        run: mix sobelow --skip --exit Low
         if: ${{ matrix.sobelow }}
 
       - name: Restore PLT Cache
@@ -113,7 +120,7 @@ jobs:
         id: plt-cache
         with:
           path: priv/plts
-          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-v1
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-v3-1
         if: ${{ matrix.dialyzer }}
 
       - name: Create PLTs
@@ -126,10 +133,6 @@ jobs:
         run: mix dialyzer --format github
         if: ${{ matrix.dialyzer && steps.plt-cache.outputs.cache-hit != 'true' }}
 
-      - name: Doc coverage report
-        run: MIX_ENV=docs mix inch.report
-        if: ${{ matrix.inch-report }}
-
       - name: Run documentation health check
         run: mix doctor
-        if: ${{ matrix.doctor }}
+        if: ${{ matrix.docs }}
