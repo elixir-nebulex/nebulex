@@ -350,7 +350,7 @@ defmodule Nebulex.CachingTest do
 
     test "returns referenced key by calling referenced cache" do
       # Expected values
-      referenced_key = keyref "referenced_id", cache: YetAnotherCache, ttl: 5000
+      referenced_key = keyref "referenced_id", cache: YetAnotherCache, ttl: :timer.seconds(5)
       result = %{id: "referenced_id", name: "referenced_name"}
 
       assert_common_references_flow(

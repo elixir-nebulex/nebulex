@@ -37,7 +37,7 @@ defmodule Nebulex.Cache do
 
   #{Nebulex.Cache.Options.start_link_options_docs()}
 
-  [local_adapter]: https://hexdocs.pm/nebulex/Nebulex.Adapters.Local.html
+  [local_adapter]: http://hexdocs.pm/nebulex_local/3.0.0-rc.1/Nebulex.Adapters.Local.html
 
   ## Shared options
 
@@ -54,10 +54,10 @@ defmodule Nebulex.Cache do
 
   ## Telemetry events
 
-  There are two types of telemetry events. The ones emitted by Nebulex and the ones
-  that are adapter specific. The ones emitted by Nebulex are divided into two
-  categories: cache lifecycle events and cache command events. Let us take a
-  closer look at each of them.
+  There are two types of telemetry events. The ones emitted by Nebulex and the
+  ones that are adapter specific. The ones emitted by Nebulex are divided into
+  two categories: cache lifecycle events and cache command events. Let us take
+  a closer look at each of them.
 
   ### Cache lifecycle events
 
@@ -124,7 +124,7 @@ defmodule Nebulex.Cache do
         :no_config
       )
 
-  See the [telemetry documentation](https://hexdocs.pm/telemetry/)
+  See the [telemetry documentation](http://hexdocs.pm/nebulex/telemetry.html)
   for more information.
 
   The following are the events you should expect from Nebulex. All examples

@@ -8,10 +8,10 @@
 
 ---
 
-![CI](https://github.com/elixir-nebulex/nebulex/workflows/CI/badge.svg)
-[![Codecov](https://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)](https://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)
-[![Hex.pm](https://img.shields.io/hexpm/v/nebulex.svg)](https://hex.pm/packages/nebulex)
-[![Documentation](https://img.shields.io/badge/Documentation-ff69b4)](https://hexdocs.pm/nebulex)
+![CI](http://github.com/elixir-nebulex/nebulex/workflows/CI/badge.svg)
+[![Codecov](http://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)](http://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)
+[![Hex.pm](http://img.shields.io/hexpm/v/nebulex.svg)](http://hex.pm/packages/nebulex)
+[![Documentation](http://img.shields.io/badge/Documentation-ff69b4)](http://hexdocs.pm/nebulex)
 
 ## About
 
@@ -32,8 +32,8 @@ among others.
 [cachex]: https://github.com/whitfin/cachex
 [redis]: https://redis.io/
 [memcached]: https://memcached.org/
-[nbx_caching]: http://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html
-[cache_patterns]: http://hexdocs.pm/nebulex/cache-usage-patterns.html
+[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.Decorators.html
+[cache_patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.1/cache-usage-patterns.html
 [cache_topologies]: https://docs.oracle.com/en/middleware/fusion-middleware/coherence/14.1.2/develop-applications/introduction-coherence-caches.html
 
 ---
@@ -70,7 +70,7 @@ end
 > For more information about available adapters, check out the
 > [Nebulex adapters][nbx_adapters] guide.
 
-[nbx_adapters]: http://hexdocs.pm/nebulex/nbx-adapters.html
+[nbx_adapters]: http://hexdocs.pm/nebulex/3.0.0-rc.1/nbx-adapters.html
 
 To give more flexibility and load only needed dependencies, Nebulex makes all
 dependencies optional. For example:
@@ -82,7 +82,7 @@ dependencies optional. For example:
     `:telemetry` to the dependency list (recommended adding it).
     See [telemetry guide][telemetry].
 
-[telemetry]: http://hexdocs.pm/nebulex/telemetry.html
+[telemetry]: http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html
 
 Then run `mix deps.get` in your shell to fetch the dependencies. If you want to
 use another cache adapter, just choose the proper dependency from the table
@@ -214,7 +214,7 @@ end
 * [Getting Started][getting_started] - Learn how to set up and use Nebulex
 * [Documentation][docs] - Complete API reference
 * [Examples][examples] - Example applications
-* [Upgrading to v3.0](http://hexdocs.pm/nebulex/v3-0.html) - Migration guide for v3.0
+* [Upgrading to v3.0](http://hexdocs.pm/nebulex/3.0.0-rc.1/v3-0.html) - Migration guide for v3.0
 
 [examples]: https://github.com/elixir-nebulex/nebulex_examples
 

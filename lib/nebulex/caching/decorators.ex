@@ -130,7 +130,7 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     > See ["Dynamic caches"][dynamic-caches] for more information.
 
-    [dynamic-caches]: https://hexdocs.pm/nebulex/Nebulex.Cache.html#module-dynamic-caches
+    [dynamic-caches]: http://hexdocs.pm/nebulex/Nebulex.Cache.html#module-dynamic-caches
 
     ### Anonymous function
 
@@ -1386,7 +1386,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         block_fun,
         fn value ->
           with false <- do_eval_cache_put(ref_cache, ref_key, value, opts, on_error, match) do
-            # The match returned `false`, remove the reference's parent key
+            # The match returned `false`, remove the parent's key reference
             _ = do_apply(cache, :delete, [key])
 
             false
@@ -1395,7 +1395,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         fn value ->
           case eval_function(match, value) do
             false ->
-              # Remove the reference's parent key
+              # Remove the parent's key reference
               _ = do_apply(cache, :delete, [key])
 
               block_fun.()

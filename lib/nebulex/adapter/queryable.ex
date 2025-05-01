@@ -58,7 +58,7 @@ defmodule Nebulex.Adapter.Queryable do
 
   See [Nebulex.Cache.get_all/2 options][get_all_opts] for the possible values.
 
-  [get_all_opts]: https://hexdocs.pm/nebulex/Nebulex.Cache.html#c:get_all/2-options
+  [get_all_opts]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Cache.html#c:get_all/2-options
   """
   @type query_meta() :: %{
           op: :get_all | :count_all | :delete_all,

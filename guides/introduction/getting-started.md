@@ -56,8 +56,8 @@ dependencies optional, including the adapters. For example:
     want to use `:shards` as the backend for partitioned ETS tables. In such a
     case, you have to add `:shards` to the dependency list.
 
-[nbx_caching]: http://hexdocs.pm/nebulex/Nebulex.Caching.html
-[telemetry]: http://hexdocs.pm/nebulex/telemetry.html
+[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.html
+[telemetry]: http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html
 
 To install these dependencies, we will run this command:
 
@@ -836,4 +836,4 @@ To learn more about how multilevel-cache works, please check
 
 * [Decorators-based DSL for cache usage patterns][cache-usage-patterns].
 
-[cache-usage-patterns]: http://hexdocs.pm/nebulex/cache-usage-patterns.html
+[cache-usage-patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.1/cache-usage-patterns.html

@@ -14,7 +14,7 @@ Nebulex also provides a simple implementation
 handler to aggregate the stats and keep them updated, therefore, it requires
 `:telemetry` to be available.
 
-[nbx_common_info]: https://hexdocs.pm/nebulex/Nebulex.Adapters.Common.Info.html
+[nbx_common_info]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Adapters.Common.Info.html
 
 ## Usage
 
