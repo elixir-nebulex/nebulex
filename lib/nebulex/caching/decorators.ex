@@ -777,7 +777,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     option `:key` to the user's ID, without specifying multiple keys like in the
     previous case. However, there is a caveat: _"the `cache_evict` decorator
     doesn't evict the references automatically"_. See the
-    ["CAVEATS"](#cacheable/3-caveats) section below.
+    ["CAVEATS"](#cacheable/3-caveats-about-references) section below.
 
     ### The `match` function on references
 
