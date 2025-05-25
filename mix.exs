@@ -60,7 +60,7 @@ defmodule Nebulex.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:stream_data, "~> 1.2", only: [:dev, :test]},
       {:mimic, "~> 1.11", only: :test},
       {:doctor, "~> 0.22", only: [:dev, :test]},
@@ -70,7 +70,7 @@ defmodule Nebulex.MixProject do
       {:benchee_html, "~> 1.0", only: [:dev, :test]},
 
       # Docs
-      {:ex_doc, "~> 0.37", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false},
       {:makeup_diff, "~> 0.1", only: [:dev, :test], runtime: false}
     ]
   end

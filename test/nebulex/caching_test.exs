@@ -339,6 +339,31 @@ defmodule Nebulex.CachingTest do
       assert_common_references_flow("referenced_id", referenced_key, result, &get_with_keyref/1)
     end
 
+    test "returns nil" do
+      default = make_ref()
+      referenced_key = keyref nil
+
+      assert Cache.get!("nil", default) == default
+      assert Cache.get!(nil, default) == default
+
+      assert get_with_keyref("nil") == nil
+
+      assert Cache.get!("nil", default) == referenced_key
+      assert Cache.get!(nil, default) == nil
+    end
+
+    test "returns nil without storing it in the cache" do
+      default = make_ref()
+
+      assert Cache.get!("nil", default) == default
+      assert Cache.get!(nil, default) == default
+
+      assert get_with_keyref_match("nil") == nil
+
+      assert Cache.get!("nil", default) == default
+      assert Cache.get!(nil, default) == default
+    end
+
     test "returns referenced key by calling function with context" do
       # Expected values
       key = :erlang.phash2({"referenced_id", ["referenced_name"]})
@@ -1072,9 +1097,22 @@ defmodule Nebulex.CachingTest do
 
   ## Key references
 
-  @decorate cacheable(key: name, references: & &1.id)
+  @decorate cacheable(key: name, references: &(&1 && &1.id))
   def get_with_keyref(name) do
-    %{id: "referenced_id", name: name}
+    if name == "nil" do
+      nil
+    else
+      %{id: "referenced_id", name: name}
+    end
+  end
+
+  @decorate cacheable(key: name, references: &(&1 && &1.id), match: &(&1 != nil))
+  def get_with_keyref_match(name) do
+    if name == "nil" do
+      nil
+    else
+      %{id: "referenced_id", name: name}
+    end
   end
 
   @decorate cacheable(key: name, references: &:erlang.phash2({&1.id, &2.args}))
