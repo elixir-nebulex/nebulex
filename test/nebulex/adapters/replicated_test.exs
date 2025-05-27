@@ -219,6 +219,42 @@ defmodule Nebulex.Adapters.ReplicatedTest do
         :ok = stop_caches(node_pid_list)
       end)
     end
+
+    test "cache data is not lost when multiple nodes join sequentially" do
+      # Start with existing nodes
+      assert Replicated.put(:a, 1) == :ok
+      assert Replicated.get(:a) == 1
+
+      # Add node 3
+      node3 = [:"node3@127.0.0.1"]
+      pids = start_caches(node3, [{Replicated, [name: @cache_name]}])
+
+      wait_until(fn ->
+        assert Replicated.nodes() |> :lists.usort() == :lists.usort(cluster_nodes() ++ node3)
+      end)
+
+      # Verify :a is still there on all nodes
+      wait_until(10, 1000, fn ->
+        assert_for_all_replicas(Replicated, :get, [:a], 1)
+      end)
+
+      # Add node 4
+      node4 = [:"node4@127.0.0.1"]
+      pids = pids ++ start_caches(node4, [{Replicated, [name: @cache_name]}])
+
+      wait_until(fn ->
+        assert Replicated.nodes() |> :lists.usort() ==
+                 :lists.usort(cluster_nodes() ++ node3 ++ node4)
+      end)
+
+      # Now check that data is still present
+      wait_until(10, 1000, fn ->
+        assert_for_all_replicas(Replicated, :get, [:a], 1)
+      end)
+
+      # Clean up
+      :ok = stop_caches(pids)
+    end
   end
 
   describe "write-like operations locked" do

@@ -755,20 +755,15 @@ defmodule Nebulex.Adapters.Replicated.Bootstrap do
 
       nodes ->
         # Sync process:
-        # 1. Push a new generation on all cluster nodes to make the newer one
-        #    empty.
-        # 2. Copy cached data from one of the cluster nodes; entries will be
-        #    streamed from the older generation since the newer one should be
-        #    empty.
-        # 3. Push a new generation on the current/new node to make it a mirror
-        #    of the other cluster nodes.
-        # 4. Reset GC timer for ell cluster nodes (making the generation timer
-        #    gap among cluster nodes as small as possible).
-        with :ok <- maybe_run_on_nodes(adapter_meta, nodes, :new_generation),
-             :ok <- copy_entries_from_nodes(adapter_meta, nodes),
-             :ok <- maybe_run_on_nodes(adapter_meta, [node()], :new_generation) do
-          maybe_run_on_nodes(adapter_meta, nodes, :reset_generation_timer)
-        end
+        #
+        # 1. Copy cached data from existing cluster nodes to the joining node.
+        #    At this point, both the newer and older generations are still present,
+        #    so data may be copied from both, ensuring no data is lost due to premature
+        #    generation rotation.
+        # 2. Reset the generation GC timer on all nodes to synchronize their GC intervals,
+        #    minimizing timer gaps and ensuring consistent generation rotation across the cluster.
+        :ok = copy_entries_from_nodes(adapter_meta, nodes)
+        maybe_run_on_nodes(adapter_meta, cluster_nodes, :reset_generation_timer)
     end
   end
 
