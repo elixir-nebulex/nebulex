@@ -126,16 +126,14 @@ defmodule Nebulex.Caching.Options do
       ```elixir
       def default_match({:error, _}), do: false
       def default_match(:error), do: false
+      def default_match(nil), do: false
       def default_match(_other), do: true
       ```
 
       By default, if the evaluation of the decorated function returns any of the
-      following terms/values `:error` or `{:error, term}`, the default match
-      function returns `false` (cache nothing). Otherwise, `true` is returned
-      (the value is cached). Remember that the default match function may store
-      a `nil` value if the decorated function returns it. If you don't want to
-      cache `nil` values or, in general, desire a different behavior, you should
-      provide another match function to meet your requirements.
+      following terms/values `{:error, term}`, `:error`, or `nil`, the default
+      match function returns `false` (cache nothing). Otherwise, `true` is
+      returned (the value is cached).
 
       If configured, it overrides the global value (if any) defined when using
       `use Nebulex.Caching, match: &MyApp.match/1`.
@@ -173,20 +171,19 @@ defmodule Nebulex.Caching.Options do
   # cacheable options
   cacheable_opts = [
     references: [
-      type: {:or, [{:fun, 1}, {:fun, 2}, nil, :any]},
+      type: {:or, [{:fun, 1}, {:fun, 2}, :any]},
       type_doc: "`t:references/0`",
       required: false,
-      default: nil,
       doc: """
       Indicates the key given by the option `:key` references another key
       provided by the option `:references`. In other words, when present,
       this option tells the `cacheable` decorator to store the decorated
       function's block result under the referenced key given by the option
       `:references` and the referenced key under the key provided by the
-      option `:key`.
+      option `:key`. See `t:references/0` for possible values.
 
-      See the ["Referenced keys"](#cacheable/3-referenced-keys) section below
-      for more information.
+      Additionally, see the ["Referenced keys"](#cacheable/3-referenced-keys)
+      section below for more information and examples.
       """
     ]
   ]

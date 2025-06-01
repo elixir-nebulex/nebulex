@@ -196,9 +196,7 @@ defmodule Nebulex.CachingTest do
 
   describe "cacheable" do
     test "with default opts" do
-      refute Cache.get!("x")
-      assert get_by_xy("x") == nil
-      assert Cache.fetch!("x") == nil
+      default = make_ref()
 
       assert get_by_xy(1, 11) == 11
       assert Cache.get!(1) == 11
@@ -206,22 +204,32 @@ defmodule Nebulex.CachingTest do
       assert get_by_xy(2, {:ok, 22}) == {:ok, 22}
       assert Cache.get!(2) == {:ok, 22}
 
-      assert get_by_xy(3, :error) == :error
-      refute Cache.get!(3)
-
-      assert get_by_xy(4, {:error, 4}) == {:error, 4}
-      refute Cache.get!(4)
-
       refute Cache.get!({:xy, 2})
       assert multiply_xy(:xy, 2) == {:xy, 4}
       assert Cache.get!({:xy, 2}) == {:xy, 4}
 
-      assert Cache.fetch!("x") == nil
+      # :error is not cached by default
+      assert get_by_xy(3, :error) == :error
+      refute Cache.get!(3)
+
+      # {:error, ...} is not cached by default
+      assert get_by_xy(4, {:error, 4}) == {:error, 4}
+      refute Cache.get!(4)
+
+      # nil value is not cached by default
+      refute Cache.get!("x")
+      assert get_by_xy("x") == nil
+      assert Cache.get!("x", default) == default
+
+      # Cached values
       assert Cache.get!(1) == 11
       assert Cache.get!(2) == {:ok, 22}
-      refute Cache.get!(3)
-      refute Cache.get!(4)
       assert Cache.get!({:xy, 2}) == {:xy, 4}
+
+      # Non-cached values
+      assert Cache.get!(3, default) == default
+      assert Cache.get!(4, default) == default
+      assert Cache.get!("x", default) == default
     end
 
     test "with opts" do
@@ -339,29 +347,29 @@ defmodule Nebulex.CachingTest do
       assert_common_references_flow("referenced_id", referenced_key, result, &get_with_keyref/1)
     end
 
-    test "returns nil" do
-      default = make_ref()
-      referenced_key = keyref nil
-
-      assert Cache.get!("nil", default) == default
-      assert Cache.get!(nil, default) == default
-
-      assert get_with_keyref("nil") == nil
-
-      assert Cache.get!("nil", default) == referenced_key
-      assert Cache.get!(nil, default) == nil
-    end
-
     test "returns nil without storing it in the cache" do
       default = make_ref()
 
       assert Cache.get!("nil", default) == default
       assert Cache.get!(nil, default) == default
 
-      assert get_with_keyref_match("nil") == nil
+      assert get_with_keyref("nil") == nil
 
       assert Cache.get!("nil", default) == default
       assert Cache.get!(nil, default) == default
+    end
+
+    test "returns nil and stores it in the cache" do
+      default = make_ref()
+      referenced_key = keyref nil
+
+      assert Cache.get!("nil", default) == default
+      assert Cache.get!(nil, default) == default
+
+      assert get_with_keyref_nil("nil") == nil
+
+      assert Cache.get!("nil", default) == referenced_key
+      assert Cache.get!(nil, default) == nil
     end
 
     test "returns referenced key by calling function with context" do
@@ -1099,20 +1107,17 @@ defmodule Nebulex.CachingTest do
 
   @decorate cacheable(key: name, references: &(&1 && &1.id))
   def get_with_keyref(name) do
-    if name == "nil" do
-      nil
-    else
-      %{id: "referenced_id", name: name}
+    case name do
+      "nil" -> nil
+      _ -> %{id: "referenced_id", name: name}
     end
   end
 
-  @decorate cacheable(key: name, references: &(&1 && &1.id), match: &(&1 != nil))
-  def get_with_keyref_match(name) do
-    if name == "nil" do
-      nil
-    else
-      %{id: "referenced_id", name: name}
-    end
+  @decorate cacheable(key: value, references: &keyref(&1), match: &match_fun_with_nil/1)
+  def get_with_keyref_nil(value) do
+    _igonore = send(self(), value)
+
+    nil
   end
 
   @decorate cacheable(key: name, references: &:erlang.phash2({&1.id, &2.args}))
@@ -1123,10 +1128,7 @@ defmodule Nebulex.CachingTest do
   @decorate cacheable(
               key: name,
               references:
-                &keyref(&1.id,
-                  cache: YetAnotherCache,
-                  ttl: __MODULE__.default_ttl()
-                )
+                &(&1 && keyref(&1.id, cache: YetAnotherCache, ttl: __MODULE__.default_ttl()))
             )
   def get_with_keyref_cache(name) do
     %{id: "referenced_id", name: name}
@@ -1175,6 +1177,14 @@ defmodule Nebulex.CachingTest do
     _ = send(self(), ctx)
 
     match_fun(result)
+  end
+
+  defp match_fun_with_nil(result) do
+    case result do
+      {:error, _} -> false
+      :error -> false
+      _ -> true
+    end
   end
 
   defp set_keys(entries) do

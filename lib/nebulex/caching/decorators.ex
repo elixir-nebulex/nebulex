@@ -620,20 +620,24 @@ if Code.ensure_loaded?(Decorator.Define) do
     When defining the `:references` option on the decorated function,
     the value can be:
 
-      * A reserved tuple that the type `t:keyref/0` defines. It must be created
-        using the macro [`keyref/2`](`Nebulex.Caching.keyref/2`).
       * An anonymous function expects the result of the decorated function
         evaluation as an argument. Alternatively, the decorator context can be
         received as a second argument. It must return the referenced key, which
-        could be `t:keyref/0` or any term.
-      * `nil` means there are no key references (ignored).
-      * Any term.
+        could be an explicit key reference spec or any term (see `t:keyref/0`).
+        However, `nil` is a special case. Returning `nil` halts the decorator
+        execution to prevent a potential cache storage downstream from being
+        invoked. If `nil` is meant to be the referenced key, a key reference
+        spec must be used (e.g., `keyref(nil)` - see the next item for more
+        information).
+      * An explicit key reference definition `t:keyref_spec/0`. It must be
+        created using the macro [`keyref/2`](`Nebulex.Caching.keyref/2`).
+      * Any term. The term is automatically wrapped in a key reference spec,
+        assigned to the `:key` field of the spec.
 
     See `cacheable/3` decorator for more information.
     """
     @type references() ::
-            nil
-            | keyref()
+            keyref()
             | (result :: any() -> keyref() | any())
             | (result :: any(), context() -> keyref() | any())
 
@@ -650,7 +654,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     applied, checking whether the function has already been invoked for the
     given arguments. A default algorithm uses the function arguments to compute
     the key. Still, a custom key can be provided through the `:key` option,
-    or a custom key-generator implementation can replace the default one
+    or a custom key-generator function can replace the default one
     (See ["Key Generation"](#module-key-generation) section in the module
     documentation).
 
@@ -677,7 +681,7 @@ if Code.ensure_loaded?(Decorator.Define) do
             # your logic (maybe the loader to retrieve the value from the SoR)
           end
 
-          @decorate cacheable(key: email, references: & &1.id)
+          @decorate cacheable(key: email, references: &(&1 && &1.id))
           def get_by_email(email) do
             # your logic (maybe the loader to retrieve the value from the SoR)
           end
@@ -745,12 +749,12 @@ if Code.ensure_loaded?(Decorator.Define) do
             # your logic ...
           end
 
-          @decorate cacheable(key: email, references: & &1.id)
+          @decorate cacheable(key: email, references: &(&1 && &1.id))
           def get_user_account_by_email(email) do
             # your logic ...
           end
 
-          @decorate cacheable(key: token, references: & &1.id)
+          @decorate cacheable(key: token, references: &(&1 && &1.id))
           def get_user_account_by_token(token) do
             # your logic ...
           end
@@ -762,12 +766,13 @@ if Code.ensure_loaded?(Decorator.Define) do
         end
 
     With the option `:references`, we are indicating to the `cacheable`
-    decorator to store the user id (`& &1.id` - assuming the function returns a
-    user record) under the key `email` and the key `token`, and the user record
-    itself under the user id, which is the referenced key. This time, instead of
-    storing the same object three times, the decorator will cache it only once
-    under the user ID, and the other entries will keep a reference to it. When
-    the functions `get_user_account_by_email/1` or `get_user_account_by_token/1`
+    decorator to store the user id under the key `email` and the key `token`
+    (assuming the function returns a user record), and the user record itself
+    under the user id, which is the referenced key; if the function returns
+    `nil`, the decorator will cache nothing. This time, instead of storing the
+    same object three times, the decorator will cache it only once under the
+    user ID, and the other entries will keep a reference to it. When the
+    functions `get_user_account_by_email/1` or `get_user_account_by_token/1` are
     are executed, the decorator will automatically handle it; under the hood,
     it will fetch the referenced key given by `email` or `token` first, and
     then get the user record under the referenced key.
@@ -775,9 +780,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     On the other hand, in the eviction function `update_user_account/1`, since
     the user record is stored only once under the user's ID, we could set the
     option `:key` to the user's ID, without specifying multiple keys like in the
-    previous case. However, there is a caveat: _"the `cache_evict` decorator
-    doesn't evict the references automatically"_. See the
-    ["CAVEATS"](#cacheable/3-caveats-about-references) section below.
+    previous case. However, there is a caveat: _"the `cache_evict` and
+    `cache_put` decorators don't evict or update the references automatically"_.
+    See the ["CAVEATS"](#cacheable/3-caveats-about-references) section below.
 
     ### The `match` function on references
 
@@ -786,7 +791,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     example to understand what this is about.
 
     Using the previous _"user accounts"_ example, here is the first call to
-    fetch a user by email:
+    get a user by email:
 
         iex> user = MyApp.UserAccounts.get_user_account_by_email("me@test.com")
         #=> %MyApp.UserAccounts.User{id: 1, email: "me@test.com", ...}
@@ -801,20 +806,21 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     The `update_user_account` function should have removed the user schema
     associated with the `user.id` key (decorated with `cache_evict`) but not
-    its references. Therefore, if we call `get_user_account_by_email` again:
+    the references. Therefore, if we call `get_user_account_by_email` again,
+    we will get the user with the updated email:
 
         iex> user = MyApp.UserAccounts.get_user_account_by_email("me@test.com")
         #=> %MyApp.UserAccounts.User{id: 1, email: "updated@test.com", ...}
 
-    And here, we have an inconsistency because we are requesting a user with
+    However, here we have an inconsistency because we are requesting a user with
     the email `"me@test.com"` and we got a user with a different email
     `"updated@test.com"` (the updated one). How can we avoid this? The answer
-    is to leverage the match function to ensure consistency and correctness.
-    Let's provide a match function that helps us with it.
+    is to leverage the `:match` option to ensure consistency and correctness.
+    Let's provide a match function that helps us with it:
 
         @decorate cacheable(
                     key: email,
-                    references: & &1.id,
+                    references: &(&1 && &1.id),
                     match: &match(&1, email)
                   )
         def get_user_account_by_email(email) do
@@ -882,7 +888,7 @@ if Code.ensure_loaded?(Decorator.Define) do
           @decorate cacheable(
                       cache: LocalCache,
                       key: email,
-                      references: &keyref(RedisCache, &1.id)
+                      references: &(&1 && keyref(&1.id, cache: RedisCache))
                     )
           def get_user_account_by_email(email) do
             # your logic ...
@@ -891,7 +897,7 @@ if Code.ensure_loaded?(Decorator.Define) do
           @decorate cacheable(
                       cache: LocalCache,
                       key: token,
-                      references: &keyref(RedisCache, &1.id)
+                      references: &(&1 && keyref(&1.id, cache: RedisCache))
                     )
           def get_user_account_by_token(token) do
             # your logic ...
@@ -907,10 +913,11 @@ if Code.ensure_loaded?(Decorator.Define) do
     `RedisCache` to store the real value in Redis while
     `get_user_account_by_email/1` and `get_user_account_by_token/1` use
     `LocalCache` to store the cache key references. Then, with the option
-    `references: &keyref(RedisCache, &1.id)` we are telling the `cacheable`
-    decorator the referenced key given by `&1.id` is located in the cache
-    `RedisCache`; underneath, the macro [`keyref/2`](`Nebulex.Caching.keyref/2`)
-    builds the particular return type for the external cache reference.
+    `references: &(&1 && keyref(&1.id, cache: RedisCache))` we are telling the
+    `cacheable` decorator the referenced key given by `&1.id` is located in the
+    cache `RedisCache`; the macro [`keyref/2`](`Nebulex.Caching.keyref/2`)
+    builds the required reference tuple for the external cache reference
+    underneath.
 
     ### Caveats about references
 
@@ -924,7 +931,11 @@ if Code.ensure_loaded?(Decorator.Define) do
         For example:
 
         ```elixir
-        @decorate cacheable(key: email, references: & &1.id, opts: [ttl: @ttl])
+        @decorate cacheable(
+                    key: email,
+                    references: &(&1 && &1.id),
+                    opts: [ttl: @ttl]
+                  )
         def get_user_by_email(email) do
           # get the user from the database ...
         end
@@ -935,7 +946,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         ```elixir
         @decorate cacheable(
                     key: email,
-                    references: &keyref(&1.id, ttl: @another_ttl),
+                    references: &(&1 && keyref(&1.id, ttl: @another_ttl)),
                     opts: [ttl: @ttl]
                   )
         def get_user_by_email(email) do
@@ -1146,6 +1157,7 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     def default_match({:error, _}), do: false
     def default_match(:error), do: false
+    def default_match(nil), do: false
     def default_match(_other), do: true
 
     @doc """
@@ -1350,7 +1362,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     Convenience function for wrapping and/or encapsulating
     the **cacheable** decorator logic.
 
-    **NOTE:** Internal purposes only.
+    > #### NOTE {: .warning}
+    >
+    > This function is for internal purposes only.
     """
     @doc group: "Internal API"
     @spec eval_cacheable(any(), any(), references(), keyword(), match(), on_error(), fun()) :: any()
@@ -1422,9 +1436,8 @@ if Code.ensure_loaded?(Decorator.Define) do
 
         other ->
           handle_cacheable(other, on_error, block_fun, fn result ->
-            reference = eval_cacheable_ref(references, result)
-
-            with true <- eval_cache_put(cache, reference, result, opts, on_error, match) do
+            with {:ok, reference} <- eval_cacheable_ref(references, result),
+                 true <- eval_cache_put(cache, reference, result, opts, on_error, match) do
               :ok = cache_put(cache, key, reference, opts)
             end
           end)
@@ -1433,8 +1446,9 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     defp eval_cacheable_ref(references, result) do
       case eval_function(references, result) do
-        keyref() = ref -> ref
-        referenced_key -> keyref(key: referenced_key)
+        nil -> :halt
+        keyref() = ref -> {:ok, ref}
+        referenced_key -> {:ok, keyref(key: referenced_key)}
       end
     end
 
@@ -1466,7 +1480,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     Convenience function for wrapping and/or encapsulating
     the **cache_evict** decorator logic.
 
-    **NOTE:** Internal purposes only.
+    > #### NOTE {: .warning}
+    >
+    > This function is for internal purposes only.
     """
     @doc group: "Internal API"
     @spec eval_cache_evict(any(), any(), boolean(), boolean(), on_error(), fun()) :: any()
@@ -1508,7 +1524,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     Convenience function for wrapping and/or encapsulating
     the **cache_put** decorator logic.
 
-    **NOTE:** Internal purposes only.
+    > #### NOTE {: .warning}
+    >
+    > This function is for internal purposes only.
     """
     @doc group: "Internal API"
     @spec eval_cache_put(any(), any(), any(), keyword(), on_error(), match()) :: any()
@@ -1564,7 +1582,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc """
     Convenience function for the `cache_put` decorator.
 
-    **NOTE:** Internal purposes only.
+    > #### NOTE {: .warning}
+    >
+    > This function is for internal purposes only.
     """
     @doc group: "Internal API"
     @spec cache_put(cache_value(), {:in, [any()]} | any(), any(), keyword()) :: :ok
@@ -1581,7 +1601,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc """
     Convenience function for evaluating the `cache` argument.
 
-    **NOTE:** Internal purposes only.
+    > #### NOTE {: .warning}
+    >
+    > This function is for internal purposes only.
     """
     @doc group: "Internal API"
     @spec eval_cache(any(), context()) :: cache_value()
@@ -1596,7 +1618,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc """
     Convenience function for evaluating the `key` argument.
 
-    **NOTE:** Internal purposes only.
+    > #### NOTE {: .warning}
+    >
+    > This function is for internal purposes only.
     """
     @doc group: "Internal API"
     @spec eval_key(any(), any(), context()) :: any()
@@ -1617,7 +1641,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc """
     Convenience function for running a cache command.
 
-    **NOTE:** Internal purposes only.
+    > #### NOTE {: .warning}
+    >
+    > This function is for internal purposes only.
     """
     @doc group: "Internal API"
     @spec run_cmd(module(), atom(), [any()], on_error()) :: any()
