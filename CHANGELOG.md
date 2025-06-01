@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.6.5](https://github.com/elixir-nebulex/nebulex/tree/v2.6.5) (2025-06-01)
+
+[Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v2.6.4...v2.6.5)
+
+**Closed issues:**
+
+- Replicated cache deletion behavior when the 3rd node joins the cluster.
+  [#234](https://github.com/elixir-nebulex/nebulex/issues/234)
+
 ## [v2.6.4](https://github.com/cabol/nebulex/tree/v2.6.4) (2024-10-19)
 
 [Full Changelog](https://github.com/cabol/nebulex/compare/v2.6.3...v2.6.4)
