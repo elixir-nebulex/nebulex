@@ -83,9 +83,10 @@ defmodule Nebulex.Cache.Supervisor do
 
         # Add required keys to the metadata
         meta =
-          Map.merge(meta, %{
+          meta
+          |> Map.put_new(:name, name)
+          |> Map.merge(%{
             cache: cache,
-            name: name,
             adapter: adapter,
             telemetry: Keyword.fetch!(opts, :telemetry),
             telemetry_prefix: Keyword.fetch!(opts, :telemetry_prefix),

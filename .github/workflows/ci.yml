@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - elixir: 1.18.x
-            otp: 27.x
+            otp: 28.x
             os: 'ubuntu-latest'
             lint: true
             style: true
