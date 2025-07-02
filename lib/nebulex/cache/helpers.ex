@@ -9,7 +9,6 @@ defmodule Nebulex.Cache.Helpers do
     all_args = defcacheapi_all_args(args)
 
     quote do
-      @impl true
       def unquote(name)(unquote_splicing(args)) do
         unquote(name)(
           get_dynamic_cache(),
@@ -17,7 +16,6 @@ defmodule Nebulex.Cache.Helpers do
         )
       end
 
-      @impl true
       def unquote(name)(dynamic_cache, unquote_splicing(all_args)) do
         unquote(target).unquote(name)(dynamic_cache, unquote_splicing(all_args))
       end
