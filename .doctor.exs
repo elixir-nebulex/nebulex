@@ -1,6 +1,5 @@
 %Doctor.Config{
   ignore_modules: [
-    Nebulex.Cache.Helpers,
     Nebulex.Cache.Options,
     Nebulex.Cache.QuerySpec,
     Nebulex.Caching.Options,

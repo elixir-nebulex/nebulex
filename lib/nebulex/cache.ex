@@ -362,38 +362,13 @@ defmodule Nebulex.Cache do
 
   ## API
 
-  import __MODULE__.Helpers
-
   @doc false
   defmacro __using__(opts) do
-    quote do
-      unquote(prelude(opts))
-      unquote(base_defs())
-      unquote(kv_defs())
-
-      if Nebulex.Adapter.Queryable in behaviours do
-        unquote(queryable_defs())
-      end
-
-      if Nebulex.Adapter.Transaction in behaviours do
-        unquote(transaction_defs())
-      end
-
-      if Nebulex.Adapter.Info in behaviours do
-        unquote(info_defs())
-      end
-
-      if Nebulex.Adapter.Observable in behaviours do
-        unquote(event_defs())
-      end
-    end
-  end
-
-  defp prelude(opts) do
-    quote do
+    # credo:disable-for-next-line
+    quote bind_quoted: [opts: opts] do
       @behaviour Nebulex.Cache
 
-      {otp_app, adapter, behaviours, opts} = Nebulex.Cache.Supervisor.compile_config(unquote(opts))
+      {otp_app, adapter, behaviours, opts} = Nebulex.Cache.Supervisor.compile_config(opts)
 
       @otp_app otp_app
       @adapter adapter
@@ -401,11 +376,9 @@ defmodule Nebulex.Cache do
       @default_dynamic_cache @opts[:default_dynamic_cache] || __MODULE__
 
       @before_compile adapter
-    end
-  end
 
-  defp base_defs do
-    quote do
+      alias Nebulex.Cache.KV
+
       ## Config and metadata
 
       @impl true
@@ -469,134 +442,514 @@ defmodule Nebulex.Cache do
           _ = put_dynamic_cache(default_dynamic_cache)
         end
       end
-    end
-  end
 
-  defp kv_defs do
-    quote do
-      alias Nebulex.Cache.KV
+      ## Nebulex.Cache.KV
 
-      defcacheapi fetch(key, opts \\ []), to: KV
+      @impl true
+      def fetch(key, opts \\ []) do
+        KV.fetch(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi fetch!(key, opts \\ []), to: KV
+      @impl true
+      def fetch(dynamic_cache, key, opts) do
+        KV.fetch(dynamic_cache, key, opts)
+      end
 
-      defcacheapi get(key, default \\ nil, opts \\ []), to: KV
+      @impl true
+      def fetch!(key, opts \\ []) do
+        KV.fetch!(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi get!(key, default \\ nil, opts \\ []), to: KV
+      @impl true
+      def fetch!(dynamic_cache, key, opts) do
+        KV.fetch!(dynamic_cache, key, opts)
+      end
 
-      defcacheapi put(key, value, opts \\ []), to: KV
+      @impl true
+      def get(key, default \\ nil, opts \\ []) do
+        KV.get(get_dynamic_cache(), key, default, opts)
+      end
 
-      defcacheapi put!(key, value, opts \\ []), to: KV
+      @impl true
+      def get(dynamic_cache, key, default, opts) do
+        KV.get(dynamic_cache, key, default, opts)
+      end
 
-      defcacheapi put_new(key, value, opts \\ []), to: KV
+      @impl true
+      def get!(key, default \\ nil, opts \\ []) do
+        KV.get!(get_dynamic_cache(), key, default, opts)
+      end
 
-      defcacheapi put_new!(key, value, opts \\ []), to: KV
+      @impl true
+      def get!(dynamic_cache, key, default, opts) do
+        KV.get!(dynamic_cache, key, default, opts)
+      end
 
-      defcacheapi replace(key, value, opts \\ []), to: KV
+      @impl true
+      def put(key, value, opts \\ []) do
+        KV.put(get_dynamic_cache(), key, value, opts)
+      end
 
-      defcacheapi replace!(key, value, opts \\ []), to: KV
+      @impl true
+      def put(dynamic_cache, key, value, opts) do
+        KV.put(dynamic_cache, key, value, opts)
+      end
 
-      defcacheapi put_all(entries, opts \\ []), to: KV
+      @impl true
+      def put!(key, value, opts \\ []) do
+        KV.put!(get_dynamic_cache(), key, value, opts)
+      end
 
-      defcacheapi put_all!(entries, opts \\ []), to: KV
+      @impl true
+      def put!(dynamic_cache, key, value, opts) do
+        KV.put!(dynamic_cache, key, value, opts)
+      end
 
-      defcacheapi put_new_all(entries, opts \\ []), to: KV
+      @impl true
+      def put_new(key, value, opts \\ []) do
+        KV.put_new(get_dynamic_cache(), key, value, opts)
+      end
 
-      defcacheapi put_new_all!(entries, opts \\ []), to: KV
+      @impl true
+      def put_new(dynamic_cache, key, value, opts) do
+        KV.put_new(dynamic_cache, key, value, opts)
+      end
 
-      defcacheapi delete(key, opts \\ []), to: KV
+      @impl true
+      def put_new!(key, value, opts \\ []) do
+        KV.put_new!(get_dynamic_cache(), key, value, opts)
+      end
 
-      defcacheapi delete!(key, opts \\ []), to: KV
+      @impl true
+      def put_new!(dynamic_cache, key, value, opts) do
+        KV.put_new!(dynamic_cache, key, value, opts)
+      end
 
-      defcacheapi take(key, opts \\ []), to: KV
+      @impl true
+      def replace(key, value, opts \\ []) do
+        KV.replace(get_dynamic_cache(), key, value, opts)
+      end
 
-      defcacheapi take!(key, opts \\ []), to: KV
+      @impl true
+      def replace(dynamic_cache, key, value, opts) do
+        KV.replace(dynamic_cache, key, value, opts)
+      end
 
-      defcacheapi has_key?(key, opts \\ []), to: KV
+      @impl true
+      def replace!(key, value, opts \\ []) do
+        KV.replace!(get_dynamic_cache(), key, value, opts)
+      end
 
-      defcacheapi ttl(key, opts \\ []), to: KV
+      @impl true
+      def replace!(dynamic_cache, key, value, opts) do
+        KV.replace!(dynamic_cache, key, value, opts)
+      end
 
-      defcacheapi ttl!(key, opts \\ []), to: KV
+      @impl true
+      def put_all(entries, opts \\ []) do
+        KV.put_all(get_dynamic_cache(), entries, opts)
+      end
 
-      defcacheapi expire(key, ttl, opts \\ []), to: KV
+      @impl true
+      def put_all(dynamic_cache, entries, opts) do
+        KV.put_all(dynamic_cache, entries, opts)
+      end
 
-      defcacheapi expire!(key, ttl, opts \\ []), to: KV
+      @impl true
+      def put_all!(entries, opts \\ []) do
+        KV.put_all!(get_dynamic_cache(), entries, opts)
+      end
 
-      defcacheapi touch(key, opts \\ []), to: KV
+      @impl true
+      def put_all!(dynamic_cache, entries, opts) do
+        KV.put_all!(dynamic_cache, entries, opts)
+      end
 
-      defcacheapi touch!(key, opts \\ []), to: KV
+      @impl true
+      def put_new_all(entries, opts \\ []) do
+        KV.put_new_all(get_dynamic_cache(), entries, opts)
+      end
 
-      defcacheapi incr(key, amount \\ 1, opts \\ []), to: KV
+      @impl true
+      def put_new_all(dynamic_cache, entries, opts) do
+        KV.put_new_all(dynamic_cache, entries, opts)
+      end
 
-      defcacheapi incr!(key, amount \\ 1, opts \\ []), to: KV
+      @impl true
+      def put_new_all!(entries, opts \\ []) do
+        KV.put_new_all!(get_dynamic_cache(), entries, opts)
+      end
 
-      defcacheapi decr(key, amount \\ 1, opts \\ []), to: KV
+      @impl true
+      def put_new_all!(dynamic_cache, entries, opts) do
+        KV.put_new_all!(dynamic_cache, entries, opts)
+      end
 
-      defcacheapi decr!(key, amount \\ 1, opts \\ []), to: KV
+      @impl true
+      def delete(key, opts \\ []) do
+        KV.delete(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi get_and_update(key, fun, opts \\ []), to: KV
+      @impl true
+      def delete(dynamic_cache, key, opts) do
+        KV.delete(dynamic_cache, key, opts)
+      end
 
-      defcacheapi get_and_update!(key, fun, opts \\ []), to: KV
+      @impl true
+      def delete!(key, opts \\ []) do
+        KV.delete!(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi update(key, initial, fun, opts \\ []), to: KV
+      @impl true
+      def delete!(dynamic_cache, key, opts) do
+        KV.delete!(dynamic_cache, key, opts)
+      end
 
-      defcacheapi update!(key, initial, fun, opts \\ []), to: KV
-    end
-  end
+      @impl true
+      def take(key, opts \\ []) do
+        KV.take(get_dynamic_cache(), key, opts)
+      end
 
-  defp queryable_defs do
-    quote do
-      alias Nebulex.Cache.Queryable
+      @impl true
+      def take(dynamic_cache, key, opts) do
+        KV.take(dynamic_cache, key, opts)
+      end
 
-      defcacheapi get_all(query_spec \\ [], opts \\ []), to: Queryable
+      @impl true
+      def take!(key, opts \\ []) do
+        KV.take!(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi get_all!(query_spec \\ [], opts \\ []), to: Queryable
+      @impl true
+      def take!(dynamic_cache, key, opts) do
+        KV.take!(dynamic_cache, key, opts)
+      end
 
-      defcacheapi count_all(query_spec \\ [], opts \\ []), to: Queryable
+      @impl true
+      def has_key?(key, opts \\ []) do
+        KV.has_key?(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi count_all!(query_spec \\ [], opts \\ []), to: Queryable
+      @impl true
+      def has_key?(dynamic_cache, key, opts) do
+        KV.has_key?(dynamic_cache, key, opts)
+      end
 
-      defcacheapi delete_all(query_spec \\ [], opts \\ []), to: Queryable
+      @impl true
+      def ttl(key, opts \\ []) do
+        KV.ttl(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi delete_all!(query_spec \\ [], opts \\ []), to: Queryable
+      @impl true
+      def ttl(dynamic_cache, key, opts) do
+        KV.ttl(dynamic_cache, key, opts)
+      end
 
-      defcacheapi stream(query_spec \\ [], opts \\ []), to: Queryable
+      @impl true
+      def ttl!(key, opts \\ []) do
+        KV.ttl!(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi stream!(query_spec \\ [], opts \\ []), to: Queryable
-    end
-  end
+      @impl true
+      def ttl!(dynamic_cache, key, opts) do
+        KV.ttl!(dynamic_cache, key, opts)
+      end
 
-  defp transaction_defs do
-    quote do
-      alias Nebulex.Cache.Transaction
+      @impl true
+      def expire(key, ttl, opts \\ []) do
+        KV.expire(get_dynamic_cache(), key, ttl, opts)
+      end
 
-      defcacheapi transaction(fun, opts \\ []), to: Transaction
+      @impl true
+      def expire(dynamic_cache, key, ttl, opts) do
+        KV.expire(dynamic_cache, key, ttl, opts)
+      end
 
-      defcacheapi in_transaction?(opts \\ []), to: Transaction
-    end
-  end
+      @impl true
+      def expire!(key, ttl, opts \\ []) do
+        KV.expire!(get_dynamic_cache(), key, ttl, opts)
+      end
 
-  defp info_defs do
-    quote do
-      alias Nebulex.Cache.Info
+      @impl true
+      def expire!(dynamic_cache, key, ttl, opts) do
+        KV.expire!(dynamic_cache, key, ttl, opts)
+      end
 
-      defcacheapi info(spec \\ :all, opts \\ []), to: Info
+      @impl true
+      def touch(key, opts \\ []) do
+        KV.touch(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi info!(spec \\ :all, opts \\ []), to: Info
-    end
-  end
+      @impl true
+      def touch(dynamic_cache, key, opts) do
+        KV.touch(dynamic_cache, key, opts)
+      end
 
-  defp event_defs do
-    quote do
-      alias Nebulex.Cache.Observable
+      @impl true
+      def touch!(key, opts \\ []) do
+        KV.touch!(get_dynamic_cache(), key, opts)
+      end
 
-      defcacheapi register_event_listener(listener, opts \\ []), to: Observable
+      @impl true
+      def touch!(dynamic_cache, key, opts) do
+        KV.touch!(dynamic_cache, key, opts)
+      end
 
-      defcacheapi register_event_listener!(listener, opts \\ []), to: Observable
+      @impl true
+      def incr(key, amount \\ 1, opts \\ []) do
+        KV.incr(get_dynamic_cache(), key, amount, opts)
+      end
 
-      defcacheapi unregister_event_listener(id, opts \\ []), to: Observable
+      @impl true
+      def incr(dynamic_cache, key, amount, opts) do
+        KV.incr(dynamic_cache, key, amount, opts)
+      end
 
-      defcacheapi unregister_event_listener!(id, opts \\ []), to: Observable
+      @impl true
+      def incr!(key, amount \\ 1, opts \\ []) do
+        KV.incr!(get_dynamic_cache(), key, amount, opts)
+      end
+
+      @impl true
+      def incr!(dynamic_cache, key, amount, opts) do
+        KV.incr!(dynamic_cache, key, amount, opts)
+      end
+
+      @impl true
+      def decr(key, amount \\ 1, opts \\ []) do
+        KV.decr(get_dynamic_cache(), key, amount, opts)
+      end
+
+      @impl true
+      def decr(dynamic_cache, key, amount, opts) do
+        KV.decr(dynamic_cache, key, amount, opts)
+      end
+
+      @impl true
+      def decr!(key, amount \\ 1, opts \\ []) do
+        KV.decr!(get_dynamic_cache(), key, amount, opts)
+      end
+
+      @impl true
+      def decr!(dynamic_cache, key, amount, opts) do
+        KV.decr!(dynamic_cache, key, amount, opts)
+      end
+
+      @impl true
+      def get_and_update(key, fun, opts \\ []) do
+        KV.get_and_update(get_dynamic_cache(), key, fun, opts)
+      end
+
+      @impl true
+      def get_and_update(dynamic_cache, key, fun, opts) do
+        KV.get_and_update(dynamic_cache, key, fun, opts)
+      end
+
+      @impl true
+      def get_and_update!(key, fun, opts \\ []) do
+        KV.get_and_update!(get_dynamic_cache(), key, fun, opts)
+      end
+
+      @impl true
+      def get_and_update!(dynamic_cache, key, fun, opts) do
+        KV.get_and_update!(dynamic_cache, key, fun, opts)
+      end
+
+      @impl true
+      def update(key, initial, fun, opts \\ []) do
+        KV.update(get_dynamic_cache(), key, initial, fun, opts)
+      end
+
+      @impl true
+      def update(dynamic_cache, key, initial, fun, opts) do
+        KV.update(dynamic_cache, key, initial, fun, opts)
+      end
+
+      @impl true
+      def update!(key, initial, fun, opts \\ []) do
+        KV.update!(get_dynamic_cache(), key, initial, fun, opts)
+      end
+
+      @impl true
+      def update!(dynamic_cache, key, initial, fun, opts) do
+        KV.update!(dynamic_cache, key, initial, fun, opts)
+      end
+
+      if Nebulex.Adapter.Queryable in behaviours do
+        alias Nebulex.Cache.Queryable
+
+        @impl true
+        def get_all(query_spec \\ [], opts \\ []) do
+          Queryable.get_all(get_dynamic_cache(), query_spec, opts)
+        end
+
+        @impl true
+        def get_all(dynamic_cache, query_spec, opts) do
+          Queryable.get_all(dynamic_cache, query_spec, opts)
+        end
+
+        @impl true
+        def get_all!(query_spec \\ [], opts \\ []) do
+          Queryable.get_all!(get_dynamic_cache(), query_spec, opts)
+        end
+
+        @impl true
+        def get_all!(dynamic_cache, query_spec, opts) do
+          Queryable.get_all!(dynamic_cache, query_spec, opts)
+        end
+
+        @impl true
+        def count_all(query_spec \\ [], opts \\ []) do
+          Queryable.count_all(get_dynamic_cache(), query_spec, opts)
+        end
+
+        @impl true
+        def count_all(dynamic_cache, query_spec, opts) do
+          Queryable.count_all(dynamic_cache, query_spec, opts)
+        end
+
+        @impl true
+        def count_all!(query_spec \\ [], opts \\ []) do
+          Queryable.count_all!(get_dynamic_cache(), query_spec, opts)
+        end
+
+        @impl true
+        def count_all!(dynamic_cache, query_spec, opts) do
+          Queryable.count_all!(dynamic_cache, query_spec, opts)
+        end
+
+        @impl true
+        def delete_all(query_spec \\ [], opts \\ []) do
+          Queryable.delete_all(get_dynamic_cache(), query_spec, opts)
+        end
+
+        @impl true
+        def delete_all(dynamic_cache, query_spec, opts) do
+          Queryable.delete_all(dynamic_cache, query_spec, opts)
+        end
+
+        @impl true
+        def delete_all!(query_spec \\ [], opts \\ []) do
+          Queryable.delete_all!(get_dynamic_cache(), query_spec, opts)
+        end
+
+        @impl true
+        def delete_all!(dynamic_cache, query_spec, opts) do
+          Queryable.delete_all!(dynamic_cache, query_spec, opts)
+        end
+
+        @impl true
+        def stream(query_spec \\ [], opts \\ []) do
+          Queryable.stream(get_dynamic_cache(), query_spec, opts)
+        end
+
+        @impl true
+        def stream(dynamic_cache, query_spec, opts) do
+          Queryable.stream(dynamic_cache, query_spec, opts)
+        end
+
+        @impl true
+        def stream!(query_spec \\ [], opts \\ []) do
+          Queryable.stream!(get_dynamic_cache(), query_spec, opts)
+        end
+
+        @impl true
+        def stream!(dynamic_cache, query_spec, opts) do
+          Queryable.stream!(dynamic_cache, query_spec, opts)
+        end
+      end
+
+      if Nebulex.Adapter.Transaction in behaviours do
+        alias Nebulex.Cache.Transaction
+
+        @impl true
+        def transaction(fun, opts \\ []) do
+          Transaction.transaction(get_dynamic_cache(), fun, opts)
+        end
+
+        @impl true
+        def transaction(dynamic_cache, fun, opts) do
+          Transaction.transaction(dynamic_cache, fun, opts)
+        end
+
+        @impl true
+        def in_transaction?(opts \\ []) do
+          Transaction.in_transaction?(get_dynamic_cache(), opts)
+        end
+
+        @impl true
+        def in_transaction?(dynamic_cache, opts) do
+          Transaction.in_transaction?(dynamic_cache, opts)
+        end
+      end
+
+      if Nebulex.Adapter.Info in behaviours do
+        alias Nebulex.Cache.Info
+
+        @impl true
+        def info(spec \\ :all, opts \\ []) do
+          Info.info(get_dynamic_cache(), spec, opts)
+        end
+
+        @impl true
+        def info(dynamic_cache, spec, opts) do
+          Info.info(dynamic_cache, spec, opts)
+        end
+
+        @impl true
+        def info!(spec \\ :all, opts \\ []) do
+          Info.info!(get_dynamic_cache(), spec, opts)
+        end
+
+        @impl true
+        def info!(dynamic_cache, spec, opts) do
+          Info.info!(dynamic_cache, spec, opts)
+        end
+      end
+
+      if Nebulex.Adapter.Observable in behaviours do
+        alias Nebulex.Cache.Observable
+
+        @impl true
+        def register_event_listener(listener, opts \\ []) do
+          Observable.register_event_listener(get_dynamic_cache(), listener, opts)
+        end
+
+        @impl true
+        def register_event_listener(dynamic_cache, listener, opts) do
+          Observable.register_event_listener(dynamic_cache, listener, opts)
+        end
+
+        @impl true
+        def register_event_listener!(listener, opts \\ []) do
+          Observable.register_event_listener!(get_dynamic_cache(), listener, opts)
+        end
+
+        @impl true
+        def register_event_listener!(dynamic_cache, listener, opts) do
+          Observable.register_event_listener!(dynamic_cache, listener, opts)
+        end
+
+        @impl true
+        def unregister_event_listener(id, opts \\ []) do
+          Observable.unregister_event_listener(get_dynamic_cache(), id, opts)
+        end
+
+        @impl true
+        def unregister_event_listener(dynamic_cache, id, opts) do
+          Observable.unregister_event_listener(dynamic_cache, id, opts)
+        end
+
+        @impl true
+        def unregister_event_listener!(id, opts \\ []) do
+          Observable.unregister_event_listener!(get_dynamic_cache(), id, opts)
+        end
+
+        @impl true
+        def unregister_event_listener!(dynamic_cache, id, opts) do
+          Observable.unregister_event_listener!(dynamic_cache, id, opts)
+        end
+      end
     end
   end
 
