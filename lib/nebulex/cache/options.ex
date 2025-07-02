@@ -235,9 +235,6 @@ defmodule Nebulex.Cache.Options do
   # Start options
   @start_link_opts Keyword.keys(@start_link_opts_schema.schema)
 
-  # Telemetry options schema
-  @telemetry_opts_schema NimbleOptions.new!(telemetry_opts)
-
   # Shared options schema
   @runtime_shared_opts_schema NimbleOptions.new!(runtime_shared_opts ++ telemetry_opts)
 
@@ -376,12 +373,12 @@ defmodule Nebulex.Cache.Options do
     Keyword.merge(opts, start_link_opts)
   end
 
-  @spec validate_telemetry_opts!(keyword()) :: keyword()
-  def validate_telemetry_opts!(opts) do
+  @spec validate_runtime_shared_opts!(keyword()) :: keyword()
+  def validate_runtime_shared_opts!(opts) do
     _ignore =
       opts
-      |> Keyword.take([:telemetry_event, :telemetry_metadata])
-      |> NimbleOptions.validate!(@telemetry_opts_schema)
+      |> Keyword.take(@runtime_shared_opts)
+      |> NimbleOptions.validate!(@runtime_shared_opts_schema)
 
     opts
   end

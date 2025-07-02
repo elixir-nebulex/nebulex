@@ -393,7 +393,8 @@ defmodule Nebulex.Cache do
     quote do
       @behaviour Nebulex.Cache
 
-      {otp_app, adapter, behaviours, opts} = Nebulex.Cache.Supervisor.compile_config(unquote(opts))
+      {otp_app, adapter, behaviours, opts} =
+        Nebulex.Cache.Supervisor.compile_config(unquote(opts))
 
       @otp_app otp_app
       @adapter adapter

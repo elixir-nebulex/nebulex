@@ -145,7 +145,7 @@ defmodule Nebulex.Adapter do
         args,
         opts
       ) do
-    opts = Options.validate_telemetry_opts!(opts)
+    opts = Options.validate_runtime_shared_opts!(opts)
     args = args ++ [opts]
 
     if telemetry? do
