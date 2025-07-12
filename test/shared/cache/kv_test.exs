@@ -310,6 +310,51 @@ defmodule Nebulex.Cache.KVTest do
       end
     end
 
+    describe "fetch_or_store/3" do
+      test "stores the value in the cache if the key does not exist", %{cache: cache} do
+        assert cache.fetch_or_store("lazy", fn -> {:ok, "value"} end) == {:ok, "value"}
+        assert cache.get!("lazy") == "value"
+
+        assert cache.fetch_or_store("lazy", fn -> {:ok, "new value"} end) == {:ok, "value"}
+        assert cache.get!("lazy") == "value"
+      end
+
+      test "returns error if the function returns an error", %{cache: cache} do
+        assert {:error, %Nebulex.Error{reason: "error"}} =
+                 cache.fetch_or_store("lazy", fn -> {:error, "error"} end)
+
+        refute cache.get!("lazy")
+      end
+
+      test "raises if the function returns an invalid value", %{cache: cache} do
+        msg =
+          "the supplied lambda function must return {:ok, value} or " <>
+            "{:error, reason}, got: :invalid"
+
+        assert_raise RuntimeError, msg, fn ->
+          cache.fetch_or_store!("lazy", fn -> :invalid end)
+        end
+      end
+    end
+
+    describe "fetch_or_store!/3" do
+      test "stores the value in the cache if the key does not exist", %{cache: cache} do
+        assert cache.fetch_or_store!("lazy", fn -> {:ok, "value"} end) == "value"
+        assert cache.get!("lazy") == "value"
+
+        assert cache.fetch_or_store!("lazy", fn -> {:ok, "new value"} end) == "value"
+        assert cache.get!("lazy") == "value"
+      end
+
+      test "raises if an error occurs", %{cache: cache} do
+        assert_raise Nebulex.Error, ~r"error", fn ->
+          cache.fetch_or_store!("lazy", fn -> {:error, "error"} end)
+        end
+
+        refute cache.get!("lazy")
+      end
+    end
+
     describe "delete/2" do
       test "deletes the given key", %{cache: cache} do
         for x <- 1..3, do: cache.put(x, x * 2)

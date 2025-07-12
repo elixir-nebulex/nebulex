@@ -542,6 +542,10 @@ defmodule Nebulex.Cache do
       defcacheapi update(key, initial, fun, opts \\ []), to: KV
 
       defcacheapi update!(key, initial, fun, opts \\ []), to: KV
+
+      defcacheapi fetch_or_store(key, fun, opts \\ []), to: KV
+
+      defcacheapi fetch_or_store!(key, fun, opts \\ []), to: KV
     end
   end
 
@@ -1777,6 +1781,12 @@ defmodule Nebulex.Cache do
       iex> MyCache.get_and_update(:b, fn _ -> :pop end)
       {:ok, {nil, nil}}
 
+  > #### `get_and_update` atomicity {: .warning}
+  >
+  > This operation is not atomic. It uses `get` and `put` (or `delete` for
+  > `:pop`) under the hood, but the function is executed outside of the cache
+  > transaction. If you need to ensure atomicity, consider wrapping the function
+  > in a `c:transaction/2` call.
   """
   @doc group: "KV API"
   @callback get_and_update(key(), (value() -> {current_value, new_value} | :pop), opts()) ::
@@ -1860,6 +1870,12 @@ defmodule Nebulex.Cache do
       iex> MyCache.update(:a, 1, &(&1 * 2))
       {:ok, 2}
 
+  > #### `update` atomicity {: .warning}
+  >
+  > This operation is not atomic. It uses `fetch` and `put` under the hood,
+  > but the function is executed outside of the cache transaction. If you need
+  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
+  > call.
   """
   @doc group: "KV API"
   @callback update(key(), initial :: value(), (value() -> value()), opts()) ::
@@ -1895,11 +1911,76 @@ defmodule Nebulex.Cache do
   @callback update!(key(), initial :: value(), (value() -> value()), opts()) :: value()
 
   @doc """
-  Same as `c:update!/5` but raises an exception if an error occurs.
+  Same as `c:update/5` but raises an exception if an error occurs.
   """
   @doc group: "KV API"
   @callback update!(dynamic_cache(), key(), initial :: value(), (value() -> value()), opts()) ::
               value()
+
+  @doc """
+  Fetches the value for the given `key` from the cache. If the key is not
+  present, the provided anonymous function is executed.
+
+  If the function returns `{:ok, value}`, the value is cached under the given
+  `key` and returned as the result. If it returns `{:error, reason}`, the value
+  is **not** cached, and the error is returned as is.
+
+  If the function returns any other value, a `RuntimeError` is raised.
+
+  ## Options
+
+  See the ["Shared options"](#module-shared-options) section in the module
+  documentation for a list of supported options.
+
+  ## Examples
+
+      iex> MyCache.fetch_or_store("foo", fn -> {:ok, "bar"} end)
+      {:ok, "bar"}
+
+      iex> MyCache.fetch_or_store("foo", fn -> {:error, "error"} end)
+      {:error, "error"}
+
+      iex> MyCache.fetch_or_store("foo", fn -> :invalid end)
+      ** (RuntimeError) the supplied lambda function must return {:ok, value} or {:error, reason}, got: :invalid
+
+  > #### `fetch_or_store` atomicity {: .warning}
+  >
+  > This operation is not atomic. It uses `fetch` and `put` under the hood,
+  > but the function is executed outside of the cache transaction. If you need
+  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
+  > call.
+  """
+  @doc group: "KV API"
+  @callback fetch_or_store(key(), fun(), opts()) :: ok_error_tuple(value())
+
+  @doc """
+  Same as `c:fetch_or_store/3`, but the command is executed on the cache
+  instance given at the first argument `dynamic_cache`.
+
+  See the ["Dynamic caches"](#module-dynamic-caches) section in the
+  module documentation for more information.
+
+  ## Examples
+
+      iex> MyCache.fetch_or_store(MyCache1, "key", fn -> {:ok, "value"} end, [])
+      {:ok, "value"}
+
+  """
+  @doc group: "KV API"
+  @callback fetch_or_store(dynamic_cache(), key(), fun(), opts()) :: ok_error_tuple(value())
+
+  @doc """
+  Same as `c:fetch_or_store/3` but raises an exception if an error occurs.
+  """
+  @doc group: "KV API"
+  @callback fetch_or_store!(key(), fun(), opts()) :: value()
+
+  @doc """
+  Same as `c:fetch_or_store!/3` but the command is executed on the cache
+  instance given at the first argument `dynamic_cache`.
+  """
+  @doc group: "KV API"
+  @callback fetch_or_store!(dynamic_cache(), key(), fun(), opts()) :: value()
 
   ## Nebulex.Adapter.Queryable
 

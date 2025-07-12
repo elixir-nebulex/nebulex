@@ -2,7 +2,7 @@ defmodule Nebulex.Cache.KV do
   @moduledoc false
 
   import Nebulex.Adapter
-  import Nebulex.Utils, only: [is_timeout: 1, unwrap_or_raise: 1]
+  import Nebulex.Utils, only: [is_timeout: 1, unwrap_or_raise: 1, wrap_error: 2]
 
   alias Nebulex.Cache.Options
 
@@ -341,5 +341,37 @@ defmodule Nebulex.Cache.KV do
   """
   def update!(name, key, initial, fun, opts) do
     unwrap_or_raise update(name, key, initial, fun, opts)
+  end
+
+  @doc """
+  Implementation for `c:Nebulex.Cache.fetch_or_store/3`.
+  """
+  def fetch_or_store(name, key, fun, opts) do
+    with {:error, %Nebulex.KeyError{key: ^key}} <- fetch(name, key, opts) do
+      eval_fetch_or_store_fun(name, key, fun, opts)
+    end
+  end
+
+  @doc """
+  Implementation for `c:Nebulex.Cache.fetch_or_store!/3`.
+  """
+  def fetch_or_store!(name, key, fun, opts) do
+    unwrap_or_raise fetch_or_store(name, key, fun, opts)
+  end
+
+  defp eval_fetch_or_store_fun(name, key, fun, opts) do
+    case fun.() do
+      {:ok, value} ->
+        with {:ok, _} <- do_put(name, key, value, :put, opts) do
+          {:ok, value}
+        end
+
+      {:error, reason} ->
+        wrap_error Nebulex.Error, reason: reason, key: key
+
+      other ->
+        raise "the supplied lambda function must return {:ok, value} " <>
+                "or {:error, reason}, got: #{inspect(other)}"
+    end
   end
 end
