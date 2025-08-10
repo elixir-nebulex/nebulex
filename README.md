@@ -275,5 +275,5 @@ all checks run successfully.
 
 Copyright (c) 2017, Carlos Bolaños.
 
-Nebulex source code is licensed under the [MIT License](LICENSE).
+Nebulex source code is licensed under the [MIT License](LICENSE.md).
 

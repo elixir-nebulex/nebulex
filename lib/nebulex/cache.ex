@@ -360,6 +360,12 @@ defmodule Nebulex.Cache do
   @typedoc "Ok/Error type"
   @type ok_error_tuple(ok, error) :: {:ok, ok} | {:error, error}
 
+  @typedoc "Fetch or store function"
+  @type fetch_or_store_fun() :: (-> {:ok, value()} | {:error, any()})
+
+  @typedoc "Get or store function"
+  @type get_or_store_fun() :: (-> any())
+
   ## API
 
   import __MODULE__.Helpers
@@ -542,6 +548,14 @@ defmodule Nebulex.Cache do
       defcacheapi update(key, initial, fun, opts \\ []), to: KV
 
       defcacheapi update!(key, initial, fun, opts \\ []), to: KV
+
+      defcacheapi fetch_or_store(key, fun, opts \\ []), to: KV
+
+      defcacheapi fetch_or_store!(key, fun, opts \\ []), to: KV
+
+      defcacheapi get_or_store(key, fun, opts \\ []), to: KV
+
+      defcacheapi get_or_store!(key, fun, opts \\ []), to: KV
     end
   end
 
@@ -1777,6 +1791,12 @@ defmodule Nebulex.Cache do
       iex> MyCache.get_and_update(:b, fn _ -> :pop end)
       {:ok, {nil, nil}}
 
+  > #### `get_and_update` atomicity {: .warning}
+  >
+  > This operation is not atomic. It uses `get` and `put` (or `delete` for
+  > `:pop`) under the hood, but the function is executed outside of the cache
+  > transaction. If you need to ensure atomicity, consider wrapping the function
+  > in a `c:transaction/2` call.
   """
   @doc group: "KV API"
   @callback get_and_update(key(), (value() -> {current_value, new_value} | :pop), opts()) ::
@@ -1860,6 +1880,12 @@ defmodule Nebulex.Cache do
       iex> MyCache.update(:a, 1, &(&1 * 2))
       {:ok, 2}
 
+  > #### `update` atomicity {: .warning}
+  >
+  > This operation is not atomic. It uses `fetch` and `put` under the hood,
+  > but the function is executed outside of the cache transaction. If you need
+  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
+  > call.
   """
   @doc group: "KV API"
   @callback update(key(), initial :: value(), (value() -> value()), opts()) ::
@@ -1895,11 +1921,179 @@ defmodule Nebulex.Cache do
   @callback update!(key(), initial :: value(), (value() -> value()), opts()) :: value()
 
   @doc """
-  Same as `c:update!/5` but raises an exception if an error occurs.
+  Same as `c:update/5` but raises an exception if an error occurs.
   """
   @doc group: "KV API"
   @callback update!(dynamic_cache(), key(), initial :: value(), (value() -> value()), opts()) ::
               value()
+
+  @doc """
+  Fetches the value for the given `key` from the cache. If the key is not
+  present, the provided anonymous function is executed.
+
+  If the function returns `{:ok, value}`, the value is cached under the given
+  `key` and returned as the result. If it returns `{:error, reason}`, the value
+  is **not** cached, and the error is returned as is.
+
+  If the function returns any other value, a `RuntimeError` is raised.
+
+  ## Options
+
+  Since the `put` operation is used under the hood, the following options are
+  supported:
+
+  #{Nebulex.Cache.Options.put_options_docs()}
+
+  See the ["Shared options"](#module-shared-options) section in the module
+  documentation for a list of supported options.
+
+  ## Examples
+
+      iex> MyCache.fetch_or_store("foo", fn -> {:ok, "bar"} end)
+      {:ok, "bar"}
+
+      iex> MyCache.fetch_or_store("foo", fn -> {:error, "error"} end)
+      {:error, %Nebulex.Error{reason: "error"}}
+
+      iex> MyCache.fetch_or_store("foo", fn -> :invalid end)
+      ** (RuntimeError) the supplied lambda function must return {:ok, value} or {:error, reason}, got: :invalid
+
+      iex> MyCache.fetch_or_store("ttl", fn -> {:ok, "ttl"} end, ttl: 1000)
+      {:ok, "ttl"}
+
+  > #### `fetch_or_store` atomicity {: .info}
+  >
+  > This operation is not atomic. It uses `fetch` and `put` under the hood,
+  > but the function is executed outside of the cache transaction. If you need
+  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
+  > call.
+  """
+  @doc group: "KV API"
+  @callback fetch_or_store(key(), fetch_or_store_fun(), opts()) :: ok_error_tuple(value())
+
+  @doc """
+  Same as `c:fetch_or_store/3`, but the command is executed on the cache
+  instance given at the first argument `dynamic_cache`.
+
+  See the ["Dynamic caches"](#module-dynamic-caches) section in the
+  module documentation for more information.
+
+  ## Examples
+
+      iex> MyCache.fetch_or_store(MyCache1, "key", fn -> {:ok, "value"} end, [])
+      {:ok, "value"}
+
+  """
+  @doc group: "KV API"
+  @callback fetch_or_store(dynamic_cache(), key(), fetch_or_store_fun(), opts()) ::
+              ok_error_tuple(value())
+
+  @doc """
+  Same as `c:fetch_or_store/3` but raises an exception if an error occurs.
+
+  ## Examples
+
+      iex> MyCache.fetch_or_store!("key", fn -> {:ok, "value"} end)
+      "value"
+
+      iex> MyCache.fetch_or_store!("key", fn -> {:error, "error"} end)
+      ** (Nebulex.Error) ...
+
+  """
+  @doc group: "KV API"
+  @callback fetch_or_store!(key(), fetch_or_store_fun(), opts()) :: value()
+
+  @doc """
+  Same as `c:fetch_or_store!/3` but the command is executed on the cache
+  instance given at the first argument `dynamic_cache`.
+  """
+  @doc group: "KV API"
+  @callback fetch_or_store!(dynamic_cache(), key(), fetch_or_store_fun(), opts()) :: value()
+
+  @doc """
+  Gets the value for the given `key` from the cache. If the key is not
+  present, the provided anonymous function is executed and its result
+  is always cached under the given `key`.
+
+  Unlike `fetch_or_store/3`, this function always caches the result
+  regardless of whether it's a success or error tuple.
+
+  ## Options
+
+  Since the `put` operation is used under the hood, the following options are
+  supported:
+
+  #{Nebulex.Cache.Options.put_options_docs()}
+
+  See the ["Shared options"](#module-shared-options) section in the module
+  documentation for a list of supported options.
+
+  ## Examples
+
+      iex> MyCache.get_or_store("api_result", fn -> "data" end)
+      {:ok, "data"}
+
+      iex> MyCache.get_or_store("api_result_tuple", fn -> {:ok, "data"} end)
+      {:ok, {:ok, "data"}}
+
+      iex> MyCache.get_or_store("api_error", fn -> {:error, "rate_limited"} end)
+      {:ok, {:error, "rate_limited"}}
+
+      iex> MyCache.get_or_store("with_ttl", fn -> "with_ttl" end, ttl: 1000)
+      {:ok, "with_ttl"}
+
+  > #### `get_or_store` atomicity {: .info}
+  >
+  > This operation is not atomic. It uses `fetch` and `put` under the hood,
+  > but the function is executed outside of the cache transaction. If you need
+  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
+  > call.
+  """
+  @doc group: "KV API"
+  @callback get_or_store(key(), get_or_store_fun(), opts()) :: ok_error_tuple(value())
+
+  @doc """
+  Same as `c:get_or_store/3`, but the command is executed on the cache
+  instance given at the first argument `dynamic_cache`.
+
+  See the ["Dynamic caches"](#module-dynamic-caches) section in the
+  module documentation for more information.
+
+  ## Examples
+
+      iex> MyCache.get_or_store(MyCache, "key", fn -> "value" end, [])
+      {:ok, "value"}
+
+  """
+  @doc group: "KV API"
+  @callback get_or_store(dynamic_cache(), key(), get_or_store_fun(), opts()) ::
+              ok_error_tuple(value())
+
+  @doc """
+  Same as `c:get_or_store/3` but raises an exception if a cache error occurs
+  (e.g., the adapter failed executing the command and returns an error).
+
+  ## Examples
+
+      iex> MyCache.get_or_store!("key", fn -> "value" end)
+      "value"
+
+      iex> MyCache.get_or_store!("key", fn -> {:ok, "value"} end)
+      {:ok, "value"}
+
+      iex> MyCache.get_or_store!("key", fn -> {:error, "error"} end)
+      {:error, "error"}
+
+  """
+  @doc group: "KV API"
+  @callback get_or_store!(key(), get_or_store_fun(), opts()) :: value()
+
+  @doc """
+  Same as `c:get_or_store!/3` but the command is executed on the cache
+  instance given at the first argument `dynamic_cache`.
+  """
+  @doc group: "KV API"
+  @callback get_or_store!(dynamic_cache(), key(), get_or_store_fun(), opts()) :: value()
 
   ## Nebulex.Adapter.Queryable
 

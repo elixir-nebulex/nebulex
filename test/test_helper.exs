@@ -1,11 +1,3 @@
-# Mocks
-[
-  Mix.Project,
-  Nebulex.Cache.Registry,
-  Nebulex.Time
-]
-|> Enum.each(&Mimic.copy/1)
-
 # Enable sleep mock to avoid test delay due to the sleep function (TTL tests)
 :ok = Application.put_env(:nebulex, :sleep_mock, true)
 
@@ -24,6 +16,14 @@ end
 for file <- File.ls!("test/shared"), not File.dir?("test/shared/" <> file) do
   Code.require_file("./shared/" <> file, __DIR__)
 end
+
+# Mocks
+[
+  Mix.Project,
+  Nebulex.Cache.Registry,
+  Nebulex.Time
+]
+|> Enum.each(&Mimic.copy/1)
 
 # Start Telemetry
 _ = Application.start(:telemetry)

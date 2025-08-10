@@ -35,4 +35,11 @@ defmodule Nebulex.CacheErrorTest do
       end
     end
   end
+
+  describe "fetch_or_store/3" do
+    test "returns an error due to a cache command failure", %{cache: cache} do
+      assert cache.fetch_or_store(:error, fn -> {:ok, "value"} end) ==
+               {:error, %Nebulex.Error{reason: :error}}
+    end
+  end
 end
