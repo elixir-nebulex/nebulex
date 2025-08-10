@@ -374,4 +374,28 @@ defmodule Nebulex.Cache.KV do
                 "or {:error, reason}, got: #{inspect(other)}"
     end
   end
+
+  @doc """
+  Implementation for `c:Nebulex.Cache.get_or_store/3`.
+  """
+  def get_or_store(name, key, fun, opts) do
+    with {:error, %Nebulex.KeyError{key: ^key}} <- fetch(name, key, opts) do
+      eval_get_or_store_fun(name, key, fun, opts)
+    end
+  end
+
+  @doc """
+  Implementation for `c:Nebulex.Cache.get_or_store!/3`.
+  """
+  def get_or_store!(name, key, fun, opts) do
+    unwrap_or_raise get_or_store(name, key, fun, opts)
+  end
+
+  defp eval_get_or_store_fun(name, key, fun, opts) do
+    value = fun.()
+
+    with {:ok, _} <- do_put(name, key, value, :put, opts) do
+      {:ok, value}
+    end
+  end
 end
