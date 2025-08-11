@@ -1,19 +1,21 @@
-# Getting started
+# Getting Started
 
-This guide is an introduction to [Nebulex][nbx_repo], a local and distributed
-caching toolkit for Elixir. Nebulex API is pretty much inspired by
-[Ecto](https://github.com/elixir-ecto/ecto), taking advantage of its simplicity,
-flexibility and pluggable architecture. Same as Ecto, developers can provide
-their own cache (adapter) implementations. In this guide, we're going to learn
-some basics about Nebulex, such as write, read and delete cache entries.
+This guide introduces [Nebulex][nbx_repo], a local and distributed
+caching toolkit for Elixir. The Nebulex API is heavily inspired by
+[Ecto](https://github.com/elixir-ecto/ecto), leveraging its simplicity,
+flexibility, and pluggable architecture. Like Ecto, developers can provide
+their own cache (adapter) implementations. In this guide, we'll learn
+the basics of Nebulex, including how to write, read, and delete cache entries.
 
 [nbx_repo]: https://github.com/elixir-nebulex/nebulex
 
-## Adding Nebulex to an application
+---
 
-Let's start creating a new Elixir application by running this command:
+## Adding Nebulex to Your Application
 
-```
+Let's start by creating a new Elixir application:
+
+```bash
 mix new blog --sup
 ```
 
@@ -21,11 +23,12 @@ The `--sup` option ensures that this application has
 [a supervision tree](https://hexdocs.pm/elixir/supervisor-and-application.html),
 which will be needed by Nebulex later on.
 
-To add Nebulex to this application, there are a few steps that we need to take.
+To add Nebulex to your application, follow these steps:
 
-The first step will be adding both Nebulex and the cache adapter as a dependency
-to our `mix.exs` file, which we'll do by changing the `deps` definition in that
-file to this:
+### Step 1: Add Dependencies
+
+Add both Nebulex and the cache adapter as dependencies
+to your `mix.exs` file by updating the `deps` definition:
 
 ```elixir
 defp deps do
@@ -43,34 +46,36 @@ defp deps do
 end
 ```
 
-To give more flexibility and load only needed dependencies, Nebulex makes all
-dependencies optional, including the adapters. For example:
+To provide more flexibility and load only the needed dependencies, Nebulex makes
+all dependencies optional, including the adapters. For example:
 
-  * For enabling [declarative decorator-based caching][nbx_caching], you have
-    to add `:decorator` to the dependency list.
+  * **For enabling [declarative decorator-based caching][nbx_caching]**:
+    Add `:decorator` to the dependency list.
 
-  * For enabling Telemetry events dispatched by Nebulex, you have to add
-    `:telemetry` to the dependency list. See [telemetry guide][telemetry].
+  * **For enabling Telemetry events**: Add `:telemetry` to the dependency list.
+    See the [telemetry guide][telemetry].
 
-  * For intensive workloads when using `Nebulex.Adapters.Local` adapter, you may
-    want to use `:shards` as the backend for partitioned ETS tables. In such a
-    case, you have to add `:shards` to the dependency list.
+  * **For intensive workloads** when using `Nebulex.Adapters.Local` adapter:
+    You may want to use `:shards` as the backend for partitioned ETS tables.
+    In such cases, add `:shards` to the dependency list.
 
 [nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.html
 [telemetry]: http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html
 
-To install these dependencies, we will run this command:
+Install these dependencies by running:
 
-```
+```bash
 mix deps.get
 ```
 
-We now need to define a Cache and setup some configuration for Nebulex so that
+### Step 2: Generate Cache Configuration
+
+We now need to define a Cache and set up some configuration for Nebulex so that
 we can perform actions on a cache from within the application's code.
 
-We can set up this configuration by running this command:
+Generate the required configuration by running:
 
-```
+```bash
 mix nbx.gen.cache -c Blog.Cache
 ```
 
@@ -83,7 +88,7 @@ config :blog, Blog.Cache,
   # backend: :shards,
   # GC interval for pushing a new generation (e.g., 12 hrs)
   gc_interval: :timer.hours(12),
-  # Max number of entries (e.g, 1 million)
+  # Max number of entries (e.g., 1 million)
   max_size: 1_000_000,
   # Max memory size in bytes (e.g., 2GB)
   allocated_memory: 2_000_000_000,
@@ -91,11 +96,11 @@ config :blog, Blog.Cache,
   gc_memory_check_interval: :timer.seconds(10)
 ```
 
-If you want to use `:shards` as backend, uncomment the `backend:` option.
+If you want to use `:shards` as the backend, uncomment the `backend:` option.
 
-> See adapters docs for more information.
+> See the adapter documentation for more information.
 
-And the `Blog.Cache` module is defined in `lib/blog/cache.ex` by our
+The `Blog.Cache` module is defined in `lib/blog/cache.ex` by our
 `mix nbx.gen.cache` command:
 
 ```elixir
@@ -106,15 +111,17 @@ defmodule Blog.Cache do
 end
 ```
 
-This module is what we'll be using to interact with the cache. It uses the
-`Nebulex.Cache` module and it expects the `:otp_app` as option. The `otp_app`
-tells Nebulex which Elixir application it can look for cache configuration in.
+This module is what we'll use to interact with the cache. It uses the
+`Nebulex.Cache` module and expects the `:otp_app` option. The `otp_app`
+tells Nebulex which Elixir application to look for cache configuration in.
 In this case, we've specified that it is the `:blog` application where Nebulex
-can find that configuration and so Nebulex will use the configuration that was
+can find that configuration, so Nebulex will use the configuration that was
 set up in `config/config.exs`.
 
-The final piece of configuration is to setup the `Blog.Cache` as a
-supervisor within the application's supervision tree, which we can do in
+### Step 3: Add to Supervision Tree
+
+The final piece of configuration is to set up the `Blog.Cache` as a
+supervisor within the application's supervision tree. We can do this in
 `lib/blog/application.ex`, inside the `start/2` function:
 
 ```elixir
@@ -123,24 +130,26 @@ def start(_type, _args) do
     Blog.Cache
   ]
 
-  ...
+  # ... rest of your supervision tree
 ```
 
-This piece of configuration will start the Nebulex process which receives and
-executes our application's commands. Without it, we wouldn't be able to use
-the cache at all!
+This configuration will start the Nebulex process which receives and executes
+our application's commands. Without it, we wouldn't be able to use the cache
+at all!
 
 We've now configured our application so that it's able to execute commands
 against our cache.
 
-**IMPORTANT:** Make sure the cache is put in first place within the children
-list, or at least before the process or processes using it. Otherwise, there
-could be race conditions causing exceptions; processes attempting to use
-the cache and this one hasn't been even started.
+> **⚠️ Important:** Make sure the cache is placed first in the children
+> list, or at least before the processes that use it. Otherwise, there
+> could be race conditions causing exceptions; processes attempting to use
+> the cache before it has even started.
 
-## Inserting entries
+---
 
-We can insert a new entries into our blog cache with this code:
+## Inserting Entries
+
+We can insert new entries into our blog cache with this code:
 
 ```elixir
 iex> user = %{id: 1, first_name: "Galileo", last_name: "Galilei"}
@@ -148,11 +157,11 @@ iex> Blog.Cache.put(user[:id], user, ttl: :timer.hours(1))
 :ok
 ```
 
-To insert the data into our cache, we call `put` on `Blog.Cache`. This function
+To insert data into our cache, we call `put` on `Blog.Cache`. This function
 tells Nebulex that we want to insert a new key/value entry into the cache
-corresponding `Blog.Cache`.
+corresponding to `Blog.Cache`.
 
-It is also possible to insert multiple entries at once:
+It's also possible to insert multiple entries at once:
 
 ```elixir
 iex> users = %{
@@ -164,17 +173,17 @@ iex> Blog.Cache.put_all(users)
 :ok
 ```
 
-> The given entries can be a `map` or a Key/Value tuple list.
+> The given entries can be a `map` or a key/value tuple list.
 
-### Inserting new entries and replacing existing ones
+### Inserting New Entries vs. Replacing Existing Ones
 
-As we saw previously, `put` creates a new entry in cache if it doesn't exist,
-or overrides it if it does exist (including the `:ttl`). However, there might
-be circumstances where we want to set the entry only if it doesn't exit or the
-other way around. For those cases you can use `put_new` and `replace` functions
-instead.
+As we saw previously, `put` creates a new entry in the cache if it doesn't
+exist, or overrides it if it does exist (including the `:ttl`). However, there
+might be circumstances where we want to set the entry only if it doesn't exist,
+or the other way around. For those cases, you can use `put_new` and `replace`
+functions instead.
 
-Let's try `put_new` and `put_new!` functions:
+Let's try the `put_new` and `put_new!` functions:
 
 ```elixir
 iex> new_user = %{id: 4, first_name: "John", last_name: "Doe"}
@@ -184,12 +193,12 @@ iex> Blog.Cache.put_new(new_user.id, new_user, ttl: 900)
 iex> Blog.Cache.put_new(new_user.id, new_user)
 {:ok, false}
 
-# same as previous one but raises `Nebulex.Error` in case of error
+# Same as the previous one but raises `Nebulex.Error` in case of error
 iex> Blog.Cache.put_new!(new_user.id, new_user)
 false
 ```
 
-Now `replace` and `replace!` functions:
+Now let's try the `replace` and `replace!` functions:
 
 ```elixir
 iex> existing_user = %{id: 5, first_name: "John", last_name: "Doe2"}
@@ -770,8 +779,6 @@ defmodule Blog.NearCache do
       otp_app: :blog,
       adapter: Nebulex.Adapters.Partitioned
   end
-
-  ## TODO: Add, remove or modify the auto-generated cache levels above
 end
 ```
 

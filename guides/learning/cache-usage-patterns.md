@@ -1,4 +1,4 @@
-# Cache usage patterns with caching decorators
+# Cache Usage Patterns with Caching Decorators
 
 Nebulex supports several common cache access patterns via
 [caching decorators][nbx_caching].
@@ -10,9 +10,11 @@ Nebulex supports several common cache access patterns via
 
 [EHCache]: https://www.ehcache.org/documentation/3.10/caching-patterns.html
 
-## Cache-aside
+---
 
-The cache-aside pattern involves direct cache usage in application code.
+## Cache-Aside
+
+The **cache-aside** pattern involves direct cache usage in application code.
 
 When accessing the system-of-record (SoR), the application first checks the
 cache. If the data exists in the cache, it's returned directly, bypassing the
@@ -20,7 +22,7 @@ SoR. Otherwise, the application fetches the data from the SoR, stores it in the
 cache, and then returns it. When writing data, both the cache and SoR must be
 updated.
 
-### Reading values
+### Reading Values
 
 ```elixir
 # Check cache first, then fall back to SoR
@@ -31,7 +33,7 @@ with {:error, _reason} <- MyCache.fetch(key) do
 end
 ```
 
-### Writing values
+### Writing Values
 
 ```elixir
 # Update both cache and SoR
@@ -42,48 +44,48 @@ SoR.insert(key, value)  # e.g., Ecto.Repo
 This is the default behavior for most caches, requiring direct interaction with
 both the cache and the SoR (typically a database).
 
+---
+
 ## Cache-as-SoR
 
-The cache-as-SoR pattern uses the cache as the primary system-of-record (SoR).
-
-The pattern delegates SoR reading and writing activities to the cache, so that
-application code is (at least directly) absolved of this responsibility.
+The **cache-as-SoR** pattern uses the cache as the primary system-of-record
+(SoR). The pattern delegates SoR reading and writing activities to the cache,
+so that application code is (at least directly) absolved of this responsibility.
 To implement the cache-as-SoR pattern, use a combination of the following
 read and write patterns:
 
  * **Read-through**
-
  * **Write-through**
 
-Advantages of using the cache-as-SoR pattern are:
+### Advantages
 
- * Less cluttered application code (improved maintainability through centralized
-   SoR read/write operations)
+* **Less cluttered application code** (improved maintainability through
+  centralized SoR read/write operations).
+* **Choice of write-through or write-behind strategies** on a per-cache basis.
+* **Allows the cache to solve the thundering-herd problem**.
 
- * Choice of write-through or write-behind strategies on a per-cache basis
+### Disadvantages
 
- * Allows the cache to solve the thundering-herd problem
+* **Less directly visible code-path** – But how do you get all this
+  out-of-the-box? This is where declarative decorator-based caching comes in.
+  Nebulex provides a set of annotations to abstract most of the logic behind
+  **Read-through** and **Write-through** patterns and make the implementation
+  extremely easy. Let's go over these patterns in more detail and see how to
+  implement them using [Nebulex decorators][nbx_caching].
 
-A disadvantage of using the cache-as-SoR pattern is:
+---
 
- * Less directly visible code-path
+## Read-Through
 
-But how to get all this out-of-box? This is where declarative decorator-based
-caching comes in. Nebulex provides a set of annotation to abstract most of the
-logic behind **Read-through** and **Write-through** patterns and make the
-implementation extremely easy. But let's go over these patterns more in detail
-and how to implement them by using [Nebulex decorators][nbx_caching].
-
-## Read-through
-
-Under the read-through pattern, the cache is configured with a loader component
-that knows how to load data from the system-of-record (SoR).
+Under the **read-through** pattern, the cache is configured with a loader
+component that knows how to load data from the system-of-record (SoR).
 
 When the cache is asked for the value associated with a given key and such an
 entry does not exist within the cache, the cache invokes the loader to retrieve
-the value from the SoR, then caches the value, then returns it to the caller.
+the value from the SoR, then caches the value, and finally returns it to the
+caller.
 
-The next time the cache is asked for the value for the same key it can be
+The next time the cache is asked for the value for the same key, it can be
 returned from the cache without using the loader (unless the entry has been
 evicted or expired).
 
