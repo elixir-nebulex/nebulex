@@ -18,8 +18,26 @@ Currently we officially support the following adapters:
 [ma]: http://hexdocs.pm/nebulex_distributed/3.0.0-rc.1/Nebulex.Adapters.Multilevel.html
 [nbx_redis]: http://hexdocs.pm/nebulex_redis_adapter/3.0.0-rc.1/Nebulex.Adapters.Redis.html
 [nbx_cachex]: http://hexdocs.pm/nebulex_adapters_cachex/3.0.0-rc.1/Nebulex.Adapters.Cachex.html
-[disk_lfu]: https://github.com/elixir-nebulex/nebulex_disk_lfu
+[disk_lfu]: http://github.com/elixir-nebulex/nebulex_disk_lfu
 
 The adapter documentation links above will help you get started with your
 adapter of choice. For API reference, you can check out the
-[Nebulex documentation](http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.html).
+[Nebulex Cache API](http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Cache.html).
+
+> [!NOTE]
+>
+> _**All the official adapters listed above support Nebulex v3.**_
+
+## Non-official adapters
+
+The following non-official adapters are available:
+
+Cache | Nebulex Adapter | Dependency
+:-----| :---------------| :---------
+Distributed with Horde | Nebulex.Adapters.Horde | [nebulex_adapters_horde][nbx_horde]
+Multilevel with cluster broadcasting | NebulexLocalMultilevelAdapter | [nebulex_local_multilevel_adapter][nbx_local_multilevel]
+Ecto Postgres table | Nebulex.Adapters.Ecto | [nebulex_adapters_ecto][nebulex_adapters_ecto]
+
+[nbx_horde]: http://github.com/eliasdarruda/nebulex_adapters_horde
+[nbx_local_multilevel]: http://github.com/slab/nebulex_local_multilevel_adapter
+[nebulex_adapters_ecto]: http://github.com/hissssst/nebulex_adapters_ecto

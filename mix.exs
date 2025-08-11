@@ -210,6 +210,6 @@ defmodule Nebulex.MixProject do
   end
 
   defp plt_file_name do
-    "dialyzer-#{Mix.env()}-#{System.otp_release()}-#{System.version()}.plt"
+    "dialyzer-#{Mix.env()}-Elixir-#{System.version()}-OTP-#{System.otp_release()}.plt"
   end
 end

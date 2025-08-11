@@ -1,19 +1,21 @@
-# Getting started
+# Getting Started
 
-This guide is an introduction to [Nebulex][nbx_repo], a local and distributed
-caching toolkit for Elixir. Nebulex API is pretty much inspired by
-[Ecto](https://github.com/elixir-ecto/ecto), taking advantage of its simplicity,
-flexibility and pluggable architecture. Same as Ecto, developers can provide
-their own cache (adapter) implementations. In this guide, we're going to learn
-some basics about Nebulex, such as write, read and delete cache entries.
+This guide introduces [Nebulex][nbx_repo], a local and distributed
+caching toolkit for Elixir. The Nebulex API is heavily inspired by
+[Ecto](https://github.com/elixir-ecto/ecto), leveraging its simplicity,
+flexibility, and pluggable architecture. Like Ecto, developers can provide
+their own cache (adapter) implementations. In this guide, we'll learn
+the basics of Nebulex, including how to write, read, and delete cache entries.
 
 [nbx_repo]: https://github.com/elixir-nebulex/nebulex
 
-## Adding Nebulex to an application
+---
 
-Let's start creating a new Elixir application by running this command:
+## Adding Nebulex to Your Application
 
-```
+Let's start by creating a new Elixir application:
+
+```bash
 mix new blog --sup
 ```
 
@@ -21,11 +23,12 @@ The `--sup` option ensures that this application has
 [a supervision tree](https://hexdocs.pm/elixir/supervisor-and-application.html),
 which will be needed by Nebulex later on.
 
-To add Nebulex to this application, there are a few steps that we need to take.
+To add Nebulex to your application, follow these steps:
 
-The first step will be adding both Nebulex and the cache adapter as a dependency
-to our `mix.exs` file, which we'll do by changing the `deps` definition in that
-file to this:
+### Step 1: Add Dependencies
+
+Add both Nebulex and the cache adapter as dependencies
+to your `mix.exs` file by updating the `deps` definition:
 
 ```elixir
 defp deps do
@@ -43,34 +46,36 @@ defp deps do
 end
 ```
 
-To give more flexibility and load only needed dependencies, Nebulex makes all
-dependencies optional, including the adapters. For example:
+To provide more flexibility and load only the needed dependencies, Nebulex makes
+all dependencies optional, including the adapters. For example:
 
-  * For enabling [declarative decorator-based caching][nbx_caching], you have
-    to add `:decorator` to the dependency list.
+  * **For enabling [declarative decorator-based caching][nbx_caching]**:
+    Add `:decorator` to the dependency list.
 
-  * For enabling Telemetry events dispatched by Nebulex, you have to add
-    `:telemetry` to the dependency list. See [telemetry guide][telemetry].
+  * **For enabling Telemetry events**: Add `:telemetry` to the dependency list.
+    See the [telemetry guide][telemetry].
 
-  * For intensive workloads when using `Nebulex.Adapters.Local` adapter, you may
-    want to use `:shards` as the backend for partitioned ETS tables. In such a
-    case, you have to add `:shards` to the dependency list.
+  * **For intensive workloads** when using `Nebulex.Adapters.Local` adapter:
+    You may want to use `:shards` as the backend for partitioned ETS tables.
+    In such cases, add `:shards` to the dependency list.
 
 [nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.html
 [telemetry]: http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html
 
-To install these dependencies, we will run this command:
+Install these dependencies by running:
 
-```
+```bash
 mix deps.get
 ```
 
-We now need to define a Cache and setup some configuration for Nebulex so that
+### Step 2: Generate Cache Configuration
+
+We now need to define a Cache and set up some configuration for Nebulex so that
 we can perform actions on a cache from within the application's code.
 
-We can set up this configuration by running this command:
+Generate the required configuration by running:
 
-```
+```bash
 mix nbx.gen.cache -c Blog.Cache
 ```
 
@@ -83,7 +88,7 @@ config :blog, Blog.Cache,
   # backend: :shards,
   # GC interval for pushing a new generation (e.g., 12 hrs)
   gc_interval: :timer.hours(12),
-  # Max number of entries (e.g, 1 million)
+  # Max number of entries (e.g., 1 million)
   max_size: 1_000_000,
   # Max memory size in bytes (e.g., 2GB)
   allocated_memory: 2_000_000_000,
@@ -91,11 +96,11 @@ config :blog, Blog.Cache,
   gc_memory_check_interval: :timer.seconds(10)
 ```
 
-If you want to use `:shards` as backend, uncomment the `backend:` option.
+If you want to use `:shards` as the backend, uncomment the `backend:` option.
 
-> See adapters docs for more information.
+> See the adapter documentation for more information.
 
-And the `Blog.Cache` module is defined in `lib/blog/cache.ex` by our
+The `Blog.Cache` module is defined in `lib/blog/cache.ex` by our
 `mix nbx.gen.cache` command:
 
 ```elixir
@@ -106,15 +111,17 @@ defmodule Blog.Cache do
 end
 ```
 
-This module is what we'll be using to interact with the cache. It uses the
-`Nebulex.Cache` module and it expects the `:otp_app` as option. The `otp_app`
-tells Nebulex which Elixir application it can look for cache configuration in.
+This module is what we'll use to interact with the cache. It uses the
+`Nebulex.Cache` module and expects the `:otp_app` option. The `otp_app`
+tells Nebulex which Elixir application to look for cache configuration in.
 In this case, we've specified that it is the `:blog` application where Nebulex
-can find that configuration and so Nebulex will use the configuration that was
+can find that configuration, so Nebulex will use the configuration that was
 set up in `config/config.exs`.
 
-The final piece of configuration is to setup the `Blog.Cache` as a
-supervisor within the application's supervision tree, which we can do in
+### Step 3: Add to Supervision Tree
+
+The final piece of configuration is to set up the `Blog.Cache` as a
+supervisor within the application's supervision tree. We can do this in
 `lib/blog/application.ex`, inside the `start/2` function:
 
 ```elixir
@@ -123,24 +130,26 @@ def start(_type, _args) do
     Blog.Cache
   ]
 
-  ...
+  # ... rest of your supervision tree
 ```
 
-This piece of configuration will start the Nebulex process which receives and
-executes our application's commands. Without it, we wouldn't be able to use
-the cache at all!
+This configuration will start the Nebulex process which receives and executes
+our application's commands. Without it, we wouldn't be able to use the cache
+at all!
 
 We've now configured our application so that it's able to execute commands
 against our cache.
 
-**IMPORTANT:** Make sure the cache is put in first place within the children
-list, or at least before the process or processes using it. Otherwise, there
-could be race conditions causing exceptions; processes attempting to use
-the cache and this one hasn't been even started.
+> **⚠️ Important:** Make sure the cache is placed first in the children
+> list, or at least before the processes that use it. Otherwise, there
+> could be race conditions causing exceptions; processes attempting to use
+> the cache before it has even started.
 
-## Inserting entries
+---
 
-We can insert a new entries into our blog cache with this code:
+## Inserting Entries
+
+We can insert new entries into our blog cache with this code:
 
 ```elixir
 iex> user = %{id: 1, first_name: "Galileo", last_name: "Galilei"}
@@ -148,11 +157,11 @@ iex> Blog.Cache.put(user[:id], user, ttl: :timer.hours(1))
 :ok
 ```
 
-To insert the data into our cache, we call `put` on `Blog.Cache`. This function
+To insert data into our cache, we call `put` on `Blog.Cache`. This function
 tells Nebulex that we want to insert a new key/value entry into the cache
-corresponding `Blog.Cache`.
+corresponding to `Blog.Cache`.
 
-It is also possible to insert multiple entries at once:
+It's also possible to insert multiple entries at once:
 
 ```elixir
 iex> users = %{
@@ -164,17 +173,17 @@ iex> Blog.Cache.put_all(users)
 :ok
 ```
 
-> The given entries can be a `map` or a Key/Value tuple list.
+> The given entries can be a `map` or a key/value tuple list.
 
-### Inserting new entries and replacing existing ones
+### Inserting New Entries vs. Replacing Existing Ones
 
-As we saw previously, `put` creates a new entry in cache if it doesn't exist,
-or overrides it if it does exist (including the `:ttl`). However, there might
-be circumstances where we want to set the entry only if it doesn't exit or the
-other way around. For those cases you can use `put_new` and `replace` functions
-instead.
+As we saw previously, `put` creates a new entry in the cache if it doesn't
+exist, or overrides it if it does exist (including the `:ttl`). However, there
+might be circumstances where we want to set the entry only if it doesn't exist,
+or the other way around. For those cases, you can use `put_new` and `replace`
+functions instead.
 
-Let's try `put_new` and `put_new!` functions:
+Let's try the `put_new` and `put_new!` functions:
 
 ```elixir
 iex> new_user = %{id: 4, first_name: "John", last_name: "Doe"}
@@ -184,12 +193,12 @@ iex> Blog.Cache.put_new(new_user.id, new_user, ttl: 900)
 iex> Blog.Cache.put_new(new_user.id, new_user)
 {:ok, false}
 
-# same as previous one but raises `Nebulex.Error` in case of error
+# Same as the previous one but raises `Nebulex.Error` in case of error
 iex> Blog.Cache.put_new!(new_user.id, new_user)
 false
 ```
 
-Now `replace` and `replace!` functions:
+Now let's try the `replace` and `replace!` functions:
 
 ```elixir
 iex> existing_user = %{id: 5, first_name: "John", last_name: "Doe2"}
@@ -305,6 +314,100 @@ iex> Blog.Cache.update(1, initial, &(%{&1 | first_name: "Y"}))
 
 > You can also use the version with the trailing bang (`!`) `get_and_update!`
 > and `!update`.
+
+## Fetch or Store and Get or Store
+
+Nebulex provides two powerful functions for lazy loading and caching:
+`fetch_or_store` and `get_or_store`. These functions are particularly useful in\
+scenarios where you want to:
+
+- **Lazy load data**: Only fetch data from an external source when it's actually
+  requested.
+- **Cache expensive operations**: Store the result of database queries, API
+  calls, or complex computations.
+- **Implement cache-aside pattern**: Check the cache first, then fall back to
+  the data source if needed.
+- **Avoid cache stampede**: Prevent multiple concurrent requests from hitting
+  the same expensive operation.
+
+The key difference between these functions is how they handle the return value
+from the provided function:
+
+- `fetch_or_store` expects the function to return `{:ok, value}` or
+  `{:error, reason}` and only caches successful results.
+- `get_or_store` always caches whatever the function returns, including error
+  tuples.
+
+### Fetch or Store
+
+Use `fetch_or_store` when you want to cache only successful results and handle
+errors separately:
+
+```elixir
+# Cache successful API responses, but don't cache errors
+iex> Blog.Cache.fetch_or_store("user:123", fn ->
+...>   case fetch_user_from_api(123) do
+...>     {:ok, user} -> {:ok, user}
+...>     {:error, reason} -> {:error, reason}
+...>   end
+...> end)
+{:ok, %{id: 123, name: "John Doe"}}
+
+# If the function returns an error, it won't be cached
+iex> Blog.Cache.fetch_or_store("user:999", fn ->
+...>   {:error, "User not found"}
+...> end)
+{:error, %Nebulex.Error{reason: "User not found"}}
+
+# Subsequent calls will still execute the function since errors aren't cached
+iex> Blog.Cache.fetch_or_store("user:999", fn ->
+...>   {:error, "User not found"}
+...> end)
+{:error, %Nebulex.Error{reason: "User not found"}}
+```
+
+### Get or Store
+
+Use `get_or_store` when you want to cache everything, including error responses:
+
+```elixir
+# Cache API responses regardless of success or failure
+iex> Blog.Cache.get_or_store("api:users", fn ->
+...>   fetch_users_from_api()
+...> end)
+{:ok, %{users: [%{id: 1, name: "John"}]}}
+
+# Even error responses get cached
+iex> Blog.Cache.get_or_store("api:invalid", fn ->
+...>   {:error, "Rate limited"}
+...> end)
+{:ok, {:error, "Rate limited"}}
+
+# Subsequent calls return the cached error without hitting the API
+iex> Blog.Cache.get_or_store("api:invalid", fn ->
+...>   {:error, "Rate limited"}
+...> end)
+{:ok, {:error, "Rate limited"}}
+```
+
+### When to Use Each
+
+- **Use `fetch_or_store`** when:
+  - You want to cache only successful results
+  - You need to handle errors differently (e.g., retry logic)
+  - You're implementing a cache-aside pattern for external APIs
+  - You want to avoid caching transient failures
+
+- **Use `get_or_store`** when:
+  - You want to cache everything (success and errors)
+  - You're implementing rate limiting or circuit breaker patterns
+  - You want to avoid repeated expensive operations even when they fail
+  - You're caching database query results
+
+> **Note**: Both functions are not atomic operations. They use `fetch` and `put`
+> under the hood, but the function execution happens outside the cache
+> transaction. If you need atomicity, consider wrapping the operation
+> in a `transaction/2` call.
 
 ## Counters
 
@@ -608,28 +711,257 @@ iex> Blog.Cache.info!([:server, :stats])
 
 ## Cache events
 
-Since Nebulex v3, a new API is available for registering cache event handlers,
-which are invoked after an entry is mutated in the cache.
+Since Nebulex v3, a powerful event system is available for monitoring cache
+operations. You can register event listeners that are invoked after cache
+entries are mutated, enabling you to build sophisticated monitoring, logging,
+and analytics systems.
+
+### Basic Event Handling
+
+The simplest way to handle cache events is to register a listener function:
 
 ```elixir
 defmodule Blog.Cache.EventHandler do
   def handle(event) do
-    IO.inspect(event)
+    IO.inspect(event, label: "Cache Event")
   end
 end
 
-iex> {:ok, id} = Blog.Cache.register_event_listener(&Blog.Cache.EventHandler.handle/1)
-iex> Blog.Cache.put("event_test_key", "event_testvalue")
+# Register the event listener
+iex> Blog.Cache.register_event_listener(&Blog.Cache.EventHandler.handle/1)
 :ok
 
-#=> %Nebulex.Event.CacheEntryEvent{
+# Now perform some cache operations to see events
+iex> Blog.Cache.put("user:123", %{id: 123, name: "John Doe"})
+:ok
+
+#=> Cache Event: %Nebulex.Event.CacheEntryEvent{
 #=>   cache: Blog.Cache,
 #=>   name: Blog.Cache,
 #=>   type: :inserted,
-#=>   target: {:key, "event_test_key"},
-#=>   command: :put
+#=>   target: {:key, "user:123"},
+#=>   command: :put,
+#=>   metadata: []
+#=> }
+
+iex> Blog.Cache.replace("user:123", %{id: 123, name: "John Doe", email: "john@example.com"})
+{:ok, %{id: 123, name: "John Doe", email: "john@example.com"}}
+
+#=> Cache Event: %Nebulex.Event.CacheEntryEvent{
+#=>   cache: Blog.Cache,
+#=>   type: :updated,
+#=>   target: {:key, "user:123"},
+#=>   command: :replace,
+#=>   metadata: []
+#=> }
+
+iex> Blog.Cache.delete("user:123")
+:ok
+
+#=> Cache Event: %Nebulex.Event.CacheEntryEvent{
+#=>   cache: Blog.Cache,
+#=>   type: :deleted,
+#=>   target: {:key, "user:123"},
+#=>   command: :delete,
+#=>   metadata: []
 #=> }
 ```
+
+### Event Types and Commands
+
+Cache events are triggered by different operations and have specific types:
+
+- **`:inserted`** - When entries are added via `put`, `put_new`, `put_all`,
+  or `put_new_all`.
+- **`:updated`** - When existing entries are modified via `replace`, `expire`,
+  or `touch`.
+- **`:deleted`** - When entries are removed via `delete` or `delete_all`.
+- **`:expired`** - When entries are evicted due to TTL expiration.
+
+### Advanced Event Handling with Filters
+
+You can use filters to only receive events for specific operations or
+conditions. Filters are functions that return `true` to process an event
+or `false` to ignore it. This approach is more efficient than filtering
+in the handler function because:
+
+- **Performance**: Events are filtered before reaching your handler, reducing
+  unnecessary function calls.
+- **Clarity**: Handler functions can focus on processing logic rather than
+  filtering logic.
+- **Reusability**: Filter functions can be shared between different handlers.
+- **Composability**: You can create complex filtering logic by combining
+  multiple filter functions.
+
+```elixir
+defmodule Blog.Cache.AnalyticsHandler do
+  def handle_insertions(event) do
+    # Only handle insertions (filter ensures this is always :inserted)
+    %{target: {:key, key}} = event
+    IO.puts("New cache entry: #{key}")
+    # Send metrics to your analytics system
+    # increment_counter("cache.insertions")
+  end
+
+  def handle_user_events(event) do
+    # Only handle events for user-related keys (filter ensures this is always a user key)
+    %{target: {:key, key}, type: type} = event
+    IO.puts("User cache event: #{type} for #{key}")
+  end
+
+  # Filter functions - return true to process the event, false to ignore it
+  def filter_insertions(%{type: :inserted}), do: true
+  def filter_insertions(_other), do: false
+
+  def filter_user_keys(%{target: {:key, "user:" <> _ = key}}), do: true
+  def filter_user_keys(_other), do: false
+
+  def filter_specific_commands(%{command: command}) when command in [:put, :put_new], do: true
+  def filter_specific_commands(_other), do: false
+end
+
+# Register listeners with specific filters
+iex> Blog.Cache.register_event_listener(
+...>   &Blog.Cache.AnalyticsHandler.handle_insertions/1,
+...>   id: :insertion_tracker,
+...>   filter: &Blog.Cache.AnalyticsHandler.filter_insertions/1
+...> )
+:ok
+
+iex> Blog.Cache.register_event_listener(
+...>   &Blog.Cache.AnalyticsHandler.handle_user_events/1,
+...>   id: :user_tracker,
+...>   filter: &Blog.Cache.AnalyticsHandler.filter_user_keys/1
+...> )
+:ok
+
+# You can also combine filters for more specific event handling
+iex> Blog.Cache.register_event_listener(
+...>   &Blog.Cache.AnalyticsHandler.handle_insertions/1,
+...>   id: :put_operations,
+...>   filter: &Blog.Cache.AnalyticsHandler.filter_specific_commands/1
+...> )
+:ok
+
+# Now only relevant events will be processed
+iex> Blog.Cache.put("user:456", %{id: 456, name: "Jane Smith"})
+:ok
+#=> New cache entry: user:456
+#=> User cache event: inserted for user:456
+
+iex> Blog.Cache.put("config:theme", "dark")
+:ok
+#=> New cache entry: config:theme
+# (no user event since the filter excludes non-user keys)
+
+iex> Blog.Cache.replace("user:456", %{id: 456, name: "Jane Smith", email: "jane@example.com"})
+{:ok, %{id: 456, name: "Jane Smith", email: "jane@example.com"}}
+#=> User cache event: updated for user:456
+# (no insertion event since replace doesn't trigger :inserted type)
+```
+
+### Event Metadata and Context
+
+You can attach custom metadata to your event listeners for additional context:
+
+```elixir
+defmodule Blog.Cache.MonitoringHandler do
+  def handle_with_context(%{metadata: metadata} = event) do
+    case metadata do
+      [environment: env, service: service] ->
+        IO.puts("[#{env}] #{service}: #{event.type} event for #{inspect(event.target)}")
+
+      [level: level] ->
+        # Different handling based on monitoring level
+        case level do
+          :debug -> IO.inspect(event, label: "DEBUG")
+          :info -> IO.puts("Cache #{event.type}: #{inspect(event.target)}")
+          :warn -> IO.puts("WARNING: Cache #{event.type} event")
+        end
+
+      _ ->
+        IO.puts("Cache event: #{event.type}")
+    end
+  end
+end
+
+# Register with different metadata configurations
+iex> Blog.Cache.register_event_listener(
+...>   &Blog.Cache.MonitoringHandler.handle_with_context/1,
+...>   id: :production_monitor,
+...>   metadata: [environment: :production, service: :blog_api]
+...> )
+:ok
+
+iex> Blog.Cache.register_event_listener(
+...>   &Blog.Cache.MonitoringHandler.handle_with_context/1,
+...>   id: :debug_monitor,
+...>   metadata: [level: :debug]
+...> )
+:ok
+
+# Events now include the metadata
+iex> Blog.Cache.put("post:789", %{title: "Hello World"})
+:ok
+#=> [production] blog_api: inserted event for {:key, "post:789"}
+#=> DEBUG: %Nebulex.Event.CacheEntryEvent{...}
+```
+
+### Managing Event Listeners
+
+You can register multiple listeners and manage them individually:
+
+```elixir
+# Register with custom IDs for easier management
+iex> Blog.Cache.register_event_listener(
+...>   &Blog.Cache.EventHandler.handle/1,
+...>   id: :general_logger
+...> )
+{:ok, :general_logger}
+
+iex> Blog.Cache.register_event_listener(
+...>   &Blog.Cache.AnalyticsHandler.handle_insertions/1,
+...>   id: :analytics
+...> )
+{:ok, :analytics}
+
+# Unregister specific listeners
+iex> Blog.Cache.unregister_event_listener(:general_logger)
+:ok
+
+iex> Blog.Cache.unregister_event_listener(:analytics)
+:ok
+```
+
+### Performance Considerations
+
+Event listeners are executed synchronously and can impact cache operation
+performance. Keep your event handlers lightweight:
+
+```elixir
+defmodule Blog.Cache.FastEventHandler do
+  def handle(event) do
+    # Send to a separate process for heavy processing
+    spawn(fn -> process_event_async(event) end)
+
+    # Or use GenServer for queuing
+    # Blog.Cache.EventProcessor.cast(event)
+
+    :ok
+  end
+
+  defp process_event_async(event) do
+    # Heavy processing here (database writes, external API calls, etc.)
+    :timer.sleep(100) # Simulate heavy work
+    IO.puts("Processed event: #{event.type}")
+  end
+end
+```
+
+> **Note**: Event listeners are fired after the cache operation completes,
+> so they don't affect the success or failure of the cache operation itself.
+> They're perfect for monitoring, analytics, and side effects that shouldn't
+> interfere with cache performance.
 
 ## Distributed cache topologies
 
@@ -770,8 +1102,6 @@ defmodule Blog.NearCache do
       otp_app: :blog,
       adapter: Nebulex.Adapters.Partitioned
   end
-
-  ## TODO: Add, remove or modify the auto-generated cache levels above
 end
 ```
 

@@ -4,7 +4,7 @@
   <img src="./guides/images/nbx-logo.png" alt="Nebulex logo" />
 </picture>
 
-> In-memory and distributed caching toolkit for Elixir.
+> **In-memory and distributed caching toolkit for Elixir**
 
 ---
 
@@ -13,11 +13,12 @@
 [![Hex.pm](http://img.shields.io/hexpm/v/nebulex.svg)](http://hex.pm/packages/nebulex)
 [![Documentation](http://img.shields.io/badge/Documentation-ff69b4)](http://hexdocs.pm/nebulex)
 
-## About
+## 🚀 About
 
-Nebulex provides support for transparently adding caching into an existing
-Elixir application. Like [Ecto][ecto], the caching abstraction allows consistent
-use of various caching solutions with minimal impact on the code.
+Nebulex provides support for transparently adding caching to existing
+Elixir applications. Like [Ecto][ecto], the caching abstraction allows
+consistent use of various caching solutions with minimal impact on your
+code.
 
 Nebulex's cache abstraction shields developers from directly interacting with
 underlying caching implementations, such as [Redis][redis],
@@ -41,7 +42,7 @@ among others.
 > [!NOTE]
 >
 > This README refers to the main branch of Nebulex, not the latest released
-> version on Hex. Please reference the [getting started guide][getting_started]
+> version on Hex. Please refer to the [getting started guide][getting_started]
 > and the [official documentation][docs] for the latest stable release.
 
 [getting_started]: http://hexdocs.pm/nebulex/getting-started.html
@@ -49,47 +50,47 @@ among others.
 
 ---
 
-## Usage
+## 📖 Usage
 
 To use Nebulex, add both `:nebulex` and your chosen cache adapter as
-dependencies in your `mix.exs` file. For example, to use the
-Generational Local Cache (`Nebulex.Adapters.Local` adapter),
-add the following to your `mix.exs`:
+dependencies in your `mix.exs` file.
+
+> _**For more information about available adapters, check out the
+> [Nebulex adapters][nbx_adapters] guide.**_
+
+[nbx_adapters]: http://hexdocs.pm/nebulex/3.0.0-rc.1/nbx-adapters.html
+
+For example, to use the Generational Local Cache
+(`Nebulex.Adapters.Local` adapter), add the following to your `mix.exs`:
 
 ```elixir
 def deps do
   [
     {:nebulex, "~> 3.0.0-rc.1"},
-    {:nebulex_local, "~> 3.0"},  # Generational local cache adapter
-    {:decorator, "~> 1.4"},      # Required for caching decorators
-    {:telemetry, "~> 1.2"}       # Required for telemetry events
+    {:nebulex_local, "~> 3.0.0-rc.1"}, # Generational local cache adapter
+    {:decorator, "~> 1.4"},            # Required for caching decorators
+    {:telemetry, "~> 1.2"}             # Required for telemetry events
   ]
 end
 ```
 
-> For more information about available adapters, check out the
-> [Nebulex adapters][nbx_adapters] guide.
+To provide more flexibility and load only the needed dependencies, Nebulex makes
+all dependencies optional, including the adapters. For example:
 
-[nbx_adapters]: http://hexdocs.pm/nebulex/3.0.0-rc.1/nbx-adapters.html
+  * **For enabling [declarative decorator-based caching][nbx_caching]**:
+    Add `:decorator` to the dependency list (recommended).
 
-To give more flexibility and load only needed dependencies, Nebulex makes all
-dependencies optional. For example:
-
-  * For enabling [declarative decorator-based caching][nbx_caching], you
-    have to add `:decorator` to the dependency list (recommended adding it).
-
-  * For enabling Telemetry events dispatched by Nebulex, you have to add
-    `:telemetry` to the dependency list (recommended adding it).
-    See [telemetry guide][telemetry].
+  * **For enabling Telemetry events**: Add `:telemetry` to the dependency list
+    (recommended). See the [telemetry guide][telemetry].
 
 [telemetry]: http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html
 
 Then run `mix deps.get` in your shell to fetch the dependencies. If you want to
-use another cache adapter, just choose the proper dependency from the table
+use another cache adapter, just choose the appropriate dependency from the table
 above.
 
-Finally, in the cache definition, you will need to specify the `adapter:`
-respective to the chosen dependency. For the local cache would be:
+Finally, in your cache definition, you'll need to specify the `adapter:`
+corresponding to the chosen dependency. For the local cache, it would be:
 
 ```elixir
 defmodule MyApp.Cache do
@@ -107,7 +108,7 @@ def start(_type, _args) do
     MyApp.Cache
   ]
 
-  ...
+  # ... rest of your supervision tree
 ```
 
 You're now ready to use the cache:
@@ -126,7 +127,9 @@ For more detailed information, see the
 [getting_started-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.1/getting-started.html
 [docs-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.html
 
-## A quickstart example using caching decorators
+---
+
+## ⚡ Quick Start Example with Caching Decorators
 
 This example demonstrates how to use Nebulex with Ecto and declarative caching:
 
@@ -213,41 +216,51 @@ defmodule MyApp.Accounts do
 end
 ```
 
-## Important links
+---
 
-* [Getting Started][getting_started] - Learn how to set up and use Nebulex
-* [Documentation][docs] - Complete API reference
-* [Examples][examples] - Example applications
-* [Upgrading to v3.0](http://hexdocs.pm/nebulex/3.0.0-rc.1/v3-0.html) - Migration guide for v3.0
+## 🔗 Important Links
+
+* [Getting Started][getting_started] - Learn how to set up and use Nebulex.
+* [Documentation][docs] - Complete API reference.
+* [Examples][examples] - Example applications.
+* [Upgrading to v3.0][upgrading_to_v3] - Migration guide for v3.0.
+* [Nebulex Streams][nebulex_streams] - Real-time event streaming for Nebulex
+  caches via `Phoenix.PubSub`.
 
 [examples]: https://github.com/elixir-nebulex/nebulex_examples
+[upgrading_to_v3]: http://hexdocs.pm/nebulex/3.0.0-rc.1/v3-0.html
+[nebulex_streams]: https://github.com/elixir-nebulex/nebulex_streams
 
-## Testing
+---
+
+## 🧪 Testing
 
 To run only the tests:
 
-```
+```bash
 $ mix test
 ```
 
-Additionally, to run all Nebulex checks run:
+Additionally, to run all Nebulex checks:
 
-```
+```bash
 $ mix test.ci
 ```
 
-The `mix check` will run the tests, coverage, credo, dialyzer, etc. This is the
-recommended way to test Nebulex.
+The `mix test.ci` command will run the tests, coverage, credo, dialyzer,
+and more. This is the recommended way to test Nebulex.
 
-## Benchmarks
+---
+
+## 📊 Benchmarks
 
 Nebulex provides a set of basic benchmark tests using the library
-[benchee](https://github.com/PragTob/benchee), and they are located within
-the directory [benchmarks](./benchmarks).
+[benchee](https://github.com/PragTob/benchee), located in the
+[benchmarks](./benchmarks) directory.
 
-To run a benchmark test you have to run:
+To run a benchmark test:
 
-```
+```bash
 $ mix bench
 ```
 
@@ -255,25 +268,29 @@ $ mix bench
 > measuring the Nebulex abstraction layer performance rather than a specific
 > adapter.
 
-## Contributing
+---
+
+## 🤝 Contributing
 
 Contributions to Nebulex are very welcome and appreciated!
 
 Use the [issue tracker](https://github.com/elixir-nebulex/nebulex/issues)
 for bug reports or feature requests. Open a
 [pull request](https://github.com/elixir-nebulex/nebulex/pulls)
-when you are ready to contribute.
+when you're ready to contribute.
 
-When submitting a pull request you should not update the
-[CHANGELOG.md](CHANGELOG.md), and also make sure you test your changes
-thoroughly, include unit tests alongside new or changed code.
+When submitting a pull request:
+- **Do not update** the [CHANGELOG.md](CHANGELOG.md)
+- **Ensure** you test your changes thoroughly
+- **Include** unit tests alongside new or changed code
 
-Before to submit a PR it is highly recommended to run `mix test.ci` and ensure
+Before submitting a PR, it is highly recommended to run `mix test.ci` and ensure
 all checks run successfully.
 
-## Copyright and License
+---
+
+## 📄 Copyright and License
 
 Copyright (c) 2017, Carlos Bolaños.
 
 Nebulex source code is licensed under the [MIT License](LICENSE.md).
-
