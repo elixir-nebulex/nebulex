@@ -154,19 +154,9 @@ defmodule Nebulex.Adapters.NilTest do
   ## Private Functions
 
   defp setup_cache(_config) do
-    {:ok, _pid} = NilCache.start_link(telemetry: false)
-
-    on_exit(fn -> safe_stop() end)
+    _pid = start_supervised!({NilCache, telemetry: false})
 
     {:ok, cache: NilCache}
-  end
-
-  defp safe_stop do
-    NilCache.stop()
-  catch
-    # Perhaps the `pid` has terminated already (race-condition),
-    # so we don't want to crash the test
-    :exit, _ -> :ok
   end
 
   def my_listener(event) do

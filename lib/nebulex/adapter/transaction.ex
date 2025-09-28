@@ -67,102 +67,108 @@ defmodule Nebulex.Adapter.Transaction do
   @callback in_transaction?(Nebulex.Adapter.adapter_meta(), Nebulex.Cache.opts()) ::
               Nebulex.Cache.ok_error_tuple(boolean())
 
+  alias Nebulex.Adapter.Transaction.Options
+
+  import Nebulex.Utils, only: [wrap_ok: 1, wrap_error: 2]
+
   @doc false
   defmacro __using__(_opts) do
     quote do
       @behaviour Nebulex.Adapter.Transaction
 
-      import Nebulex.Utils, only: [wrap_ok: 1, wrap_error: 2]
-
-      alias Nebulex.Adapter.Transaction.Options
+      @impl true
+      defdelegate transaction(adapter_meta, fun, opts), to: unquote(__MODULE__)
 
       @impl true
-      def transaction(%{cache: cache, pid: pid} = adapter_meta, fun, opts) do
-        opts = Options.validate!(opts)
-
-        adapter_meta
-        |> do_in_transaction?()
-        |> do_transaction(
-          pid,
-          adapter_meta[:name] || cache,
-          Keyword.fetch!(opts, :keys),
-          Keyword.get(opts, :nodes, [node()]),
-          Keyword.fetch!(opts, :retries),
-          fun
-        )
-      end
-
-      @impl true
-      def in_transaction?(adapter_meta, _opts) do
-        wrap_ok do_in_transaction?(adapter_meta)
-      end
+      defdelegate in_transaction?(adapter_meta, opts), to: unquote(__MODULE__)
 
       defoverridable transaction: 3, in_transaction?: 2
+    end
+  end
 
-      ## Helpers
+  @doc false
+  def transaction(%{cache: cache, pid: pid} = adapter_meta, fun, opts) do
+    opts = Options.validate!(opts)
 
-      defp do_in_transaction?(%{pid: pid}) do
-        !!Process.get({pid, self()})
-      end
+    adapter_meta
+    |> do_in_transaction?()
+    |> do_transaction(
+      pid,
+      adapter_meta[:name] || cache,
+      Keyword.fetch!(opts, :keys),
+      Keyword.get(opts, :nodes, [node()]),
+      Keyword.fetch!(opts, :retries),
+      fun
+    )
+  end
 
-      defp do_transaction(true, _pid, _name, _keys, _nodes, _retries, fun) do
-        {:ok, fun.()}
-      end
+  @doc false
+  def in_transaction?(adapter_meta, _opts) do
+    wrap_ok do_in_transaction?(adapter_meta)
+  end
 
-      defp do_transaction(false, pid, name, keys, nodes, retries, fun) do
-        ids = lock_ids(name, keys)
+  ## Helpers
 
-        case set_locks(ids, nodes, retries) do
-          true ->
-            try do
-              _ = Process.put({pid, self()}, %{keys: keys, nodes: nodes})
+  defp do_in_transaction?(%{pid: pid}) do
+    !!Process.get({pid, self()})
+  end
 
-              {:ok, fun.()}
-            after
-              _ = Process.delete({pid, self()})
+  defp do_transaction(true, _pid, _name, _keys, _nodes, _retries, fun) do
+    {:ok, fun.()}
+  end
 
-              del_locks(ids, nodes)
-            end
+  defp do_transaction(false, pid, name, keys, nodes, retries, fun) do
+    ids = lock_ids(name, keys)
 
-          false ->
-            wrap_error Nebulex.Error,
-              reason: :transaction_aborted,
-              cache: name,
-              nodes: nodes,
-              cache: name
+    case set_locks(ids, nodes, retries) do
+      true ->
+        try do
+          _ = Process.put({pid, self()}, %{keys: keys, nodes: nodes})
+
+          {:ok, fun.()}
+        after
+          _ = Process.delete({pid, self()})
+
+          del_locks(ids, nodes)
         end
-      end
 
-      defp set_locks(ids, nodes, retries) do
-        maybe_set_lock = fn id, {:ok, acc} ->
-          case :global.set_lock(id, nodes, retries) do
-            true -> {:cont, {:ok, [id | acc]}}
-            false -> {:halt, {:error, acc}}
-          end
-        end
+      false ->
+        wrap_error Nebulex.Error,
+          reason: :transaction_aborted,
+          cache: name,
+          nodes: nodes,
+          cache: name
+    end
+  end
 
-        case Enum.reduce_while(ids, {:ok, []}, maybe_set_lock) do
-          {:ok, _} ->
-            true
-
-          {:error, locked_ids} ->
-            :ok = del_locks(locked_ids, nodes)
-
-            false
-        end
-      end
-
-      defp del_locks(ids, nodes) do
-        Enum.each(ids, &:global.del_lock(&1, nodes))
-      end
-
-      defp lock_ids(name, []) do
-        [{name, self()}]
-      end
-
-      defp lock_ids(name, keys) do
-        Enum.map(keys, &{{name, &1}, self()})
+  defp set_locks(ids, nodes, retries) do
+    maybe_set_lock = fn id, {:ok, acc} ->
+      case :global.set_lock(id, nodes, retries) do
+        true -> {:cont, {:ok, [id | acc]}}
+        false -> {:halt, {:error, acc}}
       end
     end
+
+    case Enum.reduce_while(ids, {:ok, []}, maybe_set_lock) do
+      {:ok, _} ->
+        true
+
+      {:error, locked_ids} ->
+        :ok = del_locks(locked_ids, nodes)
+
+        false
+    end
+  end
+
+  defp del_locks(ids, nodes) do
+    Enum.each(ids, &:global.del_lock(&1, nodes))
+  end
+
+  defp lock_ids(name, []) do
+    [{name, self()}]
+  end
+
+  defp lock_ids(name, keys) do
+    Enum.map(keys, &{{name, &1}, self()})
   end
 end

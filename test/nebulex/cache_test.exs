@@ -32,7 +32,7 @@ defmodule Nebulex.Adapters.CacheTest do
     end
 
     test "get_and_update fails because cache is not started", %{cache: cache, name: name} do
-      :ok = cache.stop()
+      :ok = stop_supervised!(name)
 
       assert_raise Nebulex.CacheNotFoundError, ~r/unable to find cache: #{inspect(name)}/, fn ->
         assert cache.get_and_update!(1, fn _ -> :pop end)
@@ -178,7 +178,7 @@ defmodule Nebulex.Adapters.CacheTest do
 
   describe "error" do
     test "because cache is stopped", %{cache: cache, name: name} do
-      :ok = cache.stop()
+      :ok = stop_supervised!(name)
 
       ops = [
         fn -> cache.put(1, 13) end,

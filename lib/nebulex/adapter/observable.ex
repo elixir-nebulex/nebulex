@@ -69,25 +69,15 @@ defmodule Nebulex.Adapter.Observable do
     quote do
       @behaviour Nebulex.Adapter.Observable
 
-      alias Nebulex.Telemetry.CacheEntryHandler
+      @impl true
+      defdelegate register_event_listener(adapter_meta, listener, filter, metadata, opts),
+        to: Nebulex.Telemetry.CacheEntryHandler,
+        as: :register
 
       @impl true
-      def register_event_listener(
-            %{cache: cache} = adapter_meta,
-            listener,
-            filter,
-            metadata,
-            opts
-          ) do
-        opts
-        |> Keyword.get(:id, listener)
-        |> CacheEntryHandler.register(adapter_meta[:name] || cache, listener, filter, metadata)
-      end
-
-      @impl true
-      def unregister_event_listener(%{cache: cache} = adapter_meta, id, _opts) do
-        CacheEntryHandler.unregister(id, adapter_meta[:name] || cache)
-      end
+      defdelegate unregister_event_listener(adapter_meta, id, opts),
+        to: Nebulex.Telemetry.CacheEntryHandler,
+        as: :unregister
     end
   end
 end

@@ -5,6 +5,7 @@ defmodule Nebulex.Cache.ObservableTest do
     import ExUnit.CaptureLog
     import Nebulex.CacheCase, only: [t_sleep: 1, assert_eventually: 1]
 
+    alias Nebulex.Adapter
     alias Nebulex.Event.CacheEntryEvent
 
     describe "register_event_listener!/2" do
@@ -29,6 +30,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
         event =
           CacheEntryEvent.new(
+            pid: Adapter.lookup_meta(name).pid,
             cache: cache,
             name: name,
             type: :inserted,
@@ -134,6 +136,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
         event =
           CacheEntryEvent.new(
+            pid: Adapter.lookup_meta(name).pid,
             cache: cache,
             name: name,
             type: :inserted,
@@ -202,6 +205,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
         event =
           CacheEntryEvent.new(
+            pid: Adapter.lookup_meta(name).pid,
             cache: cache,
             name: name,
             type: :inserted,
@@ -228,6 +232,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
         event =
           CacheEntryEvent.new(
+            pid: Adapter.lookup_meta(name).pid,
             cache: cache,
             name: name,
             type: :inserted,
@@ -257,6 +262,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
           event1 =
             CacheEntryEvent.new(
+              pid: Adapter.lookup_meta(name).pid,
               cache: cache,
               name: name,
               type: :inserted,
@@ -264,7 +270,7 @@ defmodule Nebulex.Cache.ObservableTest do
               command: :put
             )
 
-          event2 = %{event1 | name: temp}
+          event2 = %{event1 | name: temp, pid: Adapter.lookup_meta(temp).pid}
 
           assert cache.put("test", "test") == :ok
           assert_receive ^event1

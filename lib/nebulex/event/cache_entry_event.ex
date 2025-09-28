@@ -39,6 +39,7 @@ defmodule Nebulex.Event.CacheEntryEvent do
 
     * `:cache` - The defined cache module.
     * `:name` - The cache name (for dynamic caches).
+    * `:pid` - The cache PID.
     * `:type` - The event type.
     * `:target` - The event target. It could be a key or a query
       (in case of `delete_all`).
@@ -50,6 +51,7 @@ defmodule Nebulex.Event.CacheEntryEvent do
   @type t() :: %__MODULE__{
           cache: Nebulex.Cache.t(),
           name: atom() | nil,
+          pid: pid() | nil,
           type: type(),
           target: target(),
           command: atom(),
@@ -57,8 +59,8 @@ defmodule Nebulex.Event.CacheEntryEvent do
         }
 
   # Event structure
-  @enforce_keys [:cache, :type, :target, :command]
-  defstruct cache: nil, name: nil, type: nil, target: nil, command: nil, metadata: []
+  @enforce_keys [:cache, :pid, :type, :target, :command]
+  defstruct cache: nil, name: nil, pid: nil, type: nil, target: nil, command: nil, metadata: []
 
   # Supported event types
   @event_types ~w(deleted expired inserted updated)a
@@ -86,16 +88,18 @@ defmodule Nebulex.Event.CacheEntryEvent do
   ## Example
 
       iex> Nebulex.Event.CacheEntryEvent.new(
-      ...>   cache: :my_cache,
+      ...>   cache: MyApp.Cache,
+      ...>   pid: self(),
       ...>   target: {:key, "foo"},
       ...>   command: :put,
       ...>   type: :inserted
       ...> )
       %Nebulex.Event.CacheEntryEvent{
+        cache: MyApp.Cache,
         command: :put,
         name: nil,
+        pid: self(),
         type: :inserted,
-        cache: :my_cache,
         metadata: [],
         target: {:key, "foo"}
       }

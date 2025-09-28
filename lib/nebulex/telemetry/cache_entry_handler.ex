@@ -17,22 +17,29 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
   events.
   """
   @spec register(
-          id :: any(),
-          cache_name :: atom() | pid(),
+          Adapter.adapter_meta(),
           Nebulex.Event.listener(),
           Nebulex.Event.filter(),
-          Nebulex.Event.metadata()
+          Nebulex.Event.metadata(),
+          keyword()
         ) :: :ok | Nebulex.Error.t()
-  def register(id, cache_name, listener, filter, meta \\ []) do
-    %{telemetry_prefix: telemetry_prefix} = Adapter.lookup_meta(cache_name)
-    handler_id = {cache_name, id}
+  def register(
+        %{name: name, pid: pid, telemetry_prefix: telemetry_prefix},
+        listener,
+        filter,
+        meta,
+        opts
+      ) do
+    cache_name = name || pid
+    id = Keyword.get(opts, :id, listener)
+    handler_id = {name, id}
 
     with {:error, :already_exists} <-
            Telemetry.attach_many(
              handler_id,
              [telemetry_prefix ++ [:command, :stop]],
              &__MODULE__.handle_event/4,
-             %{name: cache_name, listener: listener, filter: filter, meta: meta}
+             %{name: cache_name, pid: pid, listener: listener, filter: filter, meta: meta}
            ) do
       wrap_error Nebulex.Error,
         reason: :event_listener_already_exists,
@@ -46,8 +53,8 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
   @doc """
   Un-registers a Telemetry handler that listens and handles cache entry events.
   """
-  def unregister(id, cache_name) do
-    _ignore = Telemetry.detach({cache_name, id})
+  def unregister(%{name: name, pid: pid}, id, _opts) do
+    _ignore = Telemetry.detach({name || pid, id})
 
     :ok
   end
@@ -64,11 +71,11 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
           command: command,
           args: args,
           result: result,
-          adapter_meta: %{cache: cache, name: name}
+          adapter_meta: %{cache: cache, pid: pid}
         },
-        %{name: name, meta: meta} = config
+        %{pid: pid, name: name, meta: meta} = config
       ) do
-    do_handle(command, args, result, [cache: cache, name: name, metadata: meta], config)
+    do_handle(command, args, result, [cache: cache, name: name, pid: pid, metadata: meta], config)
   end
 
   def handle_event(_event, _measurements, _metadata, _config) do

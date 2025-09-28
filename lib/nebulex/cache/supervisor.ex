@@ -24,15 +24,13 @@ defmodule Nebulex.Cache.Supervisor do
   """
   @spec runtime_config(module(), atom(), keyword()) :: {:ok, keyword()} | :ignore
   def runtime_config(cache, otp_app, opts) do
-    config =
-      otp_app
-      |> Application.get_env(cache, [])
-      |> Keyword.merge(opts)
-      |> Keyword.put(:otp_app, otp_app)
-      |> Keyword.put_new_lazy(:telemetry_prefix, fn -> Telemetry.default_prefix(cache) end)
-      |> validate_start_opts!()
-
-    cache_init(cache, config)
+    otp_app
+    |> Application.get_env(cache, [])
+    |> Keyword.merge(opts)
+    |> Keyword.put(:otp_app, otp_app)
+    |> Keyword.put_new_lazy(:telemetry_prefix, fn -> Telemetry.default_prefix(cache) end)
+    |> validate_start_opts!()
+    |> then(&cache_init(cache, &1))
   end
 
   defp cache_init(cache, config) do

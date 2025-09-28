@@ -46,13 +46,9 @@ defmodule Nebulex.CacheCase do
         {ctx_opts, opts} = Keyword.split(opts, [:error_module, :error_reason, :after_setup])
         {after_setup, ctx_opts} = Keyword.pop_lazy(ctx_opts, :after_setup, fn -> &{:ok, &1} end)
 
-        {:ok, pid} = cache.start_link(opts)
+        pid = start_supervised!({cache, opts})
 
-        on_exit(fn ->
-          unquote(__MODULE__).safe_stop(pid)
-        end)
-
-        after_setup.([cache: cache] ++ ctx_opts)
+        after_setup.([cache: cache, cache_pid: pid] ++ ctx_opts)
       end
     end
   end
@@ -69,19 +65,19 @@ defmodule Nebulex.CacheCase do
         {after_setup, ctx_opts} = Keyword.pop_lazy(ctx_opts, :after_setup, fn -> &{:ok, &1} end)
 
         default_dynamic_cache = cache.get_dynamic_cache()
-        {:ok, pid} = cache.start_link([name: name] ++ opts)
+
+        pid =
+          {cache, [name: name] ++ opts}
+          |> Supervisor.child_spec(id: name)
+          |> start_supervised!()
 
         _ = cache.put_dynamic_cache(name)
 
         on_exit(fn ->
-          try do
-            unquote(__MODULE__).safe_stop(pid)
-          after
-            cache.put_dynamic_cache(default_dynamic_cache)
-          end
+          cache.put_dynamic_cache(default_dynamic_cache)
         end)
 
-        after_setup.([cache: cache, name: name] ++ ctx_opts)
+        after_setup.([cache: cache, name: name, cache_pid: pid] ++ ctx_opts)
       end
     end
   end

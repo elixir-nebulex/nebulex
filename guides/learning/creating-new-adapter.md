@@ -139,19 +139,11 @@ defmodule NebulexMemoryAdapterTest do
   alias NebulexMemoryAdapter.TestCache, as: Cache
 
   setup do
-    {:ok, pid} = Cache.start_link()
-    Cache.delete_all()
+    pid = start_supervised!(Cache)
+    _ignore = Cache.delete_all!()
     :ok
 
-    on_exit(fn -> safe_stop(pid) end)
-
     {:ok, cache: Cache, name: Cache}
-  end
-
-  defp safe_stop(pid) do
-    Cache.stop(pid)
-  catch
-    :exit, _ -> :ok
   end
 end
 ```
