@@ -321,7 +321,12 @@ defmodule Nebulex.Cache do
   @typedoc "Cache action options"
   @type opts() :: keyword()
 
-  @typedoc "The data type for a query spec"
+  @typedoc """
+  The data type for a query spec.
+
+  See the ["query-spec"](#c:get_all/2-query-specification) section for more
+  information.
+  """
   @type query_spec() :: keyword()
 
   @typedoc "Specification key for the item(s) to include in the returned info"

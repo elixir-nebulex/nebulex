@@ -62,7 +62,7 @@ defmodule Nebulex.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:stream_data, "~> 1.2", only: [:dev, :test]},
-      {:mimic, "~> 1.11", only: :test},
+      {:mimic, "~> 2.1", only: :test},
       {:doctor, "~> 0.22", only: [:dev, :test]},
 
       # Benchmark Test

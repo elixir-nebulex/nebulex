@@ -763,6 +763,20 @@ defmodule Nebulex.CachingTest do
       refute Cache.get!(key)
     end
 
+    test "cache_evict annotation with custom key and query spec" do
+      :ok = Cache.put_all(foo: "foo", bar: "bar", baz: "baz", qux: "qux")
+      assert Cache.get!(:foo) == "foo"
+      assert Cache.get!(:bar) == "bar"
+      assert Cache.get!(:baz) == "baz"
+      assert Cache.get!(:qux) == "qux"
+
+      assert evict_with_query_spec(nil) == nil
+      refute Cache.get!(:foo)
+      refute Cache.get!(:bar)
+      refute Cache.get!(:baz)
+      refute Cache.get!(:qux)
+    end
+
     test "cache_put annotation" do
       assert multiple_clauses(2, 2) == 4
       assert Cache.get!(2) == 4
@@ -1042,6 +1056,11 @@ defmodule Nebulex.CachingTest do
   @decorate cache_evict(key: &:erlang.list_to_tuple(&1.args))
   def evict_with_keygen2(x, y) do
     {x, y}
+  end
+
+  @decorate cache_evict(key: &{:query, hd(&1.args)})
+  def evict_with_query_spec(query) do
+    query
   end
 
   @decorate cache_put(key: &hd(&1.args))

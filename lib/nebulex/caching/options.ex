@@ -93,9 +93,13 @@ defmodule Nebulex.Caching.Options do
         * An anonymous function to call to generate the key in runtime.
           The function optionally receives the decorator context as an argument
           and must return the key for caching.
-        * The tuple `{:in, keys}`, where `keys` is a list with the keys to
-          evict or update. This option is allowed for `cache_evict` and
-          `cache_put` decorators only.
+        * The tuple `{:in, keys}`, where `keys` is a list with the keys to evict
+          or update (`cache.delete_all(in: keys)` is invoked under the hood).
+          This option is allowed for `cache_evict` and `cache_put` decorators
+          only.
+        * The tuple `{:query, value}`, where `value` is a query supported by the
+          cache adapter (`cache.delete_all(query: value)` is invoked under the
+          hood). This option is allowed for the `cache_evict` decorator only.
         * Any term.
 
       See ["Key Generation"](#module-key-generation) section

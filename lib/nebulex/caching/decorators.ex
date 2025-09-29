@@ -589,12 +589,16 @@ if Code.ensure_loaded?(Decorator.Define) do
         The function optionally receives the decorator context as an argument
         and must return the key for caching.
       * The tuple `{:in, keys}`, where `keys` is a list with the keys to evict
-        or update. This option is allowed for `cache_evict` and `cache_put`
-        decorators only.
+        or update (`cache.delete_all(in: keys)` is invoked under the hood).
+        This option is allowed for `cache_evict` and `cache_put` decorators
+        only.
+      * The tuple `{:query, value}`, where `value` is a query supported by the
+        cache adapter (`cache.delete_all(query: value)` is invoked under the
+        hood). This option is allowed for the `cache_evict` decorator only.
       * Any term.
 
     """
-    @type key() :: (-> any()) | (context() -> any()) | {:in, [any()]} | any()
+    @type key() :: (-> any()) | (context() -> any()) | {:in, [any()]} | {:query, any()} | any()
 
     @typedoc "Type for on_error action"
     @type on_error() :: :nothing | :raise
@@ -1059,6 +1063,15 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     #{Nebulex.Caching.Options.cache_evict_options_docs()}
 
+    > #### `:key` option with a query {: .info}
+    >
+    > The `:key` option can be a tuple `{:query, value}` (or a function that
+    > returns that tuple), where the `value` is a query supported by the cache
+    > adapter. See the ["Eviction with a query"][evict-q] section for more
+    > information.
+
+    [evict-q]: #cache_evict/3-eviction-with-a-query
+
     See the ["Shared options"](#module-shared-options) section in the module
     documentation for more options.
 
@@ -1083,12 +1096,48 @@ if Code.ensure_loaded?(Decorator.Define) do
           end
         end
 
+    ## Eviction with a query
+
+    To explain how this works, let's use an example. Imagine you have a function
+    `delete_objects_by_tag` which receives a `tag` as an argument and deletes
+    all records that match the given tag from the SoR. Therefore, we would like
+    to evict those entries from the cache too. This can be done by using a query
+    as an eviction key. However, we don't want to write a query in the decorator
+    itself because it can be a complex query, and it will look verbose. So, we
+    can use a function as an eviction key that returns the required query to
+    evict the cached entries by the given tag.
+
+        @decorate cache_evict(key: &__MODULE__.query_for_tag/1)
+        def delete_objects_by_tag(tag) do
+          # your logic to delete data from the SoR
+        end
+
+        def query_for_tag(%{args: [tag]} = _context) do
+          # Assuming we are using the `Nebulex.Adapters.Local` adapter and the
+          # value of the entry is a map with a `tag` field, then match spec
+          # would be something like:
+          match_spec = [
+            {
+              {:entry, :"$1", %{tag: :"$2"}, :_, :_},
+              [{:"=:=", :"$2", tag}],
+              [true]
+            }
+          ]
+
+          {:query, match_spec}
+        end
+
+    As you can see, the key eviction function returns the tuple
+    `{:query, value}`, where the `value` must be a query
+    supported by the cache adapter.
+
     > #### **Write-through** pattern {: .info}
     >
     > This decorator supports the **Write-through** pattern. Your function
     > provides the logic to write data to the system of record (SoR), and the
     > decorator under the hood provides the rest. But in contrast with the
-    > `update` decorator, the data is deleted from the cache instead of updated.
+    > `cache_put` decorator, the data is deleted from the cache instead of
+    > updated.
     """
     @doc group: "Decorator API"
     def cache_evict(attrs \\ [], block, context) do
@@ -1362,16 +1411,16 @@ if Code.ensure_loaded?(Decorator.Define) do
     Convenience function for wrapping and/or encapsulating
     the **cacheable** decorator logic.
 
-    > #### NOTE {: .warning}
+    > #### NOTE {: .info}
     >
-    > This function is for internal purposes only.
+    > _**This function is for internal purposes only.**_
     """
     @doc group: "Internal API"
     @spec eval_cacheable(any(), any(), references(), keyword(), match(), on_error(), fun()) :: any()
     def eval_cacheable(cache, key, references, opts, match, on_error, block_fun) do
       context = Process.get(@decorator_context_key)
       cache = eval_cache(cache, context)
-      key = eval_key(cache, key, context)
+      key = eval_key(key, context)
 
       do_eval_cacheable(cache, key, references, opts, match, on_error, block_fun)
     end
@@ -1480,16 +1529,16 @@ if Code.ensure_loaded?(Decorator.Define) do
     Convenience function for wrapping and/or encapsulating
     the **cache_evict** decorator logic.
 
-    > #### NOTE {: .warning}
+    > #### NOTE {: .info}
     >
-    > This function is for internal purposes only.
+    > _**This function is for internal purposes only.**_
     """
     @doc group: "Internal API"
     @spec eval_cache_evict(any(), any(), boolean(), boolean(), on_error(), fun()) :: any()
     def eval_cache_evict(cache, key, before_invocation?, all_entries?, on_error, block_fun) do
       context = Process.get(@decorator_context_key)
       cache = eval_cache(cache, context)
-      key = eval_key(cache, key, context)
+      key = eval_key(key, context)
 
       do_eval_cache_evict(cache, key, before_invocation?, all_entries?, on_error, block_fun)
     end
@@ -1512,8 +1561,8 @@ if Code.ensure_loaded?(Decorator.Define) do
       run_cmd(cache, :delete_all, [], on_error)
     end
 
-    defp do_evict(false, cache, {:in, keys}, on_error) do
-      run_cmd(cache, :delete_all, [[in: keys]], on_error)
+    defp do_evict(false, cache, {op, _} = q, on_error) when op in [:in, :query] do
+      run_cmd(cache, :delete_all, [[q]], on_error)
     end
 
     defp do_evict(false, cache, key, on_error) do
@@ -1524,16 +1573,16 @@ if Code.ensure_loaded?(Decorator.Define) do
     Convenience function for wrapping and/or encapsulating
     the **cache_put** decorator logic.
 
-    > #### NOTE {: .warning}
+    > #### NOTE {: .info}
     >
-    > This function is for internal purposes only.
+    > _**This function is for internal purposes only.**_
     """
     @doc group: "Internal API"
     @spec eval_cache_put(any(), any(), any(), keyword(), on_error(), match()) :: any()
     def eval_cache_put(cache, key, value, opts, on_error, match) do
       context = Process.get(@decorator_context_key)
       cache = eval_cache(cache, context)
-      key = eval_key(cache, key, context)
+      key = eval_key(key, context)
 
       do_eval_cache_put(cache, key, value, opts, on_error, match)
     end
@@ -1582,9 +1631,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc """
     Convenience function for the `cache_put` decorator.
 
-    > #### NOTE {: .warning}
+    > #### NOTE {: .info}
     >
-    > This function is for internal purposes only.
+    > _**This function is for internal purposes only.**_
     """
     @doc group: "Internal API"
     @spec cache_put(cache_value(), {:in, [any()]} | any(), any(), keyword()) :: :ok
@@ -1601,9 +1650,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc """
     Convenience function for evaluating the `cache` argument.
 
-    > #### NOTE {: .warning}
+    > #### NOTE {: .info}
     >
-    > This function is for internal purposes only.
+    > _**This function is for internal purposes only.**_
     """
     @doc group: "Internal API"
     @spec eval_cache(any(), context()) :: cache_value()
@@ -1618,32 +1667,24 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc """
     Convenience function for evaluating the `key` argument.
 
-    > #### NOTE {: .warning}
+    > #### NOTE {: .info}
     >
-    > This function is for internal purposes only.
+    > _**This function is for internal purposes only.**_
     """
     @doc group: "Internal API"
-    @spec eval_key(any(), any(), context()) :: any()
-    def eval_key(cache, key, ctx)
+    @spec eval_key(any(), context()) :: any()
+    def eval_key(key, ctx)
 
-    def eval_key(_cache, key, ctx) when is_function(key, 1) do
-      key.(ctx)
-    end
-
-    def eval_key(_cache, key, _ctx) when is_function(key, 0) do
-      key.()
-    end
-
-    def eval_key(_cache, key, _ctx) do
-      key
-    end
+    def eval_key(key, ctx) when is_function(key, 1), do: key.(ctx)
+    def eval_key(key, _ctx) when is_function(key, 0), do: key.()
+    def eval_key(key, _ctx), do: key
 
     @doc """
     Convenience function for running a cache command.
 
-    > #### NOTE {: .warning}
+    > #### NOTE {: .info}
     >
-    > This function is for internal purposes only.
+    > _**This function is for internal purposes only.**_
     """
     @doc group: "Internal API"
     @spec run_cmd(module(), atom(), [any()], on_error()) :: any()
