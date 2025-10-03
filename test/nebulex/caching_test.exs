@@ -698,8 +698,8 @@ defmodule Nebulex.CachingTest do
     end
   end
 
-  describe "option :key with custom key generator on" do
-    test "cacheable annotation" do
+  describe "option :key with a custom key generator in annotation" do
+    test "cacheable" do
       key = default_hash(:cacheable, :get_with_keygen, 2, [1, 2])
 
       refute Cache.get!(key)
@@ -707,13 +707,13 @@ defmodule Nebulex.CachingTest do
       assert Cache.get!(key) == {1, 2}
     end
 
-    test "cacheable annotation (key generator with arity 0)" do
+    test "cacheable (key generator has arity 0)" do
       refute Cache.get!(1)
       assert get_with_keygen_arity_0(1) == 1
       assert Cache.get!(:get_with_keygen_arity_0) == 1
     end
 
-    test "cacheable annotation with multiple function clauses and pattern-matching " do
+    test "cacheable (multiple function clauses and pattern-matching)" do
       key = default_hash(:cacheable, :get_with_keygen2, 3, [1, 2])
 
       refute Cache.get!(key)
@@ -727,7 +727,7 @@ defmodule Nebulex.CachingTest do
       assert Cache.get!(key) == {1, 2, %{b: 3}}
     end
 
-    test "cacheable annotation with ignored arguments" do
+    test "cacheable (ignored arguments)" do
       key = default_hash(:cacheable, :get_with_keygen3, 7, [1, %{b: 2}])
 
       refute Cache.get!(key)
@@ -735,7 +735,7 @@ defmodule Nebulex.CachingTest do
       assert Cache.get!(key) == {1, %{b: 2}}
     end
 
-    test "cacheable annotation with custom key" do
+    test "cacheable (custom key)" do
       key = {:a, :b, 1, 2}
 
       refute Cache.get!(key)
@@ -743,7 +743,7 @@ defmodule Nebulex.CachingTest do
       assert Cache.get!(key) == {1, 2}
     end
 
-    test "cache_evict annotation" do
+    test "cache_evict (function as key)" do
       key = default_hash(:cache_evict, :evict_with_keygen, 2, ["foo", "bar"])
 
       :ok = Cache.put(key, {"foo", "bar"})
@@ -753,7 +753,7 @@ defmodule Nebulex.CachingTest do
       refute Cache.get!(key)
     end
 
-    test "cache_evict annotation with custom key" do
+    test "cache_evict (function returns the args)" do
       key = {"foo", "bar"}
 
       :ok = Cache.put(key, {"foo", "bar"})
@@ -763,7 +763,7 @@ defmodule Nebulex.CachingTest do
       refute Cache.get!(key)
     end
 
-    test "cache_evict annotation with custom key and query spec" do
+    test "cache_evict (function returns a query spec)" do
       :ok = Cache.put_all(foo: "foo", bar: "bar", baz: "baz", qux: "qux")
       assert Cache.get!(:foo) == "foo"
       assert Cache.get!(:bar) == "bar"
@@ -777,7 +777,7 @@ defmodule Nebulex.CachingTest do
       refute Cache.get!(:qux)
     end
 
-    test "cache_put annotation" do
+    test "cache_put" do
       assert multiple_clauses(2, 2) == 4
       assert Cache.get!(2) == 4
 
@@ -790,7 +790,7 @@ defmodule Nebulex.CachingTest do
       assert Cache.get!(2) == 16
     end
 
-    test "cache_put annotation with custom key" do
+    test "cache_put (function returns a tuple)" do
       key = {:tuple, 2}
 
       assert Cache.put(key, 2) == :ok
@@ -804,42 +804,42 @@ defmodule Nebulex.CachingTest do
     end
   end
 
-  describe "option :on_error on" do
+  describe "option :on_error in annotation" do
     setup_with_cache ErrorCache
 
-    test "cacheable annotation raises a cache error" do
+    test "cacheable raises a cache error" do
       assert_raise Nebulex.Error, ~r"command failed", fn ->
         get_and_raise_exception(:raise)
       end
     end
 
-    test "cacheable annotation ignores the exception" do
+    test "cacheable ignores the exception" do
       assert get_ignoring_exception("foo") == "foo"
     end
 
-    test "cache_put annotation raises a cache error" do
+    test "cache_put raises a cache error" do
       assert_raise Nebulex.Error, ~r"command failed", fn ->
         update_and_raise_exception(:raise)
       end
     end
 
-    test "cache_put annotation ignores the exception" do
+    test "cache_put ignores the exception" do
       assert update_ignoring_exception("foo") == "foo"
     end
 
-    test "cache_evict annotation raises a cache error" do
+    test "cache_evict raises a cache error" do
       assert_raise Nebulex.Error, ~r"command failed", fn ->
         evict_and_raise_exception(:raise)
       end
     end
 
-    test "cache_evict annotation ignores the exception" do
+    test "cache_evict ignores the exception" do
       assert evict_ignoring_exception("foo") == "foo"
     end
   end
 
-  describe "option :cache with anonymous function on" do
-    test "cacheable annotation" do
+  describe "option :cache with anonymous function in annotation" do
+    test "cacheable" do
       refute Cache.get!("foo")
 
       assert get_fn_cache("foo") == "foo"
@@ -847,7 +847,7 @@ defmodule Nebulex.CachingTest do
       assert Cache.get!("foo") == "foo"
     end
 
-    test "cache_put annotation" do
+    test "cache_put" do
       :ok = Cache.put("foo", "bar")
 
       assert update_fn_cache("bar bar") == "bar bar"
@@ -855,12 +855,38 @@ defmodule Nebulex.CachingTest do
       assert Cache.get!("foo") == "bar bar"
     end
 
-    test "cache_evict annotation" do
+    test "cache_evict" do
       :ok = Cache.put("foo", "bar")
 
       assert delete_fn_cache("bar bar") == "bar bar"
       assert_receive %{module: __MODULE__, function_name: :delete_fn_cache, args: ["bar bar"]}
       refute Cache.get!("foo")
+    end
+  end
+
+  describe "[key: {:in, keys}] where keys have references in annotation" do
+    setup_with_cache YetAnotherCache
+
+    test "cache_evict" do
+      assert set_keys(x: 1, y: 2, z: 3, w: 4) == :ok
+
+      assert evict_keys_with_refs(:x, :y, :z) == {:x, :y, :z}
+
+      refute Cache.get!(:x)
+      refute Cache.get!(:y)
+      assert Cache.get!(:z) == 3
+      assert Cache.get!(:w) == 4
+    end
+
+    test "cache_put" do
+      expected_result = {:x, :y, :z}
+
+      assert put_keys_with_refs(:x, :y, :z) == expected_result
+
+      assert Cache.get!(:x) == expected_result
+      assert Cache.get!(:y) == expected_result
+      refute Cache.get!(:z)
+      assert YetAnotherCache.get!(:z) == expected_result
     end
   end
 
@@ -1168,6 +1194,18 @@ defmodule Nebulex.CachingTest do
     _ = name
 
     value
+  end
+
+  ## Multiple keys and references
+
+  @decorate cache_evict(key: {:in, [x, keyref(y, cache: Cache), keyref(z, cache: YetAnotherCache)]})
+  def evict_keys_with_refs(x, y, z) do
+    {x, y, z}
+  end
+
+  @decorate cache_put(key: {:in, [x, keyref(y, cache: Cache), keyref(z, cache: YetAnotherCache)]})
+  def put_keys_with_refs(x, y, z) do
+    {x, y, z}
   end
 
   ## Helpers

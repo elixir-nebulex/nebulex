@@ -457,6 +457,112 @@ if Code.ensure_loaded?(Decorator.Define) do
           # your logic ...
         end
 
+    ## Anonymous functions vs. module captures
+
+    Some options (`:cache`, `:key`, `:references`, `:match`) may be configured
+    with anonymous functions. These functions are **inlined by the decorator
+    macro** at compile time and **evaluated at runtime** each time the decorated
+    function is invoked. In other words, on every decorated call a new function
+    term is created and executed once (or a few times) by the decorator.
+
+    This behavior is normal and efficient for most cases, but understanding how
+    it works helps you write clearer and faster code.
+
+    ### Key points
+
+      * Both anonymous functions (`fn ... end`) and module captures
+        (`&Mod.fun/2`) allocate a new function term per invocation.
+
+      * A **module capture** (`&Mod.fun/arity`) has **no environment** —
+        it doesn’t carry any extra data, so its allocation is minimal.
+
+      * An **anonymous closure** may **capture variables** from its environment.
+        If the captured data is large (e.g. big maps, structs, lists, configs),
+        every decorated call will create a new closure holding references to
+        those values, which can add GC pressure on hot paths.
+
+    ### Best practices
+
+      * Small lambdas are perfectly fine and idiomatic:
+
+        ```elixir
+        key: &(&1 && &1.id)
+        references: &(&1 && keyref(&1.id, cache: RedisCache))
+        match: &match(&1, email)
+        ```
+
+      * Prefer **module captures** for shared or non-trivial logic. They allocate
+        a fresh but **environment-free** function per call, which is very cheap:
+
+        ```elixir
+        key: &MyApp.Keygen.generate/1
+        match: &__MODULE__.match_fun/2
+        ```
+
+      * If you need access to the function arguments, use the
+        **decorator context** instead of capturing:
+
+        ```elixir
+        def match_fun(result, %Nebulex.Caching.Decorators.Context{args: [arg]}) do
+          check_valid?(result, arg)
+        end
+
+        @decorate cacheable(key: arg.id, match: &__MODULE__.match_fun/2)
+        def get_user(arg), do: Repo.get(User, arg.id)
+        ```
+
+      * Capturing a small or static module attribute (e.g. `@config`) inside the
+        lambda is perfectly fine. The value is referenced from the environment,
+        not duplicated:
+
+        ```elixir
+        # Small config map
+        @config %{foo: "bar", baz: "qux"}
+
+        @decorate cacheable(key: id, match: &check_valid?(&1, @config))
+        def get_user(id), do: Repo.get(User, id)
+        ```
+
+      * If you do use lambdas, **keep captured data small**. Instead of closing
+        over large maps or configs, **fetch what you need inside a module
+        function**:
+
+        ```elixir
+        # ❌ Avoid: capturing the full config (large map) in the lambda
+        @config %{ttl: :timer.hours(1), cache: MyApp.Cache, extra: %{...}}
+
+        @decorate cacheable(key: id, match: &MyApp.Validator.valid?(&1, @config))
+        def get_user(id), do: Repo.get(User, id)
+
+        # ✅ Better: fetch what you need inside the module function
+        defmodule MyApp.Validator do
+          def valid?(result) do
+            # or from :persistent_term / ETS / any external source
+            config = Application.get_env(:my_app, :validation_config)
+
+            do_validate(result, config)
+          end
+        end
+
+        @decorate cacheable(key: id, match: &MyApp.Validator.valid?(&1))
+        def get_user(id), do: Repo.get(User, id)
+        ```
+
+    ### When to care
+
+    Because Nebulex decorators run as often as your cached functions are called,
+    the option lambdas are evaluated on every call. However, the cost of
+    creating a small or environment-free function term per call is negligible
+    in most real-world scenarios.
+
+    You only need to be mindful of this if:
+
+      * The function captures **large data structures** in its environment.
+      * Profiling shows decorator evaluation as a measurable hotspot.
+
+    When in doubt, use a **module capture** for clarity and consistency — it’s
+    the simplest, most allocation-friendly choice.
+
     ## Further readings
 
       * [Cache Usage Patterns Guide](http://hexdocs.pm/nebulex/3.0.0-rc.1/cache-usage-patterns.html).
@@ -588,17 +694,30 @@ if Code.ensure_loaded?(Decorator.Define) do
       * An anonymous function to call to generate the key in runtime.
         The function optionally receives the decorator context as an argument
         and must return the key for caching.
+
       * The tuple `{:in, keys}`, where `keys` is a list with the keys to evict
         or update (`cache.delete_all(in: keys)` is invoked under the hood).
-        This option is allowed for `cache_evict` and `cache_put` decorators
-        only.
+        The list can also contain key references, in case you need to reference
+        a key from another cache. See `t:keyref_spec/0` for more information.
+
+        > **This option is only available for `cache_evict` and `cache_put`
+        > decorators.**
+
       * The tuple `{:query, value}`, where `value` is a query supported by the
         cache adapter (`cache.delete_all(query: value)` is invoked under the
-        hood). This option is allowed for the `cache_evict` decorator only.
+        hood).
+
+        > **This option is only available for the `cache_evict` decorator.**
+
       * Any term.
 
     """
-    @type key() :: (-> any()) | (context() -> any()) | {:in, [any()]} | {:query, any()} | any()
+    @type key() ::
+            (-> any())
+            | (context() -> any())
+            | {:in, [keyref_spec() | any()]}
+            | {:query, any()}
+            | any()
 
     @typedoc "Type for on_error action"
     @type on_error() :: :nothing | :raise
@@ -666,6 +785,13 @@ if Code.ensure_loaded?(Decorator.Define) do
     will be invoked, and the returned value will be stored in the associated
     cache. Note that what is cached can be handled with the `:match` option.
 
+    > #### **Read-through** pattern {: .info}
+    >
+    > The `cacheable` decorator supports the **Read-through** pattern.
+    > The loader to retrieve the value from the system of record (SoR)
+    > is your function's logic, and the macro under the hood provides
+    > the rest.
+
     ## Options
 
     #{Nebulex.Caching.Options.cacheable_options_docs()}
@@ -698,12 +824,6 @@ if Code.ensure_loaded?(Decorator.Define) do
           defp match_fun([]), do: false
           defp match_fun(_), do: true
         end
-
-    > #### **Read-through** pattern {: .info}
-    >
-    > This decorator supports the **Read-through** pattern. The loader to
-    > retrieve the value from the system of record (SoR) is your function's
-    > logic, and the macro under the hood provides the rest.
 
     ## Referenced keys
 
@@ -784,9 +904,15 @@ if Code.ensure_loaded?(Decorator.Define) do
     On the other hand, in the eviction function `update_user_account/1`, since
     the user record is stored only once under the user's ID, we could set the
     option `:key` to the user's ID, without specifying multiple keys like in the
-    previous case. However, there is a caveat: _"the `cache_evict` and
-    `cache_put` decorators don't evict or update the references automatically"_.
-    See the ["CAVEATS"](#cacheable/3-caveats-about-references) section below.
+    previous case. However, there is a caveat:
+
+    > #### **Caveat** {: .info}
+    >
+    > _**`cache_evict` and `cache_put` decorators don't evict or update the
+    > references automatically**_.
+    >
+    > See the ["Eviction of references"](#cacheable/3-eviction-of-references)
+    > section below.
 
     ### The `match` function on references
 
@@ -874,7 +1000,8 @@ if Code.ensure_loaded?(Decorator.Define) do
         references more often to avoid having dangling keys since the
         `cache_evict` decorator doesn't remove the references automatically,
         just the defined key (or keys). See the
-        ["CAVEATS"](#cacheable/3-caveats) section below.
+        ["Eviction of references"](#cacheable/3-eviction-of-references)
+        section below.
 
     Let us modify the previous _"user accounts"_ example based on the Redis
     scenario:
@@ -923,49 +1050,17 @@ if Code.ensure_loaded?(Decorator.Define) do
     builds the required reference tuple for the external cache reference
     underneath.
 
-    ### Caveats about references
+    ## Eviction of references
 
-    * When the `cache_evict` decorator annotates a key (or keys) to evict, the
-      decorator removes only the entry associated with that key. Therefore, if
-      the key has references, those are not automatically removed, which means
-      dangling keys. However, there are multiple ways to address dangling keys
-      (or references):
+    When the `cache_evict` decorator annotates a key (or keys) to evict, it
+    removes only the entry associated with that key. Therefore, if the key has
+    references, those are not automatically removed, which results in dangling
+    keys. However, there are multiple ways to evict references and avoid
+    dangling keys:
 
-      * The first one (perhaps the simplest one) sets a TTL to the reference.
-        For example:
-
-        ```elixir
-        @decorate cacheable(
-                    key: email,
-                    references: &(&1 && &1.id),
-                    opts: [ttl: @ttl]
-                  )
-        def get_user_by_email(email) do
-          # get the user from the database ...
-        end
-        ```
-
-        You could also specify a different TTL for the referenced key:
-
-        ```elixir
-        @decorate cacheable(
-                    key: email,
-                    references: &(&1 && keyref(&1.id, ttl: @another_ttl)),
-                    opts: [ttl: @ttl]
-                  )
-        def get_user_by_email(email) do
-          # get the user from the database ...
-        end
-        ```
-
-      * The second alternative, perhaps the recommended, is having a separate
-        cache to keep the references (e.g., a cache using the local adapter).
-        This way, you could provide a different eviction or GC configuration
-        to run the GC more often and keep the references cache clean. See
-        ["External referenced keys"](#cacheable/3-external-referenced-keys).
-
-      * The third alternative uses the `key: {:in, keys}` to specify a key and
-        its references. For example, if you have:
+      * **Specify the key and its references explicitly** - Use the
+        `key: {:in, keys}` option to specify both a key and its references.
+        For example, if you have:
 
         ```elixir
         @decorate cacheable(key: email, references: & &1.id)
@@ -983,16 +1078,243 @@ if Code.ensure_loaded?(Decorator.Define) do
         end
         ```
 
-        This one is perhaps the least ideal option because it is cumbersome;
-        you have to know and specify the key and all its references, and at the
-        same time, you will need to have access to the key and references in the
-        arguments, which sometimes is not possible because you may receive only
-        the ID, but not the email.
+        However, to make this work, you need access to both the key and
+        references in the function arguments, which is not always possible.
+        Consider the previous example: what if the `delete_user` function
+        receives only the ID? You won't be able to evict the reference since
+        you don't have access to the email in the arguments.
+
+      * **Set a TTL for the reference** - Configure a time-to-live value so
+        references expire automatically. For example:
+
+        ```elixir
+        @decorate cacheable(
+                    key: email,
+                    references: &(&1 && &1.id),
+                    opts: [ttl: @ttl]
+                  )
+        def get_user_by_email(email) do
+          # get the user from the database ...
+        end
+        ```
+
+        You can also specify a different TTL for the referenced key:
+
+        ```elixir
+        @decorate cacheable(
+                    key: email,
+                    references: &(&1 && keyref(&1.id, ttl: @another_ttl)),
+                    opts: [ttl: @ttl]
+                  )
+        def get_user_by_email(email) do
+          # get the user from the database ...
+        end
+        ```
+
+      * **Use a separate cache for references** - Maintain a dedicated cache
+        for references only (e.g., a cache using the local adapter). This
+        allows you to provide a different eviction or garbage collection
+        configuration to run the GC more frequently and keep the references
+        cache clean. See the
+        ["External referenced keys"](#cacheable/3-external-referenced-keys)
+        section above.
+
+      * **Combine multiple strategies** - You can combine the previous
+        approaches to create a more robust solution:
+
+        - Use `key: {:in, keys}` together with a TTL configuration to
+          explicitly evict keys when possible while having automatic cleanup
+          as a fallback.
+
+        - Use a separate cache for references with its own TTL and eviction
+          configuration, then explicitly evict keys from both caches when
+          you have access to all necessary arguments.
+
+        This layered approach provides both automatic cleanup through TTL
+        expiration and manual control when you have access to all the
+        necessary keys in your function arguments.
 
     """
     @doc group: "Decorator API"
     def cacheable(attrs \\ [], block, context) do
       caching_action(:cacheable, attrs, block, context)
+    end
+
+    @doc """
+    Decorator indicating that a function triggers a cache evict operation
+    (`delete` or `delete_all`).
+
+    > #### **Write-through** pattern {: .info}
+    >
+    > The `cache_evict` decorator supports the **write-through** pattern. Your
+    > function provides the logic to write data to the system of record (SoR),
+    > and the decorator under the hood provides the rest. But in contrast with
+    > the `cache_put` decorator, the data is deleted from the cache instead of
+    > updated.
+
+    ## Options
+
+    #{Nebulex.Caching.Options.cache_evict_options_docs()}
+
+    See the ["Shared options"](#module-shared-options) section in the module
+    documentation for more options.
+
+    ## Examples
+
+        defmodule MyApp.Example do
+          use Nebulex.Caching, cache: MyApp.Cache
+
+          @decorate cache_evict(key: id)
+          def delete(id) do
+            # your logic (maybe write/delete data to the SoR)
+          end
+
+          @decorate cache_evict(key: {:in, [object.name, object.id]})
+          def delete_object(object) do
+            # your logic (maybe write/delete data to the SoR)
+          end
+
+          @decorate cache_evict(all_entries: true)
+          def delete_all do
+            # your logic (maybe write/delete data to the SoR)
+          end
+        end
+
+    ## Eviction with a query
+
+    The `:key` option accepts a tuple `{:query, value}` (or a function that
+    returns that tuple), where `value` is a query supported by the cache
+    adapter.
+
+    To explain how this works, let's use an example. Imagine you have a function
+    `delete_objects_by_tag` that receives a `tag` as an argument and deletes
+    all records matching the given tag from the system of record (SoR). You want
+    to evict those entries from the cache as well. This can be accomplished by
+    using a query as the eviction key. However, writing the query directly in
+    the decorator can be verbose and hard to maintain, especially for complex
+    queries. Instead, you can use a function as the eviction key that returns
+    the required query to evict all cached entries matching the given tag.
+
+        @decorate cache_evict(key: &__MODULE__.query_for_tag/1)
+        def delete_objects_by_tag(tag) do
+          # your logic to delete data from the SoR
+        end
+
+        def query_for_tag(%{args: [tag]} = _context) do
+          # Assuming we are using the `Nebulex.Adapters.Local` adapter and the
+          # cached entry value is a map with a `tag` field, the match spec
+          # would look like this:
+          match_spec = [
+            {
+              {:entry, :"$1", %{tag: :"$2"}, :_, :_},
+              [{:"=:=", :"$2", tag}],
+              [true]
+            }
+          ]
+
+          {:query, match_spec}
+        end
+
+    ### More examples
+
+    #### Evicting entries by user ID
+
+    If you need to evict all cached entries associated with a specific user:
+
+        @decorate cache_evict(key: &__MODULE__.query_for_user/1)
+        def delete_user_data(user_id) do
+          # your logic to delete user data from the SoR
+        end
+
+        def query_for_user(%{args: [user_id]} = _context) do
+          match_spec = [
+            {
+              {:entry, :"$1", %{user_id: :"$2"}, :_, :_},
+              [{:"=:=", :"$2", user_id}],
+              [true]
+            }
+          ]
+
+          {:query, match_spec}
+        end
+
+    #### Evicting entries with multiple criteria
+
+    You can build more complex queries that match multiple conditions:
+
+        @decorate cache_evict(key: &__MODULE__.query_for_category_and_status/1)
+        def delete_products(category, status) do
+          # your logic to delete products from the SoR
+        end
+
+        def query_for_category_and_status(%{args: [category, status]} = _ctx) do
+          match_spec = [
+            {
+              {:entry, :"$1", %{category: :"$2", status: :"$3"}, :_, :_},
+              [{:andalso, {:"=:=", :"$2", category}, {:"=:=", :"$3", status}}],
+              [true]
+            }
+          ]
+
+          {:query, match_spec}
+        end
+
+    #### Direct query without a function
+
+    For simpler cases, you can provide the query tuple directly:
+
+        @decorate cache_evict(
+          key: {:query, [
+            {
+              {:entry, :"$1", %{archived: true}, :_, :_},
+              [],
+              [true]
+            }
+          ]}
+        )
+        def cleanup_archived_entries do
+          # your logic to cleanup archived data from the SoR
+        end
+
+    However, using a function is recommended for better readability and
+    maintainability, especially when the query depends on function arguments.
+
+    ### Best Practices
+
+    - **Keep query logic in separate functions** for reusability and cleaner
+      code.
+    - **Test queries independently** before using them in decorators to ensure
+      they match the expected entries.
+    - **Document query behavior** and the expected match criteria for future
+      maintainability.
+    - **Consider performance implications** when querying large datasets, as
+      some queries may require full cache scans.
+
+    ## Eviction of external references
+
+    As mentioned in the `cacheable` decorator's
+    ["External referenced keys"][ext-refs] section, an external reference is a
+    key (or reference) that lives in another cache store. For example, you might
+    have one cache to store only the references and another to store the actual
+    values. In these cases, when you annotate the eviction function, you want to
+    remove both the cached value and any references to it that may exist.
+    Therefore, you can use `{:in, keys}` in the `:key` option, adding the
+    references to be removed to the list. For example:
+
+    [ext-refs]: #cacheable/3-external-referenced-keys
+
+        @decorate cache_evict(key: {:in, [user.id, keyref(user.email, cache: AnotherCache)]})
+        def delete_user(user) do
+          # your logic to delete data from the SoR
+        end
+
+    Assuming there is a reference under the key `user.email` in `AnotherCache`,
+    the decorator will remove the cached value under the key `user.id` and the
+    reference under the key `user.email` from `AnotherCache`.
+    """
+    @doc group: "Decorator API"
+    def cache_evict(attrs \\ [], block, context) do
+      caching_action(:cache_evict, attrs, block, context)
     end
 
     @doc """
@@ -1004,6 +1326,12 @@ if Code.ensure_loaded?(Decorator.Define) do
     causes the function to be invoked and its result to be stored in the
     associated cache if the condition given by the `:match` option matches
     accordingly.
+
+    > #### **Write-through** pattern {: .info}
+    >
+    > The `cache_put` decorator supports the **write-through** pattern. Your
+    > function provides the logic to write data to the system of record (SoR),
+    > and the decorator under the hood provides the rest.
 
     ## Options
 
@@ -1044,104 +1372,10 @@ if Code.ensure_loaded?(Decorator.Define) do
           def match_fun({:error, _}), do: false
         end
 
-    > #### **Write-through** pattern {: .info}
-    >
-    > This decorator supports the **Write-through** pattern. Your function
-    > provides the logic to write data to the system of record (SoR), and the
-    > decorator under the hood provides the rest.
     """
     @doc group: "Decorator API"
     def cache_put(attrs \\ [], block, context) do
       caching_action(:cache_put, attrs, block, context)
-    end
-
-    @doc """
-    Decorator indicating that a function triggers a cache evict operation
-    (`delete` or `delete_all`).
-
-    ## Options
-
-    #{Nebulex.Caching.Options.cache_evict_options_docs()}
-
-    > #### `:key` option with a query {: .info}
-    >
-    > The `:key` option can be a tuple `{:query, value}` (or a function that
-    > returns that tuple), where the `value` is a query supported by the cache
-    > adapter. See the ["Eviction with a query"][evict-q] section for more
-    > information.
-
-    [evict-q]: #cache_evict/3-eviction-with-a-query
-
-    See the ["Shared options"](#module-shared-options) section in the module
-    documentation for more options.
-
-    ## Examples
-
-        defmodule MyApp.Example do
-          use Nebulex.Caching, cache: MyApp.Cache
-
-          @decorate cache_evict(key: id)
-          def delete(id) do
-            # your logic (maybe write/delete data to the SoR)
-          end
-
-          @decorate cache_evict(key: {:in, [object.name, object.id]})
-          def delete_object(object) do
-            # your logic (maybe write/delete data to the SoR)
-          end
-
-          @decorate cache_evict(all_entries: true)
-          def delete_all do
-            # your logic (maybe write/delete data to the SoR)
-          end
-        end
-
-    ## Eviction with a query
-
-    To explain how this works, let's use an example. Imagine you have a function
-    `delete_objects_by_tag` which receives a `tag` as an argument and deletes
-    all records that match the given tag from the SoR. Therefore, we would like
-    to evict those entries from the cache too. This can be done by using a query
-    as an eviction key. However, we don't want to write a query in the decorator
-    itself because it can be a complex query, and it will look verbose. So, we
-    can use a function as an eviction key that returns the required query to
-    evict the cached entries by the given tag.
-
-        @decorate cache_evict(key: &__MODULE__.query_for_tag/1)
-        def delete_objects_by_tag(tag) do
-          # your logic to delete data from the SoR
-        end
-
-        def query_for_tag(%{args: [tag]} = _context) do
-          # Assuming we are using the `Nebulex.Adapters.Local` adapter and the
-          # value of the entry is a map with a `tag` field, then match spec
-          # would be something like:
-          match_spec = [
-            {
-              {:entry, :"$1", %{tag: :"$2"}, :_, :_},
-              [{:"=:=", :"$2", tag}],
-              [true]
-            }
-          ]
-
-          {:query, match_spec}
-        end
-
-    As you can see, the key eviction function returns the tuple
-    `{:query, value}`, where the `value` must be a query
-    supported by the cache adapter.
-
-    > #### **Write-through** pattern {: .info}
-    >
-    > This decorator supports the **Write-through** pattern. Your function
-    > provides the logic to write data to the system of record (SoR), and the
-    > decorator under the hood provides the rest. But in contrast with the
-    > `cache_put` decorator, the data is deleted from the cache instead of
-    > updated.
-    """
-    @doc group: "Decorator API"
-    def cache_evict(attrs \\ [], block, context) do
-      caching_action(:cache_evict, attrs, block, context)
     end
 
     ## Decorator helpers
@@ -1557,16 +1791,28 @@ if Code.ensure_loaded?(Decorator.Define) do
       result
     end
 
-    defp do_evict(true, cache, _key, on_error) do
-      run_cmd(cache, :delete_all, [], on_error)
+    defp do_evict(false, cache, {:in, keys}, on_error) do
+      keys
+      |> group_by_cache(cache)
+      |> Enum.each(fn
+        {cache, [key]} ->
+          run_cmd(cache, :delete, [key, []], on_error)
+
+        {cache, keys} ->
+          run_cmd(cache, :delete_all, [[in: keys]], on_error)
+      end)
     end
 
-    defp do_evict(false, cache, {op, _} = q, on_error) when op in [:in, :query] do
+    defp do_evict(false, cache, {:query, _} = q, on_error) do
       run_cmd(cache, :delete_all, [[q]], on_error)
     end
 
     defp do_evict(false, cache, key, on_error) do
       run_cmd(cache, :delete, [key, []], on_error)
+    end
+
+    defp do_evict(true, cache, _key, on_error) do
+      run_cmd(cache, :delete_all, [], on_error)
     end
 
     @doc """
@@ -1640,7 +1886,15 @@ if Code.ensure_loaded?(Decorator.Define) do
     def cache_put(cache, key, value, opts)
 
     def cache_put(cache, {:in, keys}, value, opts) do
-      do_apply(cache, :put_all, [Enum.map(keys, &{&1, value}), opts])
+      keys
+      |> group_by_cache(cache)
+      |> Enum.each(fn
+        {cache, [key]} ->
+          do_apply(cache, :put, [key, value, opts])
+
+        {cache, keys} ->
+          do_apply(cache, :put_all, [Enum.map(keys, &{&1, value}), opts])
+      end)
     end
 
     def cache_put(cache, key, value, opts) do
@@ -1720,6 +1974,20 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     defp do_apply(mod, fun, args) do
       apply(mod, fun, args)
+    end
+
+    defp group_by_cache(keys, default_cache) do
+      Enum.group_by(
+        keys,
+        fn
+          keyref(cache: cache) when not is_nil(cache) -> cache
+          _else -> default_cache
+        end,
+        fn
+          keyref(key: key) -> key
+          key -> key
+        end
+      )
     end
 
     @compile {:inline, raise_invalid_cache: 1}
