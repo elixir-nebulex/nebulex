@@ -1770,6 +1770,13 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for more options.
 
+  > #### `get_and_update` atomicity {: .warning}
+  >
+  > This operation is not atomic. It uses `get` and `put` (or `delete` for
+  > `:pop`) under the hood, but the function is executed outside of the cache
+  > transaction. If you need to ensure atomicity, consider wrapping the function
+  > in a `c:transaction/2` call.
+
   ## Examples
 
   Update nonexistent key:
@@ -1796,12 +1803,6 @@ defmodule Nebulex.Cache do
       iex> MyCache.get_and_update(:b, fn _ -> :pop end)
       {:ok, {nil, nil}}
 
-  > #### `get_and_update` atomicity {: .warning}
-  >
-  > This operation is not atomic. It uses `get` and `put` (or `delete` for
-  > `:pop`) under the hood, but the function is executed outside of the cache
-  > transaction. If you need to ensure atomicity, consider wrapping the function
-  > in a `c:transaction/2` call.
   """
   @doc group: "KV API"
   @callback get_and_update(key(), (value() -> {current_value, new_value} | :pop), opts()) ::
@@ -1878,6 +1879,13 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for more options.
 
+  > #### `update` atomicity {: .warning}
+  >
+  > This operation is not atomic. It uses `fetch` and `put` under the hood,
+  > but the function is executed outside of the cache transaction. If you need
+  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
+  > call.
+
   ## Examples
 
       iex> MyCache.update(:a, 1, &(&1 * 2))
@@ -1885,12 +1893,6 @@ defmodule Nebulex.Cache do
       iex> MyCache.update(:a, 1, &(&1 * 2))
       {:ok, 2}
 
-  > #### `update` atomicity {: .warning}
-  >
-  > This operation is not atomic. It uses `fetch` and `put` under the hood,
-  > but the function is executed outside of the cache transaction. If you need
-  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
-  > call.
   """
   @doc group: "KV API"
   @callback update(key(), initial :: value(), (value() -> value()), opts()) ::
@@ -1942,6 +1944,10 @@ defmodule Nebulex.Cache do
 
   If the function returns any other value, a `RuntimeError` is raised.
 
+  This function is useful when you want to cache only successful computations,
+  such as API calls or database queries that may fail. Failed operations are
+  not cached, allowing subsequent calls to retry the operation.
+
   ## Options
 
   Since the `put` operation is used under the hood, the following options are
@@ -1952,26 +1958,92 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for a list of supported options.
 
-  ## Examples
-
-      iex> MyCache.fetch_or_store("foo", fn -> {:ok, "bar"} end)
-      {:ok, "bar"}
-
-      iex> MyCache.fetch_or_store("foo", fn -> {:error, "error"} end)
-      {:error, %Nebulex.Error{reason: "error"}}
-
-      iex> MyCache.fetch_or_store("foo", fn -> :invalid end)
-      ** (RuntimeError) the supplied lambda function must return {:ok, value} or {:error, reason}, got: :invalid
-
-      iex> MyCache.fetch_or_store("ttl", fn -> {:ok, "ttl"} end, ttl: 1000)
-      {:ok, "ttl"}
-
-  > #### `fetch_or_store` atomicity {: .info}
+  > #### `fetch_or_store` atomicity {: .warning}
   >
   > This operation is not atomic. It uses `fetch` and `put` under the hood,
   > but the function is executed outside of the cache transaction. If you need
   > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
   > call.
+
+  ## Examples
+
+  ### Basic usage
+
+      iex> MyCache.fetch_or_store("foo", fn -> {:ok, "bar"} end)
+      {:ok, "bar"}
+
+      iex> MyCache.fetch_or_store("foo", fn -> {:ok, "new value"} end)
+      {:ok, "bar"}  # Returns cached value, function not executed
+
+  ### Error handling
+
+  When the function returns an error, the value is not cached:
+
+      iex> MyCache.fetch_or_store("user", fn -> {:error, "not found"} end)
+      {:error, %Nebulex.Error{reason: "not found"}}
+
+      iex> MyCache.fetch("user")
+      {:error, %Nebulex.KeyError{key: "user"}}  # Key was not cached
+
+  ### Invalid return values
+
+  The function must return either `{:ok, value}` or `{:error, reason}`:
+
+      iex> MyCache.fetch_or_store("foo", fn -> :invalid end)
+      ** (RuntimeError) the supplied lambda function must return ..
+
+  ### With TTL
+
+      iex> MyCache.fetch_or_store(
+      ...>   "session",
+      ...>   fn -> {:ok, "data"} end,
+      ...>   ttl: :timer.minutes(5)
+      ...> )
+      {:ok, "data"}
+
+  ### Real-world example: API calls
+
+      def get_user_from_api(user_id) do
+        MyCache.fetch_or_store(
+          "user:\#{user_id}",
+          fn ->
+            case HTTPClient.get("/users/\#{user_id}") do
+              {:ok, %{status: 200, body: data}} -> {:ok, data}
+              {:ok, %{status: 404}} -> {:error, :not_found}
+              {:error, reason} -> {:error, reason}
+            end
+          end,
+          ttl: :timer.minutes(10)
+        )
+      end
+
+  ### Real-world example: Database queries
+
+      def fetch_product(id) do
+        MyCache.fetch_or_store(
+          "product:\#{id}",
+          fn ->
+            case Repo.get(Product, id) do
+              %Product{} = product -> {:ok, product}
+              nil -> {:error, :not_found}
+            end
+          end,
+          ttl: :timer.minutes(5)
+        )
+      end
+
+  ## When to use `fetch_or_store`
+
+  Use `fetch_or_store/3` when:
+
+  - The computation may fail and you don't want to cache errors.
+  - Working with external APIs that may return error responses.
+  - Fetching from databases where records might not exist.
+  - Performing validations where only valid results should be cached.
+  - Any scenario where caching failures would be problematic.
+
+  For computations that always produce a valid result to cache (even if it's
+  an error tuple), consider using `get_or_store/3` instead.
   """
   @doc group: "KV API"
   @callback fetch_or_store(key(), fetch_or_store_fun(), opts()) :: ok_error_tuple(value())
@@ -1996,13 +2068,19 @@ defmodule Nebulex.Cache do
   @doc """
   Same as `c:fetch_or_store/3` but raises an exception if an error occurs.
 
+  Returns the unwrapped value on success, or raises `Nebulex.Error` if the
+  function returns `{:error, reason}`.
+
   ## Examples
 
       iex> MyCache.fetch_or_store!("key", fn -> {:ok, "value"} end)
       "value"
 
-      iex> MyCache.fetch_or_store!("key", fn -> {:error, "error"} end)
-      ** (Nebulex.Error) ...
+      iex> MyCache.fetch_or_store!("key", fn -> {:error, :error} end)
+      ** (Nebulex.Error) fetch_or_store command failed with reason: :error
+
+      iex> MyCache.fetch_or_store!("key", fn -> :invalid end)
+      ** (RuntimeError) the supplied lambda function must return ...
 
   """
   @doc group: "KV API"
@@ -2021,7 +2099,9 @@ defmodule Nebulex.Cache do
   is always cached under the given `key`.
 
   Unlike `fetch_or_store/3`, this function always caches the result
-  regardless of whether it's a success or error tuple.
+  regardless of whether it's a success or error tuple. This makes it
+  ideal for caching expensive computations, implementing negative caching
+  patterns, or caching error states temporarily.
 
   ## Options
 
@@ -2033,10 +2113,28 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for a list of supported options.
 
+  > #### `get_or_store` atomicity {: .warning}
+  >
+  > This operation is not atomic. It uses `fetch` and `put` under the hood,
+  > but the function is executed outside of the cache transaction. If you need
+  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
+  > call.
+
   ## Examples
+
+  ### Basic usage - caching any value
+
+  The function can return any value, and it will be cached:
 
       iex> MyCache.get_or_store("api_result", fn -> "data" end)
       {:ok, "data"}
+
+      iex> MyCache.get_or_store("api_result", fn -> "new data" end)
+      {:ok, "data"}  # Returns cached value, function not executed
+
+  ### Caching tuples
+
+  This function caches the exact return value, including tuples:
 
       iex> MyCache.get_or_store("api_result_tuple", fn -> {:ok, "data"} end)
       {:ok, {:ok, "data"}}
@@ -2044,15 +2142,111 @@ defmodule Nebulex.Cache do
       iex> MyCache.get_or_store("api_error", fn -> {:error, "rate_limited"} end)
       {:ok, {:error, "rate_limited"}}
 
-      iex> MyCache.get_or_store("with_ttl", fn -> "with_ttl" end, ttl: 1000)
-      {:ok, "with_ttl"}
+  ### With TTL
 
-  > #### `get_or_store` atomicity {: .info}
-  >
-  > This operation is not atomic. It uses `fetch` and `put` under the hood,
-  > but the function is executed outside of the cache transaction. If you need
-  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
-  > call.
+      iex> MyCache.get_or_store(
+      ...>   "with_ttl",
+      ...>   fn -> "value" end,
+      ...>   ttl: :timer.minutes(5)
+      ...> )
+      {:ok, "value"}
+
+  ### Real-world example: Negative caching
+
+  Cache "not found" results to avoid repeated database queries:
+
+      def get_user(user_id) do
+        MyCache.get_or_store!(
+          "user:\#{user_id}",
+          fn ->
+            case Repo.get(User, user_id) do
+              %User{} = user ->
+                {:ok, user}
+
+              nil ->
+              # Cache the "not found" result
+              {:error, :not_found}
+            end
+          end,
+          ttl: :timer.minutes(5)
+        )
+      end
+
+      # First call - queries database, caches {:error, :not_found}
+      get_user(999)  #=> {:error, :not_found}
+
+      # Second call - returns cached error, no database query
+      get_user(999)  #=> {:error, :not_found}
+
+  ### Real-world example: Rate limit protection
+
+  Cache error responses temporarily to prevent hammering external services:
+
+      def fetch_from_api(endpoint) do
+        MyCache.get_or_store(
+          "api:\#{endpoint}",
+          fn ->
+            case ExternalAPI.call(endpoint) do
+              {:ok, data} ->
+                {:ok, data}
+
+              {:error, :rate_limited} = error ->
+                # Cache rate limit error
+                error
+
+              {:error, _} = error ->
+                error
+            end
+          end,
+          ttl: :timer.seconds(30)
+        )
+      end
+
+  ### Real-world example: Expensive computations
+
+  Cache results of expensive operations regardless of outcome:
+
+      def calculate_report(params) do
+        MyCache.get_or_store!(
+          "report:\#{hash(params)}",
+          fn ->
+            %{
+              total_revenue: calculate_revenue(params),
+              user_count: count_users(params),
+              metrics: compute_metrics(params)
+            }
+          end,
+          ttl: :timer.hours(1)
+        )
+      end
+
+  ## When to use `get_or_store` vs `fetch_or_store`
+
+  **Use `get_or_store/3` when:**
+
+  - You want to cache all results, including errors.
+  - Implementing negative caching (caching "not found" states).
+  - The computation is expensive and you want to avoid repeating it.
+  - Caching error states temporarily for rate limiting or backoff strategies.
+  - Working with pure functions that always produce valid output.
+
+  **Use `fetch_or_store/3` when:**
+
+  - The function may fail and you want to retry on subsequent calls.
+  - Errors are transient and should not be cached.
+  - Working with external APIs where temporary failures should trigger retries.
+  - You only want to cache successful results.
+
+  ## Comparison
+
+  | Feature | `get_or_store` | `fetch_or_store` |
+  |---------|----------------|------------------|
+  | Caches all values | ✅ Yes | ❌ No |
+  | Caches errors | ✅ Yes | ❌ No |
+  | Function return type | Any value | `{:ok, value}` or `{:error, reason}` |
+  | Type validation | None | Validates return type |
+  | Best for | Negative caching, pure computations | Fallible operations |
+
   """
   @doc group: "KV API"
   @callback get_or_store(key(), get_or_store_fun(), opts()) :: ok_error_tuple(value())
@@ -2078,6 +2272,9 @@ defmodule Nebulex.Cache do
   Same as `c:get_or_store/3` but raises an exception if a cache error occurs
   (e.g., the adapter failed executing the command and returns an error).
 
+  Note that this function returns the unwrapped cached value, which may itself
+  be an error tuple if that's what the function returned.
+
   ## Examples
 
       iex> MyCache.get_or_store!("key", fn -> "value" end)
@@ -2088,6 +2285,20 @@ defmodule Nebulex.Cache do
 
       iex> MyCache.get_or_store!("key", fn -> {:error, "error"} end)
       {:error, "error"}
+
+  ## Difference from fetch_or_store!
+
+  Unlike `fetch_or_store!/3` which raises when the function returns an error,
+  `get_or_store!/3` only raises when there's a cache operation error. The
+  function's return value (even if it's an error tuple) is cached and returned.
+
+      # get_or_store! caches and returns error tuples
+      iex> MyCache.get_or_store!("key", fn -> {:error, :not_found} end)
+      {:error, :not_found}
+
+      # fetch_or_store! raises when function returns error
+      iex> MyCache.fetch_or_store!("key", fn -> {:error, :not_found} end)
+      ** (Nebulex.Error) fetch_or_store command failed with reason: :not_found
 
   """
   @doc group: "KV API"
@@ -2562,7 +2773,7 @@ defmodule Nebulex.Cache do
       end)
 
   We can provide the keys to lock when using the `Nebulex.Adapters.Local`
-  adapter: (recommended):
+  adapter (or any other adapter that supports key locking):
 
       MyCache.transaction(
         fn ->
@@ -2571,7 +2782,7 @@ defmodule Nebulex.Cache do
           MyCache.put(:alice, %{alice | balance: alice.balance + 100})
           MyCache.put(:bob, %{bob | balance: bob.balance + 100})
         end,
-        [keys: [:alice, :bob]]
+        keys: [:alice, :bob]
       )
 
   """
@@ -2595,7 +2806,7 @@ defmodule Nebulex.Cache do
           MyCache.put(:alice, %{alice | balance: alice.balance + 100})
           MyCache.put(:bob, %{bob | balance: bob.balance + 100})
         end,
-        [keys: [:alice, :bob]]
+        keys: [:alice, :bob]
       )
 
   """

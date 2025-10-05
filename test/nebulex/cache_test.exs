@@ -116,8 +116,8 @@ defmodule Nebulex.Adapters.CacheTest do
     end
 
     test "fetch_or_store! raises if an error occurs", %{cache: cache} do
-      assert_raise Nebulex.Error, ~r"error", fn ->
-        cache.fetch_or_store!("lazy", fn -> {:error, "error"} end)
+      assert_raise Nebulex.Error, ~r"fetch_or_store command failed with reason: :error", fn ->
+        cache.fetch_or_store!("lazy", fn -> {:error, :error} end)
       end
 
       refute cache.get!("lazy")

@@ -367,7 +367,7 @@ defmodule Nebulex.Cache.KV do
         end
 
       {:error, reason} ->
-        wrap_error Nebulex.Error, reason: reason, key: key
+        wrap_error Nebulex.Error, reason: reason, command: :fetch_or_store, key: key
 
       other ->
         raise "the supplied lambda function must return {:ok, value} " <>

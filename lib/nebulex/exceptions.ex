@@ -136,7 +136,10 @@ defmodule Nebulex.Error do
   end
 
   def format_error(reason, metadata) do
-    "command failed with reason: #{inspect(reason)}"
+    {command, metadata} = Keyword.pop(metadata, :command)
+    prefix = if command, do: "#{command} ", else: ""
+
+    "#{prefix}command failed with reason: #{inspect(reason)}"
     |> maybe_format_metadata(metadata)
   end
 

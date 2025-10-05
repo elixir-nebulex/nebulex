@@ -903,8 +903,8 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     On the other hand, in the eviction function `update_user_account/1`, since
     the user record is stored only once under the user's ID, we could set the
-    option `:key` to the user's ID, without specifying multiple keys like in the
-    previous case. However, there is a caveat:
+    option `:key` to the user's ID, without specifying multiple keys like in
+    the previous case. However, there is a caveat:
 
     > #### **Caveat** {: .info}
     >
