@@ -9,8 +9,8 @@ defmodule Nebulex.Caching.Options do
       required: false,
       doc: """
       Defines the default key generation function for all decorated functions
-      in the module. It can be overridden at the decorator level via `:key`
-      option.
+      in the module. This can be overridden at the decorator level using the
+      `:key` option.
 
       The function must be provided in the format `&Mod.fun/arity`.
 
@@ -21,8 +21,8 @@ defmodule Nebulex.Caching.Options do
       type: :atom,
       required: false,
       doc: """
-      Defines the cache for all decorated functions in the module.
-      It can be overridden at the decorator level.
+      Defines the default cache for all decorated functions in the module.
+      This can be overridden at the decorator level.
       """
     ],
     on_error: [
@@ -31,9 +31,15 @@ defmodule Nebulex.Caching.Options do
       required: false,
       default: :nothing,
       doc: """
-      Whether to raise an exception or do nothing when there is a cache error.
-      It applies to all decorated functions in the module. It can be overridden
-      at the decorator level.
+      Defines the default error handling behavior for all decorated functions
+      in the module when a cache error occurs. This can be overridden at the
+      decorator level.
+
+      Possible values:
+
+        * `:nothing` - Ignores cache errors (default).
+        * `:raise` - Raises an exception when a cache error occurs.
+
       """
     ],
     match: [
@@ -41,8 +47,8 @@ defmodule Nebulex.Caching.Options do
       type_doc: "`t:Nebulex.Caching.Decorators.match/0`",
       required: false,
       doc: """
-      The match function for all decorated functions in the module. It can be
-      overridden at the decorator level.
+      Defines the default match function for all decorated functions in the
+      module. This can be overridden at the decorator level.
 
       The function must be provided in the format `&Mod.fun/arity`.
 
@@ -54,8 +60,8 @@ defmodule Nebulex.Caching.Options do
       required: false,
       default: [],
       doc: """
-      The options to use globally for all decorated functions in the module when
-      invoking cache commands.
+      The default options to use globally for all decorated functions in the
+      module when invoking cache commands.
       """
     ]
   ]
@@ -67,7 +73,7 @@ defmodule Nebulex.Caching.Options do
       type_doc: "`t:cache/0`",
       required: true,
       doc: """
-      The cache to use. If configured, it overrides the
+      The cache to use. When present, this option overrides the
       [default or global cache](#module-default-cache).
       See `t:cache/0` for possible values.
 
@@ -75,7 +81,7 @@ defmodule Nebulex.Caching.Options do
       decorator declaration and is not configured when defining the
       caching usage via `use Nebulex.Caching` either.
 
-      See ["Cache configuration"](#module-cache-configuration) section
+      See the ["Cache configuration"](#module-cache-configuration) section
       for more information.
       """
     ],
@@ -85,24 +91,23 @@ defmodule Nebulex.Caching.Options do
       required: false,
       doc: """
       The cache access key the decorator will use when running the decorated
-      function. The default key generator generates a default key when the
-      option is unavailable.
+      function. When this option is not provided, the default key generator
+      generates a key based on the function arguments.
 
-      The `:key` option admits the following values:
+      The `:key` option accepts the following values:
 
-        * An anonymous function to call to generate the key in runtime.
-          The function optionally receives the decorator context as an argument
-          and must return the key for caching.
-        * The tuple `{:in, keys}`, where `keys` is a list with the keys to evict
-          or update (`cache.delete_all(in: keys)` is invoked under the hood).
-          This option is allowed for `cache_evict` and `cache_put` decorators
-          only.
-        * The tuple `{:query, value}`, where `value` is a query supported by the
-          cache adapter (`cache.delete_all(query: value)` is invoked under the
-          hood). This option is allowed for the `cache_evict` decorator only.
-        * Any term.
+        * **An anonymous function** - A function that generates the key at
+          runtime. The function can optionally receive the decorator context
+          as an argument and must return the key for caching.
 
-      See ["Key Generation"](#module-key-generation) section
+        * **The tuple `{:in, keys}`** - Where `keys` is a list of keys to
+          evict or update. Under the hood, `cache.delete_all(in: keys)` or
+          `cache.put_all(entries)` is invoked. This option is only allowed
+          for the `cache_evict` and `cache_put` decorators.
+
+        * **Any term** - A literal value to use as the cache key.
+
+      See the ["Key Generation"](#module-key-generation) section
       for more information.
       """
     ],
@@ -111,21 +116,28 @@ defmodule Nebulex.Caching.Options do
       type_doc: "`t:match/0`",
       required: false,
       doc: """
-      Anonymous function to decide whether or not the result (provided as a
-      first argument) of evaluating the decorated function is cached.
-      Optionally, the match function can receive the decorator context as a
-      second argument. The match function can return:
+      An anonymous function that decides whether the result of evaluating the
+      decorated function should be cached. The function receives the result
+      as its first argument and can optionally receive the decorator context
+      as a second argument.
 
-        * `true` - The value returned by the decorated function invocation is
-          cached. (the default).
-        * `{true, value}` - `value` is cached. It is helpful to customize what
-          exactly must be cached.
-        * `{true, value, opts}` - The `value` is cached with the provided
-          options `opts`. It is helpful to customize what must be cached and the
-          runtime options for storing it. (e.g., `{true, value, [ttl: @ttl]}`).
-        * `false` - Cache nothing.
+      The match function can return:
 
-      The default match function looks like this:
+        * `true` - The value returned by the decorated function is cached
+          (this is the default behavior).
+
+        * `{true, value}` - The specified `value` is cached instead of the
+          original return value. This is useful when you need to customize
+          what gets cached.
+
+        * `{true, value, opts}` - The specified `value` is cached with the
+          provided options `opts`. This allows you to customize both what
+          gets cached and the caching options at runtime
+          (e.g., `{true, value, [ttl: @ttl]}`).
+
+        * `false` - Nothing is cached.
+
+      The default match function is defined as:
 
       ```elixir
       def default_match({:error, _}), do: false
@@ -134,13 +146,11 @@ defmodule Nebulex.Caching.Options do
       def default_match(_other), do: true
       ```
 
-      By default, if the evaluation of the decorated function returns any of the
-      following terms/values `{:error, term}`, `:error`, or `nil`, the default
-      match function returns `false` (cache nothing). Otherwise, `true` is
-      returned (the value is cached).
+      By default, if the decorated function returns `{:error, term}`, `:error`,
+      or `nil`, the value is not cached. Otherwise, the value is cached.
 
-      If configured, it overrides the global value (if any) defined when using
-      `use Nebulex.Caching, match: &MyApp.match/1`.
+      When configured, this option overrides the global value (if any) defined
+      via `use Nebulex.Caching, match: &MyApp.match/1`.
 
       The default value is `&Nebulex.Caching.Decorators.default_match/1`.
       """
@@ -151,15 +161,16 @@ defmodule Nebulex.Caching.Options do
       required: false,
       default: :nothing,
       doc: """
-      The decorators perform cache commands under the hood. With the option
-      `:on_error`, we can tell the decorator what to do in case of an error
-      or exception. The option supports the following values:
+      Defines the error handling behavior when a cache error occurs during
+      decorator execution.
 
-        * `:nothing` - ignores the error.
-        * `:raise` - raises if there is an error.
+      Possible values:
 
-      If configured, it overrides the global value (if any) defined when using
-      `use Nebulex.Caching, on_error: ...`.
+        * `:nothing` - Ignores the error and continues execution (default).
+        * `:raise` - Raises an exception when a cache error occurs.
+
+      When configured, this option overrides the global value (if any) defined
+      via `use Nebulex.Caching, on_error: ...`.
       """
     ],
     opts: [
@@ -167,7 +178,8 @@ defmodule Nebulex.Caching.Options do
       required: false,
       default: [],
       doc: """
-      The options used by the decorator when invoking cache commands.
+      The options used by the decorator when invoking cache commands. These
+      options are passed directly to the underlying cache operations.
       """
     ]
   ]
@@ -179,15 +191,15 @@ defmodule Nebulex.Caching.Options do
       type_doc: "`t:references/0`",
       required: false,
       doc: """
-      Indicates the key given by the option `:key` references another key
-      provided by the option `:references`. In other words, when present,
-      this option tells the `cacheable` decorator to store the decorated
-      function's block result under the referenced key given by the option
-      `:references` and the referenced key under the key provided by the
-      option `:key`. See `t:references/0` for possible values.
+      Indicates that the key specified by the `:key` option references another
+      key provided by this option. When present, the `cacheable` decorator
+      stores the decorated function's result under both the referenced key
+      (provided by `:references`) and the primary key (provided by `:key`).
 
-      Additionally, see the ["Referenced keys"](#cacheable/3-referenced-keys)
-      section below for more information and examples.
+      See `t:references/0` for possible values.
+
+      For more information and examples, see the
+      ["Referenced keys"](#cacheable/3-referenced-keys) section.
       """
     ]
   ]
@@ -199,8 +211,10 @@ defmodule Nebulex.Caching.Options do
       required: false,
       default: false,
       doc: """
-      Defines whether or not the decorator must remove all the entries inside
-      the cache.
+      When set to `true`, the decorator removes all entries from the cache,
+      ignoring the `:key` and `:query` options.
+
+      Default: `false`
       """
     ],
     before_invocation: [
@@ -208,8 +222,36 @@ defmodule Nebulex.Caching.Options do
       required: false,
       default: false,
       doc: """
-      Defines whether or not the decorator should run before invoking the
-      decorated function.
+      When set to `true`, the cache eviction occurs before the decorated
+      function is invoked. When `false`, the eviction occurs after the
+      function completes successfully.
+
+      Default: `false`
+      """
+    ],
+    query: [
+      type: :any,
+      type_doc: "`t:query/0`",
+      required: false,
+      doc: """
+      The query to use for evicting cache entries. When present, this option
+      overrides the `:key` option and allows you to evict multiple entries
+      based on specific criteria.
+
+      The `:query` option accepts the following values:
+
+        * **An anonymous function** - A function that generates the query at
+          runtime. The function can optionally receive the decorator context
+          as an argument and must return a query supported by the cache
+          adapter. This is useful when the query depends on function arguments
+          or needs to be built dynamically.
+
+        * **A direct query value** - Any term that is a valid query supported
+          by the cache adapter. This is suitable for static queries that don't
+          depend on runtime values.
+
+      See the ["Eviction with a query"](#cache_evict/3-eviction-with-a-query)
+      section for more details and examples.
       """
     ]
   ]

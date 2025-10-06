@@ -1084,7 +1084,7 @@ defmodule Nebulex.CachingTest do
     {x, y}
   end
 
-  @decorate cache_evict(key: &{:query, hd(&1.args)})
+  @decorate cache_evict(query: &hd(&1.args))
   def evict_with_query_spec(query) do
     query
   end

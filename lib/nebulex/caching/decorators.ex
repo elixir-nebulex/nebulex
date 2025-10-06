@@ -703,21 +703,10 @@ if Code.ensure_loaded?(Decorator.Define) do
         > **This option is only available for `cache_evict` and `cache_put`
         > decorators.**
 
-      * The tuple `{:query, value}`, where `value` is a query supported by the
-        cache adapter (`cache.delete_all(query: value)` is invoked under the
-        hood).
-
-        > **This option is only available for the `cache_evict` decorator.**
-
       * Any term.
 
     """
-    @type key() ::
-            (-> any())
-            | (context() -> any())
-            | {:in, [keyref_spec() | any()]}
-            | {:query, any()}
-            | any()
+    @type key() :: (-> any()) | (context() -> any()) | {:in, [keyref_spec() | any()]} | any()
 
     @typedoc "Type for on_error action"
     @type on_error() :: :nothing | :raise
@@ -736,6 +725,9 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     @typedoc "Type for a key reference"
     @type keyref() :: keyref_spec() | any()
+
+    @typedoc "Type for a query"
+    @type query() :: (-> any()) | (context() -> any()) | any()
 
     @typedoc """
     Type spec for the option `:references`.
@@ -1182,20 +1174,21 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Eviction with a query
 
-    The `:key` option accepts a tuple `{:query, value}` (or a function that
-    returns that tuple), where `value` is a query supported by the cache
-    adapter.
+    The `:query` option allows you to provide a query (or a function that
+    returns a query at runtime) to evict multiple cache entries based on
+    specific criteria. The query must be supported by the cache adapter.
 
     To explain how this works, let's use an example. Imagine you have a function
     `delete_objects_by_tag` that receives a `tag` as an argument and deletes
     all records matching the given tag from the system of record (SoR). You want
     to evict those entries from the cache as well. This can be accomplished by
-    using a query as the eviction key. However, writing the query directly in
-    the decorator can be verbose and hard to maintain, especially for complex
-    queries. Instead, you can use a function as the eviction key that returns
-    the required query to evict all cached entries matching the given tag.
+    using a query to identify and evict all matching entries. However, writing
+    the query directly in the decorator can be verbose and hard to maintain,
+    especially for complex queries. Instead, you can use a function that
+    receives the decorator context and returns the required query to evict all
+    cached entries matching the given tag.
 
-        @decorate cache_evict(key: &__MODULE__.query_for_tag/1)
+        @decorate cache_evict(query: &__MODULE__.query_for_tag/1)
         def delete_objects_by_tag(tag) do
           # your logic to delete data from the SoR
         end
@@ -1204,15 +1197,13 @@ if Code.ensure_loaded?(Decorator.Define) do
           # Assuming we are using the `Nebulex.Adapters.Local` adapter and the
           # cached entry value is a map with a `tag` field, the match spec
           # would look like this:
-          match_spec = [
+          [
             {
               {:entry, :"$1", %{tag: :"$2"}, :_, :_},
               [{:"=:=", :"$2", tag}],
               [true]
             }
           ]
-
-          {:query, match_spec}
         end
 
     ### More examples
@@ -1221,56 +1212,52 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     If you need to evict all cached entries associated with a specific user:
 
-        @decorate cache_evict(key: &__MODULE__.query_for_user/1)
+        @decorate cache_evict(query: &__MODULE__.query_for_user/1)
         def delete_user_data(user_id) do
           # your logic to delete user data from the SoR
         end
 
         def query_for_user(%{args: [user_id]} = _context) do
-          match_spec = [
+          [
             {
               {:entry, :"$1", %{user_id: :"$2"}, :_, :_},
               [{:"=:=", :"$2", user_id}],
               [true]
             }
           ]
-
-          {:query, match_spec}
         end
 
     #### Evicting entries with multiple criteria
 
     You can build more complex queries that match multiple conditions:
 
-        @decorate cache_evict(key: &__MODULE__.query_for_category_and_status/1)
+        @decorate cache_evict(query: &__MODULE__.query_for_category_and_status/1)
         def delete_products(category, status) do
           # your logic to delete products from the SoR
         end
 
-        def query_for_category_and_status(%{args: [category, status]} = _ctx) do
-          match_spec = [
+        def query_for_category_and_status(%{args: [category, status]} = _context) do
+          [
             {
               {:entry, :"$1", %{category: :"$2", status: :"$3"}, :_, :_},
               [{:andalso, {:"=:=", :"$2", category}, {:"=:=", :"$3", status}}],
               [true]
             }
           ]
-
-          {:query, match_spec}
         end
 
     #### Direct query without a function
 
-    For simpler cases, you can provide the query tuple directly:
+    For simpler cases, you can provide the query directly:
 
         @decorate cache_evict(
-          key: {:query, [
+          query: [
             {
               {:entry, :"$1", %{archived: true}, :_, :_},
               [],
               [true]
             }
-          ]}
+          ]
         )
         def cleanup_archived_entries do
           # your logic to cleanup archived data from the SoR
@@ -1503,20 +1490,6 @@ if Code.ensure_loaded?(Decorator.Define) do
       end
     end
 
-    defp get_cache(attrs, use_opts) do
-      with :error <- Keyword.fetch(attrs, :cache),
-           :error <- Keyword.fetch(use_opts, :cache) do
-        opts =
-          use_opts
-          |> Keyword.merge(attrs)
-          |> Keyword.keys()
-
-        raise ArgumentError, "required :cache option not found, received options: #{inspect(opts)}"
-      else
-        {:ok, cache} -> cache
-      end
-    end
-
     defp decorator_context(decorator, context) do
       # Sanitize context args
       args =
@@ -1555,6 +1528,20 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     defp sanitize_arg(_ast, acc) do
       acc
+    end
+
+    defp get_cache(attrs, use_opts) do
+      with :error <- Keyword.fetch(attrs, :cache),
+           :error <- Keyword.fetch(use_opts, :cache) do
+        opts =
+          use_opts
+          |> Keyword.merge(attrs)
+          |> Keyword.keys()
+
+        raise ArgumentError, "required :cache option not found, received options: #{inspect(opts)}"
+      else
+        {:ok, cache} -> cache
+      end
     end
 
     defp keygen_block(decorator, attrs, use_opts) do
@@ -1619,10 +1606,16 @@ if Code.ensure_loaded?(Decorator.Define) do
       before_invocation? = get_boolean(attrs, :before_invocation)
       all_entries? = get_boolean(attrs, :all_entries)
 
+      key =
+        case Keyword.fetch(attrs, :query) do
+          {:ok, q} -> {:"$nbx_query", q}
+          :error -> keygen
+        end
+
       quote do
         unquote(__MODULE__).eval_cache_evict(
           cache,
-          unquote(keygen),
+          unquote(key),
           unquote(before_invocation?),
           unquote(all_entries?),
           unquote(on_error),
@@ -1769,12 +1762,12 @@ if Code.ensure_loaded?(Decorator.Define) do
     """
     @doc group: "Internal API"
     @spec eval_cache_evict(any(), any(), boolean(), boolean(), on_error(), fun()) :: any()
-    def eval_cache_evict(cache, key, before_invocation?, all_entries?, on_error, block_fun) do
+    def eval_cache_evict(cache, key, before?, all_entries?, on_error, block_fun) do
       context = Process.get(@decorator_context_key)
       cache = eval_cache(cache, context)
       key = eval_key(key, context)
 
-      do_eval_cache_evict(cache, key, before_invocation?, all_entries?, on_error, block_fun)
+      do_eval_cache_evict(cache, key, before?, all_entries?, on_error, block_fun)
     end
 
     defp do_eval_cache_evict(cache, key, true, all_entries?, on_error, block_fun) do
@@ -1931,6 +1924,7 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     def eval_key(key, ctx) when is_function(key, 1), do: key.(ctx)
     def eval_key(key, _ctx) when is_function(key, 0), do: key.()
+    def eval_key({:"$nbx_query", q}, ctx), do: {:query, eval_key(q, ctx)}
     def eval_key(key, _ctx), do: key
 
     @doc """

@@ -15,10 +15,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [Nebulex.Cache] Added `get_or_store` callback to the Cache API.
   For more information, see:
   [#241](https://github.com/elixir-nebulex/nebulex/issues/241).
-- [Nebulex.Caching.Decorators] The `cache_evict` decorator supports a query
-  as a value for the `:key` option. For example:
-  `@decorate cache_evict(key: {:query, my_query})`. Alternatively,
-  it could be a function that returns a query specification.
+- [Nebulex.Caching.Decorators] The `cache_evict` decorator now supports a
+  `:query` option for bulk eviction based on adapter-specific queries.
+  For example: `@decorate cache_evict(query: my_query)`. The query can be
+  provided directly or as a function that returns the query at runtime.
+  When present, the `:query` option overrides the `:key` option.
   For more information, see:
   [#243](https://github.com/elixir-nebulex/nebulex/issues/243).
 - [Nebulex.Caching.Decorator] Add support for evicting external references in
