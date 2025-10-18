@@ -28,6 +28,7 @@ erl_crash.dump
 *.o
 *.beam
 *.plt
+*.coverdata
 erl_crash.dump
 .DS_Store
 ._*
@@ -37,4 +38,3 @@ erl_crash.dump
 /priv
 .sobelow*
 /config
-Elixir*
