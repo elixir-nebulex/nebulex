@@ -176,6 +176,7 @@ defmodule Nebulex.MixProject do
 
       # Learning
       "guides/learning/cache-usage-patterns.md",
+      "guides/learning/declarative-caching.md",
       "guides/learning/info-api.md",
       "guides/learning/telemetry.md",
       "guides/learning/creating-new-adapter.md",

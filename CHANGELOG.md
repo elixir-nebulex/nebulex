@@ -29,6 +29,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [Nebulex.Caching.Decorator] Add support for evicting external references in
   `cache_evict` decorator. For more information, see:
   [#244](https://github.com/elixir-nebulex/nebulex/issues/244)
+- [Documentation] Added comprehensive "Declarative Caching" guide
+  (`guides/learning/declarative-caching.md`) showcasing patterns, best
+  practices, and real-world examples for using caching decorators. The guide
+  includes progressive learning with an e-commerce scenario covering basic
+  decorator usage, advanced eviction patterns (including the new combined
+  `:key` and `:query` feature), `Nebulex.Adapters.Local` features
+  (QueryHelper, tagging, references), testing strategies, and common pitfalls.
+  Replaces ad-hoc examples previously scattered in API documentation.
+  [#246](https://github.com/elixir-nebulex/nebulex/issues/246).
 
 ## [v3.0.0-rc.1](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0-rc.1) (2025-05-01)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v2.6.4...v3.0.0-rc.1)

@@ -1183,6 +1183,12 @@ if Code.ensure_loaded?(Decorator.Define) do
           end
         end
 
+    > #### Learn more {: .tip}
+    >
+    > For comprehensive examples, real-world patterns, and adapter-specific
+    > features (including query helpers, entry tagging, and reference management),
+    > see the [Caching Decorators Guide](decorators-guide.html).
+
     ## Eviction with a query
 
     The `:query` option allows you to provide a query (or a function that

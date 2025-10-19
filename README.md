@@ -222,14 +222,17 @@ end
 
 * [Getting Started][getting_started] - Learn how to set up and use Nebulex.
 * [Documentation][docs] - Complete API reference.
-* [Examples][examples] - Example applications.
 * [Upgrading to v3.0][upgrading_to_v3] - Migration guide for v3.0.
+* [Declarative caching][declarative_caching] - Declarative Caching: Patterns
+  and Best Practices.
 * [Nebulex Streams][nebulex_streams] - Real-time event streaming for Nebulex
   caches via `Phoenix.PubSub`.
+* [Examples][examples] - Example applications.
 
 [examples]: https://github.com/elixir-nebulex/nebulex_examples
 [upgrading_to_v3]: http://hexdocs.pm/nebulex/3.0.0-rc.1/v3-0.html
 [nebulex_streams]: https://github.com/elixir-nebulex/nebulex_streams
+[declarative_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/declarative-caching.html
 
 ---
 

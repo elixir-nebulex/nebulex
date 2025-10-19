@@ -351,6 +351,12 @@ end
 - Document all compile-time options
 - Document all runtime shared options
 - Provide telemetry event documentation with measurements and metadata
+- The maximum text length is 80 characters, and you should aim to adhere to this
+  limit. However, there are special cases where exceeding it is acceptable. For
+  example, you may exceed the limit for a link (e.g., ["my link"](http://github.com/elixir-nebulex))
+  or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
+  If a code snippet exceeds the 80-character limit by more than 1 or 2 haracters,
+  format it using the Elixir formatter.
 
 ### Function Documentation
 
@@ -359,6 +365,12 @@ end
 - Provide examples in function documentation using doctests when applicable
 - Document all options with descriptions and default values
 - Group related functions using `@doc group: "Group Name"`
+- The maximum text length is 80 characters, and you should aim to adhere to this
+  limit. However, there are special cases where exceeding it is acceptable. For
+  example, you may exceed the limit for a link (e.g., ["my link"](http://github.com/elixir-nebulex))
+  or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
+  If a code snippet exceeds the 80-character limit by more than 1 or 2 haracters,
+  format it using the Elixir formatter.
 
 ### Code Comments
 
@@ -366,6 +378,8 @@ end
 - Use comments for complex algorithms or non-obvious business logic
 - Mark internal functions with `@doc false` or `@moduledoc false`
 - Use `# Inline common instructions` followed by `@compile {:inline, function_name: arity}`
+- The maximum text length is 80 characters, use multiple lines if the comment
+  exceeds the limit.
 
 ## Naming Conventions
 
