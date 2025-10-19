@@ -696,6 +696,58 @@ defmodule Nebulex.CachingTest do
       assert evict_without_args() == "hello"
       refute Cache.get!(0)
     end
+
+    test "with query" do
+      :ok = Cache.put_all(foo: "foo", bar: "bar", baz: "baz", qux: "qux")
+      assert Cache.get!(:foo) == "foo"
+      assert Cache.get!(:bar) == "bar"
+      assert Cache.get!(:baz) == "baz"
+      assert Cache.get!(:qux) == "qux"
+
+      assert evict_with_query_spec(nil) == nil
+      refute Cache.get!(:foo)
+      refute Cache.get!(:bar)
+      refute Cache.get!(:baz)
+      refute Cache.get!(:qux)
+    end
+
+    test "with both key and query" do
+      # Set up cache entries
+      assert set_keys(
+               key1: "value1",
+               key2: "value2",
+               key3: "value3",
+               specific_key: "specific_value"
+             ) == :ok
+
+      # Evict using both key and query
+      # This should evict "my_key" (via key) and the remaining entries (via query)
+      assert evict_with_key_and_query("my_key") == "my_key"
+
+      refute Cache.get!("my_key")
+      refute Cache.get!(:key1)
+      refute Cache.get!(:key2)
+      refute Cache.get!(:key3)
+      refute Cache.get!(:specific_key)
+    end
+
+    test "with both key (multiple) and query" do
+      # Set up cache entries
+      assert set_keys(a: "a", b: "b", c: "c", d: "d", e: "e") == :ok
+
+      # Evict using multiple keys and a query
+      # This should evict :c, :d (via keys) and  the remaining entries (via query)
+      assert evict_with_multiple_keys_and_query(:c, :d) == {:c, :d}
+
+      # Verify specific keys were evicted
+      refute Cache.get!(:c)
+      refute Cache.get!(:d)
+
+      # Verify the remaining entries were evicted
+      refute Cache.get!(:a)
+      refute Cache.get!(:b)
+      refute Cache.get!(:e)
+    end
   end
 
   describe "option :key with a custom key generator in annotation" do
@@ -761,20 +813,6 @@ defmodule Nebulex.CachingTest do
 
       assert evict_with_keygen2("foo", "bar") == {"foo", "bar"}
       refute Cache.get!(key)
-    end
-
-    test "cache_evict (function returns a query spec)" do
-      :ok = Cache.put_all(foo: "foo", bar: "bar", baz: "baz", qux: "qux")
-      assert Cache.get!(:foo) == "foo"
-      assert Cache.get!(:bar) == "bar"
-      assert Cache.get!(:baz) == "baz"
-      assert Cache.get!(:qux) == "qux"
-
-      assert evict_with_query_spec(nil) == nil
-      refute Cache.get!(:foo)
-      refute Cache.get!(:bar)
-      refute Cache.get!(:baz)
-      refute Cache.get!(:qux)
     end
 
     test "cache_put" do
@@ -1089,6 +1127,16 @@ defmodule Nebulex.CachingTest do
     query
   end
 
+  @decorate cache_evict(key: key, query: &evict_query/0)
+  def evict_with_key_and_query(key) do
+    key
+  end
+
+  @decorate cache_evict(key: {:in, [k1, k2]}, query: &evict_query/0)
+  def evict_with_multiple_keys_and_query(k1, k2) do
+    {k1, k2}
+  end
+
   @decorate cache_put(key: &hd(&1.args))
   def put_with_keygen(x, y) do
     x * y
@@ -1223,6 +1271,9 @@ defmodule Nebulex.CachingTest do
 
   def default_ttl, do: 5000
 
+  # Delete all entries from the cache
+  def evict_query, do: nil
+
   ## Private Functions
 
   defp match_fun({:ok, "true"}), do: true
@@ -1245,10 +1296,10 @@ defmodule Nebulex.CachingTest do
   end
 
   defp set_keys(entries) do
-    assert :ok == Cache.put_all(entries)
+    assert Cache.put_all(entries) == :ok
 
     Enum.each(entries, fn {k, v} ->
-      assert v == Cache.get!(k)
+      assert Cache.get!(k) == v
     end)
   end
 

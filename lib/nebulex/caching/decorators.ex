@@ -1170,6 +1170,17 @@ if Code.ensure_loaded?(Decorator.Define) do
           def delete_all do
             # your logic (maybe write/delete data to the SoR)
           end
+
+          @decorate cache_evict(key: user_id, query: &__MODULE__.query_for_user_sessions/1)
+          def logout_user(user_id) do
+            # Evicts both the user entry and all their session entries
+            # your logic (maybe write/delete data to the SoR)
+          end
+
+          def query_for_user_sessions(%{args: [user_id]}) do
+            # Return a query that matches user sessions
+            # (implementation depends on your adapter)
+          end
         end
 
     ## Eviction with a query
@@ -1177,6 +1188,14 @@ if Code.ensure_loaded?(Decorator.Define) do
     The `:query` option allows you to provide a query (or a function that
     returns a query at runtime) to evict multiple cache entries based on
     specific criteria. The query must be supported by the cache adapter.
+
+    > #### Query syntax varies by adapter {: .warning}
+    >
+    > The query syntax and format depend on the cache adapter being used.
+    > The examples in this section assume you are using the
+    > `Nebulex.Adapters.Local` adapter, which uses ETS match specifications.
+    > If you're using a different adapter (e.g., Redis, Partitioned, etc.),
+    > consult that adapter's documentation for the appropriate query format.
 
     To explain how this works, let's use an example. Imagine you have a function
     `delete_objects_by_tag` that receives a `tag` as an argument and deletes
@@ -1188,12 +1207,12 @@ if Code.ensure_loaded?(Decorator.Define) do
     receives the decorator context and returns the required query to evict all
     cached entries matching the given tag.
 
-        @decorate cache_evict(query: &__MODULE__.query_for_tag/1)
+        @decorate cache_evict(query: &query_for_tag/1)
         def delete_objects_by_tag(tag) do
           # your logic to delete data from the SoR
         end
 
-        def query_for_tag(%{args: [tag]} = _context) do
+        defp query_for_tag(%{args: [tag]} = _context) do
           # Assuming we are using the `Nebulex.Adapters.Local` adapter and the
           # cached entry value is a map with a `tag` field, the match spec
           # would look like this:
@@ -1212,12 +1231,12 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     If you need to evict all cached entries associated with a specific user:
 
-        @decorate cache_evict(query: &__MODULE__.query_for_user/1)
+        @decorate cache_evict(query: &query_for_user/1)
         def delete_user_data(user_id) do
           # your logic to delete user data from the SoR
         end
 
-        def query_for_user(%{args: [user_id]} = _context) do
+        defp query_for_user(%{args: [user_id]} = _context) do
           [
             {
               {:entry, :"$1", %{user_id: :"$2"}, :_, :_},
@@ -1231,12 +1250,12 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     You can build more complex queries that match multiple conditions:
 
-        @decorate cache_evict(query: &__MODULE__.query_for_category_and_status/1)
+        @decorate cache_evict(query: &query_for_category_and_status/1)
         def delete_products(category, status) do
           # your logic to delete products from the SoR
         end
 
-        def query_for_category_and_status(%{args: [category, status]} = _context) do
+        defp query_for_category_and_status(%{args: [category, status]}) do
           [
             {
               {:entry, :"$1", %{category: :"$2", status: :"$3"}, :_, :_},
@@ -1266,6 +1285,60 @@ if Code.ensure_loaded?(Decorator.Define) do
     However, using a function is recommended for better readability and
     maintainability, especially when the query depends on function arguments.
 
+    ### Combining `:key` and `:query`
+
+    You can use both `:key` and `:query` options together to evict both specific
+    entries and entries matching a query pattern. When both options are provided,
+    the decorator executes the eviction in the following order:
+
+    1. **Query-based eviction** - First, entries matching the query are evicted.
+    2. **Key-based eviction** - Then, the specific key(s) are evicted.
+
+    This is useful when you need to evict a primary entry along with related
+    entries. For example, when logging out a user, you might want to evict the
+    user's cache entry and all their active session entries (the examples below
+    assume you are using the `Nebulex.Adapters.Local` adapter):
+
+        @decorate cache_evict(key: user_id, query: &query_for_user_sessions/1)
+        def logout_user(user_id) do
+          # Evicts the user entry and all session entries for this user
+          UserSessions.delete_all_for_user(user_id)
+        end
+
+        defp query_for_user_sessions(%{args: [user_id]} = _context) do
+          # Return a query that matches all session entries for the given user
+          [
+            {
+              {:entry, :"$1", %{user_id: :"$2", type: "session"}, :_, :_},
+              [{:"=:=", :"$2", user_id}],
+              [true]
+            }
+          ]
+        end
+
+    Another common use case is evicting multiple specific keys along with a
+    query:
+
+        @decorate cache_evict(
+          key: {:in, [category.id, category.slug]},
+          query: &query_for_category_products/1
+        )
+        def delete_category(category) do
+          # Evicts both category cache entries (by id and slug) and all
+          # product entries within that category
+          Products.delete_all_for_category(category.id)
+        end
+
+        defp query_for_category_products(%{args: [category]} = _context) do
+          [
+            {
+              {:entry, :"$1", %{category_id: :"$2"}, :_, :_},
+              [{:"=:=", :"$2", category.id}],
+              [true]
+            }
+          ]
+        end
+
     ### Best Practices
 
     - **Keep query logic in separate functions** for reusability and cleaner
@@ -1276,6 +1349,8 @@ if Code.ensure_loaded?(Decorator.Define) do
       maintainability.
     - **Consider performance implications** when querying large datasets, as
       some queries may require full cache scans.
+    - **Use both `:key` and `:query` when evicting hierarchical data** where
+      you need to remove both a parent entry and its related child entries.
 
     ## Eviction of external references
 
@@ -1290,14 +1365,16 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     [ext-refs]: #cacheable/3-external-referenced-keys
 
-        @decorate cache_evict(key: {:in, [user.id, keyref(user.email, cache: AnotherCache)]})
+        @decorate cache_evict(
+                    key: {:in, [user.id, keyref(user.email, cache: ExtCache)]}
+                  )
         def delete_user(user) do
           # your logic to delete data from the SoR
         end
 
-    Assuming there is a reference under the key `user.email` in `AnotherCache`,
-    the decorator will remove the cached value under the key `user.id` and the
-    reference under the key `user.email` from `AnotherCache`.
+    Assuming there is a reference under the key `user.email` in `ExtCache`,
+    the decorator will remove the cached value under the key `user.id` and
+    the reference under the key `user.email` from `ExtCache`.
     """
     @doc group: "Decorator API"
     def cache_evict(attrs \\ [], block, context) do
@@ -1607,9 +1684,10 @@ if Code.ensure_loaded?(Decorator.Define) do
       all_entries? = get_boolean(attrs, :all_entries)
 
       key =
-        case Keyword.fetch(attrs, :query) do
-          {:ok, q} -> {:"$nbx_query", q}
-          :error -> keygen
+        case {Keyword.fetch(attrs, :query), Keyword.fetch(attrs, :key)} do
+          {{:ok, q}, {:ok, _k}} -> quote(do: {:"$nbx_query", unquote(q), unquote(keygen)})
+          {{:ok, q}, :error} -> quote(do: {:"$nbx_query", unquote(q)})
+          _else -> keygen
         end
 
       quote do
@@ -1800,6 +1878,12 @@ if Code.ensure_loaded?(Decorator.Define) do
       run_cmd(cache, :delete_all, [[q]], on_error)
     end
 
+    defp do_evict(false, cache, {:query, q, k}, on_error) do
+      _ = run_cmd(cache, :delete_all, [[{:query, q}]], on_error)
+
+      do_evict(false, cache, k, on_error)
+    end
+
     defp do_evict(false, cache, key, on_error) do
       run_cmd(cache, :delete, [key, []], on_error)
     end
@@ -1922,10 +2006,30 @@ if Code.ensure_loaded?(Decorator.Define) do
     @spec eval_key(any(), context()) :: any()
     def eval_key(key, ctx)
 
-    def eval_key(key, ctx) when is_function(key, 1), do: key.(ctx)
-    def eval_key(key, _ctx) when is_function(key, 0), do: key.()
-    def eval_key({:"$nbx_query", q}, ctx), do: {:query, eval_key(q, ctx)}
-    def eval_key(key, _ctx), do: key
+    # cache_evict: only a query is provided
+    def eval_key({:"$nbx_query", q}, ctx) do
+      {:query, eval_key(q, ctx)}
+    end
+
+    # cache_evict: a query and a key are provided
+    def eval_key({:"$nbx_query", q, k}, ctx) do
+      {:query, eval_key(q, ctx), eval_key(k, ctx)}
+    end
+
+    # The key is a function that expects the context
+    def eval_key(key, ctx) when is_function(key, 1) do
+      key.(ctx)
+    end
+
+    # The key is a function that expects no arguments
+    def eval_key(key, _ctx) when is_function(key, 0) do
+      key.()
+    end
+
+    # The key is a term
+    def eval_key(key, _ctx) do
+      key
+    end
 
     @doc """
     Convenience function for running a cache command.

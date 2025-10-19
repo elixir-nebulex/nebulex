@@ -19,9 +19,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `:query` option for bulk eviction based on adapter-specific queries.
   For example: `@decorate cache_evict(query: my_query)`. The query can be
   provided directly or as a function that returns the query at runtime.
-  When present, the `:query` option overrides the `:key` option.
+  Additionally, both `:query` and `:key` options can be used together to
+  evict specific entries and entries matching a query pattern in a single
+  operation. When both are provided, query-based eviction executes first,
+  followed by key-based eviction.
   For more information, see:
   [#243](https://github.com/elixir-nebulex/nebulex/issues/243).
+  [#245](https://github.com/elixir-nebulex/nebulex/issues/245).
 - [Nebulex.Caching.Decorator] Add support for evicting external references in
   `cache_evict` decorator. For more information, see:
   [#244](https://github.com/elixir-nebulex/nebulex/issues/244)

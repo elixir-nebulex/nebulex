@@ -234,9 +234,16 @@ defmodule Nebulex.Caching.Options do
       type_doc: "`t:query/0`",
       required: false,
       doc: """
-      The query to use for evicting cache entries. When present, this option
-      overrides the `:key` option and allows you to evict multiple entries
-      based on specific criteria.
+      The query to use for evicting cache entries based on specific criteria.
+      This option allows you to evict multiple entries that match the query.
+
+      When both `:query` and `:key` are provided, the decorator will:
+      1. First execute the query-based eviction to remove matching entries.
+      2. Then execute the key-based eviction to remove the specified key(s).
+
+      This is useful when you need to evict both a specific entry and related
+      entries. For example, when deleting a user, you might want to evict both
+      the user's cache entry and all their session entries.
 
       The `:query` option accepts the following values:
 
