@@ -5,7 +5,7 @@ Nebulex's caching decorators. While the [Decorators API documentation][decorator
 covers all options and basic usage, this guide focuses on real-world
 scenarios, adapter-specific optimizations, and advanced patterns.
 
-[decorators_api]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.Decorators.html
+[decorators_api]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html
 
 ---
 
@@ -48,7 +48,8 @@ functions in the module:
 
 ## Quick Start: Basic Usage
 
-Let's start with a simple product catalog to illustrate the basics.
+Let's start with a simple product catalog to illustrate the basics. For complete
+API documentation on all three decorators, see [Nebulex.Caching.Decorators API][decorators_api].
 
 ### Reading with `@cacheable`
 
@@ -108,7 +109,8 @@ end
 ## Advanced Eviction Patterns
 
 The `cache_evict` decorator supports several powerful patterns for
-cache invalidation.
+cache invalidation. For detailed API documentation and option reference, see
+[`cache_evict/3`](http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html#cache_evict/3).
 
 ### Evicting Multiple Keys
 
@@ -199,6 +201,10 @@ end
 The `Nebulex.Adapters.Local` adapter provides several powerful features for
 working with cached data. This section covers features introduced in recent
 versions that make cache management more intuitive and maintainable.
+
+For complete API documentation, see the
+["Local Adapter: Advanced Reference Eviction"](http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html#cache_evict/3-local-adapter-advanced-reference-eviction)
+section in `cache_evict/3`.
 
 ### Building Queries with QueryHelper
 
@@ -360,6 +366,11 @@ multiple keys, avoiding data duplication and ensuring consistency.
 
 [query_helper_section]: https://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.html#module-building-match-specs-with-queryhelper
 
+For complete API documentation on the `:references` option, see
+[`cacheable/3` - Referenced keys][cacheable_refs_api].
+
+[cacheable_refs_api]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html#cacheable/3-referenced-keys
+
 **Basic reference usage:**
 
 ```elixir
@@ -491,6 +502,178 @@ end
 - `keyref(user.email, cache: EmailLookupCache)` evicts the reference from
   `EmailLookupCache`
 - This is when you actually need `keyref()` - for cross-cache eviction!
+
+### Advanced Reference Cleanup with Tags and Queries
+
+Managing references can be challenging when you have multiple access patterns
+pointing to the same value. The `Nebulex.Adapters.Local` adapter provides two
+powerful strategies to automatically clean up all references without manually
+specifying each one.
+
+#### Strategy 1: Tag-based reference grouping
+
+Tag both the main key and its references with the same tag, then evict all
+entries with that tag in a single operation.
+
+**Setup:**
+
+```elixir
+use Nebulex.Adapters.Local.QueryHelper
+
+@decorate cacheable(key: id, opts: [tag: "user"])
+def get_user(id) do
+  Repo.get(User, id)
+end
+
+@decorate cacheable(
+            key: email,
+            references: &(&1 && &1.id),
+            opts: [tag: "user"]
+          )
+def get_user_by_email(email) do
+  Repo.get_by(User, email: email)
+end
+
+@decorate cacheable(
+            key: username,
+            references: &(&1 && &1.id),
+            opts: [tag: "user"]
+          )
+def get_user_by_username(username) do
+  Repo.get_by(User, username: username)
+end
+
+# Evict the user and ALL references by tag
+@decorate cache_evict(query: &evict_user_by_tag/1)
+def delete_user(user) do
+  Repo.delete(user)
+end
+
+defp evict_user_by_tag(%{args: [_user]}) do
+  match_spec tag: t, where: t == "user", select: true
+end
+```
+
+**Why this works:**
+- All entries (main key and references) share the same tag
+- Single query evicts everything in one operation
+- Clean and declarative
+- Perfect when you control reference creation upfront
+
+**Trade-offs:**
+- Requires planning tags during caching setup
+- Less granular - evicts all tagged entries, not just one user's
+
+#### Strategy 2: Direct reference queries with keyref_match_spec
+
+Use `keyref_match_spec/2` to automatically discover and evict all references
+pointing to a specific key, combined with explicit key eviction.
+
+**Setup:**
+
+```elixir
+use Nebulex.Adapters.Local.QueryHelper
+
+@decorate cacheable(key: id)
+def get_user(id) do
+  Repo.get(User, id)
+end
+
+@decorate cacheable(key: email, references: &(&1 && &1.id))
+def get_user_by_email(email) do
+  Repo.get_by(User, email: email)
+end
+
+@decorate cacheable(key: username, references: &(&1 && &1.id))
+def get_user_by_username(username) do
+  Repo.get_by(User, username: username)
+end
+
+# Evict the user AND all references pointing to it
+@decorate cache_evict(key: user.id, query: &evict_user_references/1)
+def delete_user(user) do
+  Repo.delete(user)
+end
+
+defp evict_user_references(%{args: [user]}) do
+  # Finds all cache keys (reference keys) that point to user.id
+  keyref_match_spec(user.id)
+end
+```
+
+**How it works:**
+1. `:key` evicts the main entry (`user.id`)
+2. `:query` finds all references pointing to `user.id`
+3. Both are evicted in a single operation
+
+**Why this approach:**
+- More flexible - discovers references automatically
+- Works even if references are created conditionally
+- Handles multiple references across different decorators
+- Doesn't require upfront tag coordination
+
+**Trade-offs:**
+- Slightly more complex than tag-based approach
+- Query performs a scan to find references
+
+#### Choosing Between Strategies
+
+| Strategy | Best For | Tradeoff |
+|----------|----------|----------|
+| **Tags** | Coordinated cleanup, related entries | Requires upfront planning |
+| **keyref_match_spec** | Multiple access patterns, flexibility | Slight performance cost for query |
+| **Combined** | Maximum robustness | Most complex, but most flexible |
+
+**Recommended approach for production:**
+
+Combine both strategies for the best of both worlds:
+
+```elixir
+use Nebulex.Adapters.Local.QueryHelper
+
+@decorate cacheable(key: id, opts: [tag: "user"])
+def get_user(id) do
+  Repo.get(User, id)
+end
+
+@decorate cacheable(key: email, references: &(&1 && &1.id), opts: [tag: "user"])
+def get_user_by_email(email) do
+  Repo.get_by(User, email: email)
+end
+
+@decorate cacheable(key: username, references: &(&1 && &1.id), opts: [tag: "user"])
+def get_user_by_username(username) do
+  Repo.get_by(User, username: username)
+end
+
+# Use both tag and query for maximum robustness:
+# - Tag evicts everything if references are properly tagged
+# - Query catches any orphaned references as a fallback
+@decorate cache_evict(query: &evict_users_by_tag/0)
+def delete_all_user_data(user) do
+  Repo.delete(user)
+end
+
+defp evict_users_by_tag do
+  match_spec tag: t, where: t == "user", select: true
+end
+
+# For individual user deletion, use keyref_match_spec for flexibility
+@decorate cache_evict(key: user.id, query: &evict_user_refs/1)
+def delete_user(user) do
+  Repo.delete(user)
+end
+
+defp evict_user_refs(%{args: [user]}) do
+  keyref_match_spec(user.id)
+end
+```
+
+This layered approach provides:
+- ✅ Automatic cleanup through tags (primary method)
+- ✅ Fallback cleanup through queries (safety net)
+- ✅ No dangling references
+- ✅ Clear intent in your code
 
 ---
 
@@ -1083,12 +1266,12 @@ Enable telemetry logging to debug cache behavior:
 
 ### Recommended Reading
 
-- [Cache Usage Patterns](http://hexdocs.pm/nebulex/3.0.0-rc.1/cache-usage-patterns.html)
+- [Cache Usage Patterns](http://hexdocs.pm/nebulex/3.0.0-rc.2/cache-usage-patterns.html)
   - Overview of caching patterns.
-- [Nebulex.Caching.Decorators API](http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.Decorators.html)
+- [Nebulex.Caching.Decorators API](http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html)
   - Complete API reference.
-- [Telemetry Guide](http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html)
-  - Monitoring and observability
+- [Info API Guide](http://hexdocs.pm/nebulex/3.0.0-rc.2/info-api.html)
+  - Monitoring and observability.
 - [Nebulex.Adapters.Local Documentation](https://hexdocs.pm/nebulex_local)
   - Local adapter features.
 

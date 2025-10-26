@@ -357,6 +357,7 @@ end
   or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
   If a code snippet exceeds the 80-character limit by more than 1 or 2 haracters,
   format it using the Elixir formatter.
+- When you make a change to the documentation, use `mix docs` to validate it.
 
 ### Function Documentation
 
@@ -371,6 +372,7 @@ end
   or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
   If a code snippet exceeds the 80-character limit by more than 1 or 2 haracters,
   format it using the Elixir formatter.
+- When you make a change to the documentation, use `mix docs` to validate it.
 
 ### Code Comments
 

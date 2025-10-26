@@ -53,14 +53,14 @@ all dependencies optional, including the adapters. For example:
     Add `:decorator` to the dependency list.
 
   * **For enabling Telemetry events**: Add `:telemetry` to the dependency list.
-    See the [telemetry guide][telemetry].
+    See the [Info API guide](http://hexdocs.pm/nebulex/3.0.0-rc.2/info-api.html)
+    for monitoring cache stats and metrics.
 
   * **For intensive workloads** when using `Nebulex.Adapters.Local` adapter:
     You may want to use `:shards` as the backend for partitioned ETS tables.
     In such cases, add `:shards` to the dependency list.
 
-[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.html
-[telemetry]: http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html
+[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.html
 
 Install these dependencies by running:
 
@@ -1166,4 +1166,4 @@ To learn more about how multilevel-cache works, please check
 
 * [Decorators-based DSL for cache usage patterns][cache-usage-patterns].
 
-[cache-usage-patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.1/cache-usage-patterns.html
+[cache-usage-patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.2/cache-usage-patterns.html

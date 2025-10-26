@@ -33,8 +33,9 @@ among others.
 [cachex]: https://github.com/whitfin/cachex
 [redis]: https://redis.io/
 [memcached]: https://memcached.org/
-[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.Decorators.html
-[cache_patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.1/cache-usage-patterns.html
+[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html
+[info_api]: http://hexdocs.pm/nebulex/3.0.0-rc.2/info-api.html
+[cache_patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.2/cache-usage-patterns.html
 [cache_topologies]: https://docs.oracle.com/en/middleware/fusion-middleware/coherence/14.1.2/develop-applications/introduction-coherence-caches.html
 
 ---
@@ -58,7 +59,7 @@ dependencies in your `mix.exs` file.
 > _**For more information about available adapters, check out the
 > [Nebulex adapters][nbx_adapters] guide.**_
 
-[nbx_adapters]: http://hexdocs.pm/nebulex/3.0.0-rc.1/nbx-adapters.html
+[nbx_adapters]: http://hexdocs.pm/nebulex/3.0.0-rc.2/nbx-adapters.html
 
 For example, to use the Generational Local Cache
 (`Nebulex.Adapters.Local` adapter), add the following to your `mix.exs`:
@@ -66,8 +67,8 @@ For example, to use the Generational Local Cache
 ```elixir
 def deps do
   [
-    {:nebulex, "~> 3.0.0-rc.1"},
-    {:nebulex_local, "~> 3.0.0-rc.1"}, # Generational local cache adapter
+    {:nebulex, "~> 3.0.0-rc.2"},
+    {:nebulex_local, "~> 3.0.0-rc.2"}, # Generational local cache adapter
     {:decorator, "~> 1.4"},            # Required for caching decorators
     {:telemetry, "~> 1.2"}             # Required for telemetry events
   ]
@@ -81,9 +82,8 @@ all dependencies optional, including the adapters. For example:
     Add `:decorator` to the dependency list (recommended).
 
   * **For enabling Telemetry events**: Add `:telemetry` to the dependency list
-    (recommended). See the [telemetry guide][telemetry].
-
-[telemetry]: http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html
+    (recommended). See the [Info API guide][info_api] for monitoring cache stats
+    and metrics.
 
 Then run `mix deps.get` in your shell to fetch the dependencies. If you want to
 use another cache adapter, just choose the appropriate dependency from the table
@@ -124,8 +124,8 @@ For more detailed information, see the
 [getting started guide][getting_started-rc1] and
 [online documentation][docs-rc1].
 
-[getting_started-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.1/getting-started.html
-[docs-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.html
+[getting_started-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.2/getting-started.html
+[docs-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.html
 
 ---
 
@@ -230,7 +230,7 @@ end
 * [Examples][examples] - Example applications.
 
 [examples]: https://github.com/elixir-nebulex/nebulex_examples
-[upgrading_to_v3]: http://hexdocs.pm/nebulex/3.0.0-rc.1/v3-0.html
+[upgrading_to_v3]: http://hexdocs.pm/nebulex/3.0.0-rc.2/v3-0.html
 [nebulex_streams]: https://github.com/elixir-nebulex/nebulex_streams
 [declarative_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/declarative-caching.html
 

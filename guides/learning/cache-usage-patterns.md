@@ -3,12 +3,23 @@
 Nebulex supports several common cache access patterns via
 [caching decorators][nbx_caching].
 
-[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.Decorators.html
+[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html
 
 > The following documentation about caching patterns is based on
 > [EHCache Docs][EHCache]
 
 [EHCache]: https://www.ehcache.org/documentation/3.10/caching-patterns.html
+
+---
+
+## Choosing a Caching Pattern
+
+| Pattern | Best For | Pros | Cons |
+|---------|----------|------|------|
+| **Cache-Aside** | Simple apps, manual control | Direct code paths, flexibility | App complexity, cache inconsistency risk |
+| **Read-Through** | Frequent reads, consistent loading | Simpler app code, automatic loading | Cache hide performance issues |
+| **Write-Through** | Critical data, consistency | Cache/SoR in sync, safe | Performance overhead, blocking |
+| **Cache-as-SoR** | High-throughput, abstraction preferred | Cleanest code, abstracted SoR | Black box behavior, harder debugging |
 
 ---
 
@@ -24,6 +35,8 @@ updated.
 
 ### Reading Values
 
+**Imperative approach:**
+
 ```elixir
 # Check cache first, then fall back to SoR
 with {:error, _reason} <- MyCache.fetch(key) do
@@ -33,7 +46,23 @@ with {:error, _reason} <- MyCache.fetch(key) do
 end
 ```
 
+**Declarative approach (with `cacheable` decorator):**
+
+```elixir
+defmodule MyApp.Users do
+  use Nebulex.Caching, cache: MyApp.Cache
+
+  # Cache-aside: automatically check cache, load from SoR if miss
+  @decorate cacheable(key: user_id)
+  def get_user(user_id) do
+    MyApp.Repo.get(User, user_id)
+  end
+end
+```
+
 ### Writing Values
+
+**Imperative approach:**
 
 ```elixir
 # Update both cache and SoR
@@ -41,8 +70,25 @@ MyCache.put(key, value)
 SoR.insert(key, value)  # e.g., Ecto.Repo
 ```
 
+**Declarative approach (with `cache_put` or `cache_evict` decorators):**
+
+```elixir
+# Option 1: Update cache when SoR is updated
+@decorate cache_put(key: user_id)
+def update_user(user_id, attrs) do
+  MyApp.Repo.update!(User, attrs)
+end
+
+# Option 2: Evict cache when SoR is updated (let next read reload)
+@decorate cache_evict(key: user_id)
+def delete_user(user_id) do
+  MyApp.Repo.delete!(User, user_id)
+end
+```
+
 This is the default behavior for most caches, requiring direct interaction with
-both the cache and the SoR (typically a database).
+both the cache and the SoR (typically a database). The decorator-based approach
+automates cache management while keeping the pattern explicit in the code.
 
 ---
 
@@ -66,12 +112,11 @@ read and write patterns:
 
 ### Disadvantages
 
-* **Less directly visible code-path** – But how do you get all this
-  out-of-the-box? This is where declarative decorator-based caching comes in.
-  Nebulex provides a set of annotations to abstract most of the logic behind
-  **Read-through** and **Write-through** patterns and make the implementation
-  extremely easy. Let's go over these patterns in more detail and see how to
-  implement them using [Nebulex decorators][nbx_caching].
+* **Less directly visible code-path** – Behavior is abstracted and less obvious
+  when reading the code. However, this is where declarative decorator-based
+  caching comes in. Nebulex provides decorators to abstract most of the logic
+  behind **Read-through** and **Write-through** patterns and make the
+  implementation extremely easy.
 
 ---
 
@@ -151,3 +196,39 @@ end
 
 As you can see, the logic to write data to the system-of-record (SoR) is the
 function logic itself.
+
+---
+
+## Implementing Patterns with Decorators
+
+The following table summarizes which decorators support which caching patterns:
+
+| Pattern | Decorator | Use Case |
+|---------|-----------|----------|
+| **Cache-Aside** | `@cacheable` | Reads: Check cache, load from SoR if miss |
+| **Read-Through** | `@cacheable` | Same as cache-aside but emphasizes automatic loading |
+| **Write-Through (Update)** | `@cache_put` | Writes: Update cache AND SoR together |
+| **Write-Through (Invalidate)** | `@cache_evict` | Writes: Invalidate cache, next read reloads from SoR |
+
+Each decorator handles cache management automatically:
+
+- **`@cacheable`** - Implements the read-through pattern by checking the cache
+  first and invoking the function body to load from SoR on miss
+- **`@cache_put`** - Implements write-through with cache update by invoking the
+  function (writing to SoR) and then storing the result in cache
+- **`@cache_evict`** - Implements write-through with cache invalidation by
+  invoking the function (writing to SoR) and then removing the cache entry
+
+For more details and advanced usage, see the Declarative Caching guide.
+
+---
+
+## Next Read
+
+Now that you understand the common caching patterns, learn how to implement them
+in your Nebulex applications:
+
+- **[Declarative Caching with Decorators](http://hexdocs.pm/nebulex/3.0.0-rc.2/declarative-caching.html)**
+  - Comprehensive guide to using `@cacheable`, `@cache_put`, and `@cache_evict`
+    decorators with real-world examples and advanced patterns
+  - Reference documentation for all decorator options and behaviors

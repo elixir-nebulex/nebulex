@@ -14,7 +14,7 @@ Nebulex also provides a simple implementation
 handler to aggregate the stats and keep them updated, therefore, it requires
 `:telemetry` to be available.
 
-[nbx_common_info]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Adapters.Common.Info.html
+[nbx_common_info]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Adapters.Common.Info.html
 
 ## Usage
 
@@ -99,6 +99,26 @@ iex> MyApp.Cache.info!([:stats, :memory])
 }
 ```
 
+## Understanding Cache Stats
+
+The stats map includes the following metrics:
+
+- **`hits`** - Number of successful `get` operations that found a value in the cache
+- **`misses`** - Number of `get` operations that did not find a value (returned `nil`)
+- **`writes`** - Number of `put` operations that added new entries to the cache
+- **`updates`** - Number of `put` operations that updated existing cache entries
+- **`deletions`** - Number of entries removed via `delete` operations
+- **`evictions`** - Number of entries automatically removed due to exceeding `max_size`
+- **`expirations`** - Number of entries automatically removed due to TTL expiration
+
+These metrics are useful for understanding cache behavior and health. For example:
+
+```elixir
+iex> stats = MyApp.Cache.info!(:stats).stats
+iex> hit_rate = stats.hits / (stats.hits + stats.misses)
+iex> IO.inspect(hit_rate, label: "Cache hit rate")
+```
+
 ## Telemetry Metrics
 
 Now, let's see how we can provide metrics out of the info data.
@@ -124,7 +144,7 @@ defmodule MyApp.Telemetry do
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000},
 
       # For example, we use the console reporter, but you can change it.
-      # See `:telemetry_metrics` for for information.
+      # See `:telemetry_metrics` for more information.
       {Telemetry.Metrics.ConsoleReporter, metrics: metrics()}
     ]
 
@@ -297,3 +317,116 @@ Metric measurement: :value (last_value)
 With value: 0
 Tag values: %{cache: MyApp.Cache, node: :nonode@nohost}
 ```
+
+## Interpreting the Metrics
+
+Once you have metrics flowing, you can use them to understand cache health:
+
+**Cache Hit Rate**
+
+Calculate hit rate as a percentage of successful lookups:
+
+```elixir
+hit_rate = hits / (hits + misses) * 100
+```
+
+- Hit rates above 80% generally indicate a well-sized cache
+- Low hit rates (<30%) may indicate the cache is too small or TTL too short
+- A hit rate of 0% suggests the cache isn't being used effectively
+
+**Memory Usage**
+
+Monitor memory trends:
+
+```elixir
+utilization = used / total * 100
+```
+
+- Consistently high utilization (>90%) may trigger frequent evictions
+- Growing memory usage over time can indicate memory leaks
+- Spikes in memory can correlate with batch operations
+
+**Eviction Rate**
+
+Track evictions over time:
+
+- Increasing evictions usually mean cache capacity is insufficient
+- Sudden eviction spikes may indicate unusual access patterns
+- High evictions combined with low hit rate suggests cache configuration issues
+
+**Activity Indicators**
+
+- `writes + updates` shows cache update frequency
+- `deletions + evictions + expirations` shows cache turnover
+- Imbalanced ratios can reveal inefficient access patterns
+
+## Poller Interval and Configuration
+
+The `:telemetry_poller` with `period: 10_000` reports cache stats every 10 seconds.
+Consider your needs:
+
+```elixir
+# Every 5 seconds - for closely monitoring cache behavior (more overhead)
+{:telemetry_poller, measurements: periodic_measurements(), period: 5_000},
+
+# Every 10 seconds - good default for most applications
+{:telemetry_poller, measurements: periodic_measurements(), period: 10_000},
+
+# Every 30 seconds - for low-overhead monitoring in production
+{:telemetry_poller, measurements: periodic_measurements(), period: 30_000},
+```
+
+Trade-offs:
+
+- **Shorter periods**: More frequent updates, higher overhead, better precision for detecting rapid changes
+- **Longer periods**: Lower overhead, less precise but sufficient for long-term trending
+- **Adaptive**: You can use different periods in different environments (dev, staging, production)
+
+## Monitoring Multiple Cache Instances
+
+If your application uses multiple cache instances or dynamic caches, you can
+track them separately by including cache metadata in the telemetry event:
+
+```elixir
+def cache_stats do
+  with {:ok, info} <- MyApp.Cache.info([:server, :stats]) do
+    :telemetry.execute(
+      [:my_app, :cache, :info, :stats],
+      info.stats,
+      %{
+        cache: info.server[:cache_name],
+        cache_module: info.server[:cache_module]
+      }
+    )
+  end
+
+  :ok
+end
+```
+
+Then in your metrics, group by cache instance:
+
+```elixir
+last_value("my_app.cache.info.stats.hits",
+  tags: [:cache, :cache_module],
+  tag_values: &%{
+    cache: &1.cache,
+    cache_module: &1.cache_module
+  }
+)
+```
+
+## Adapter-Specific Information
+
+The Info API is adapter-specific. While `Nebulex.Adapters.Local` provides the stats
+and memory metrics shown in this guide, other adapters may provide different information keys.
+
+Always consult your adapter's documentation for:
+
+- Available info keys (`:stats`, `:memory`, `:server`, etc.)
+- What each stat means in the adapter's context
+- Any adapter-specific configuration options
+- Performance characteristics of the Info API itself
+
+For example, some adapters may not support all stat types or may have different
+memory measurement approaches for distributed caches.

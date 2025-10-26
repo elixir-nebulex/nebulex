@@ -37,7 +37,7 @@ defmodule Nebulex.Cache do
 
   #{Nebulex.Cache.Options.start_link_options_docs()}
 
-  [local_adapter]: http://hexdocs.pm/nebulex_local/3.0.0-rc.1/Nebulex.Adapters.Local.html
+  [local_adapter]: http://hexdocs.pm/nebulex_local/3.0.0-rc.2/Nebulex.Adapters.Local.html
 
   ## Shared options
 
@@ -124,7 +124,7 @@ defmodule Nebulex.Cache do
         :no_config
       )
 
-  See the [telemetry documentation](http://hexdocs.pm/nebulex/3.0.0-rc.1/telemetry.html)
+  See the [telemetry documentation](http://hexdocs.pm/nebulex/3.0.0-rc.2/telemetry.html)
   for more information.
 
   The following are the events you should expect from Nebulex. All examples
@@ -294,6 +294,14 @@ defmodule Nebulex.Cache do
 
   This is another handy way to work with multiple cache instances through
   the same cache module.
+
+  ## Declarative Caching with Decorators
+
+  While the cache API provides imperative control for cache operations,
+  Nebulex also offers a declarative approach through caching decorators.
+  For applications that prefer declarative patterns, see the
+  `Nebulex.Caching.Decorators` module documentation for attributes like
+  `@cacheable`, `@cache_put`, and `@cache_evict`.
 
   ## Distributed topologies
 
@@ -733,7 +741,7 @@ defmodule Nebulex.Cache do
   will run on `:another_cache_name`.
 
   Additionally, all cache commands optionally support passing the wanted
-  dynamic cache (name or PID) as the first argument so you can o directly
+  dynamic cache (name or PID) as the first argument so you can directly
   interact with a cache instance. See the
   ["Dynamic caches"](#module-dynamic-caches) section in the module
   documentation for more information.
@@ -1559,7 +1567,7 @@ defmodule Nebulex.Cache do
       :ok
       iex> MyCache.touch(:a)
       {:ok, true}
-      iex> MyCache.ttl(:b)
+      iex> MyCache.touch(:b)
       {:ok, false}
 
   """
@@ -2440,8 +2448,15 @@ defmodule Nebulex.Cache do
       ...>   }
       ...> ]
       iex> MyCache.get_all(query: match_spec)
-      {:ok, [b: 1, c: 3]}
+      {:ok, [b: 2, c: 3]}
 
+  #### Beyond basic queries
+
+  While the examples above show basic query patterns, the
+  `Nebulex.Adapters.Local` adapter provides several advanced features for more
+  sophisticated cache management, including tags, references, query helpers,
+  and more. For detailed information on all available capabilities, see the
+  [Local Adapter documentation](https://hexdocs.pm/nebulex_local/3.0.0-rc.2/Nebulex.Adapters.Local.html).
   """
   @doc group: "Query API"
   @callback get_all(query_spec(), opts()) :: ok_error_tuple([any()])

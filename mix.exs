@@ -2,7 +2,7 @@ defmodule Nebulex.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-nebulex/nebulex"
-  @version "3.0.0-rc.1"
+  @version "3.0.0-rc.2"
 
   def project do
     [
@@ -15,14 +15,7 @@ defmodule Nebulex.MixProject do
 
       # Testing
       test_coverage: [tool: ExCoveralls, export: "test-coverage"],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test,
-        "coveralls.json": :test,
-        "test.ci": :test
-      ],
+      test_ignore_filters: [~r{test/(shared|support)/.*\.exs}],
 
       # Dialyzer
       dialyzer: dialyzer(),
@@ -39,6 +32,19 @@ defmodule Nebulex.MixProject do
 
   defp elixirc_paths(:test), do: ["lib", "test/dialyzer"]
   defp elixirc_paths(_), do: ["lib"]
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test,
+        "test.ci": :test
+      ]
+    ]
+  end
 
   def application do
     [
@@ -178,7 +184,6 @@ defmodule Nebulex.MixProject do
       "guides/learning/cache-usage-patterns.md",
       "guides/learning/declarative-caching.md",
       "guides/learning/info-api.md",
-      "guides/learning/telemetry.md",
       "guides/learning/creating-new-adapter.md",
 
       # Upgrading

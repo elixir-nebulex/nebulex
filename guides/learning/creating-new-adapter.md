@@ -91,11 +91,20 @@ mix deps.get
 
 ## Tests
 
-Before we start implementing our custom adapter, let's make our tests up and
-running.
+Before we start implementing our custom adapter, let's set up our tests.
 
-We start by defining a cache that uses our adapter in
-`test/support/test_cache.ex`
+First, it's important to understand which adapter behaviors we need to implement:
+
+- **`Nebulex.Adapter.KV`** - Required. Provides key-value operations like `get`,
+  `put`, `delete`, etc. All adapters must implement this.
+- **`Nebulex.Adapter.Queryable`** - Optional. Provides query-based operations like
+  `delete_all`, `get_all` with filters, etc. Recommended for most adapters.
+- **`Nebulex.Adapter.Transaction`**, **`Nebulex.Adapter.Info`**,
+  **`Nebulex.Adapter.Observable`** - Other optional behaviors for advanced features
+  (documented separately in the Adapter API).
+
+We'll implement `KV` and `Queryable` in this guide. Let's start by defining a
+cache that uses our adapter in `test/support/test_cache.ex`
 
 ```elixir
 defmodule NebulexMemoryAdapter.TestCache do
@@ -105,11 +114,10 @@ defmodule NebulexMemoryAdapter.TestCache do
 end
 ```
 
-We won't be writing tests ourselves. Instead, we will use shared tests from the
-Nebulex parent repo. To do so, we will create a helper module in
-`test/shared/cache_test.exs` that will `use` test suites for behaviour we are
-going to implement. The minimal set of behaviours is `KV` and `Queryable` so
-we'll go with them.
+We won't be writing tests ourselves. Instead, we'll use shared tests from the
+Nebulex parent repo. To do so, we'll create a helper module in
+`test/shared/cache_test.exs` that uses test suites for the behaviors we're
+implementing. We'll test both `KV` and `Queryable` behaviors.
 
 ```elixir
 defmodule NebulexMemoryAdapter.CacheTest do
@@ -126,10 +134,10 @@ defmodule NebulexMemoryAdapter.CacheTest do
 end
 ```
 
-Let's now edit `test/nebulex_memory_adapter_test.exs` and make it run those
-shared tests by calling `use NebulexMemoryAdapter.CacheTest`. We also need to
-define a setup that will start our cache process and put the `cache` and `name`
-keys into the test context.
+Now let's edit `test/nebulex_memory_adapter_test.exs` to run the shared tests by
+using `NebulexMemoryAdapter.CacheTest`. We also need to define a setup callback
+that starts our cache process and puts the `cache` and `name` keys into the test
+context.
 
 ```elixir
 defmodule NebulexMemoryAdapterTest do
@@ -148,7 +156,7 @@ defmodule NebulexMemoryAdapterTest do
 end
 ```
 
-Now it's time to grind through failing tests.
+Now let's run the tests to see what we need to implement.
 
 ```console
 mix test
@@ -158,8 +166,8 @@ mix test
     test/support/test_cache.ex:2: (module)
 ```
 
-Looks like our adapter needs to `Nebulex.Adapter` behaviour. Luckily, it's just
-2 callback that we can copy from `Nebulex.Adapters.Nil`
+Looks like our adapter needs to implement the `Nebulex.Adapter` behaviour.
+Luckily, it's just 2 callbacks that we can copy from `Nebulex.Adapters.Nil`
 
 ```elixir
 # lib/nebulex_memory_adapter.ex
@@ -191,8 +199,8 @@ mix test
     test/nebulex_memory_adapter_test.exs:3: NebulexMemoryAdapterTest (module)
 ```
 
-Looks like files from Nebulex parent repo aren't automatically compiled. Let's
-address this in `test/test_helper.exs`
+The test files from the Nebulex parent repo aren't automatically compiled.
+Let's address this in `test/test_helper.exs`
 
 ```elixir
 # Nebulex dependency path
@@ -243,13 +251,62 @@ Finished in 0.2 seconds (0.2s async, 0.00s sync)
 
 ## Implementation
 
-Now that we have our failing tests we can write some implementation. We'll start
-by making `delete_all/0` work as it is called in the setup.
+Now that we have our failing tests, we can implement the adapter. We'll build
+this step-by-step, starting with the base `Nebulex.Adapter` behavior, then
+implementing the required `Nebulex.Adapter.KV` behavior, and finally adding
+the optional `Nebulex.Adapter.Queryable` behavior.
+
+> **Note**: For a complete reference implementation with all the correct callback
+> signatures and production patterns, consult the
+> [Nebulex.TestAdapter](https://github.com/elixir-nebulex/nebulex/blob/main/test/support/test_adapter.exs)
+> source code. This guide shows the essential structure and flow, but you'll want
+> to refer to TestAdapter for exact implementations.
+
+### Step 1: Implement Nebulex.Adapter
+
+First, let's implement the base `Nebulex.Adapter` behavior with the two required
+callbacks:
 
 ```elixir
 defmodule NebulexMemoryAdapter do
   @behaviour Nebulex.Adapter
-  @behaviour Nebulex.Adapter.Queryable
+
+  import Nebulex.Utils
+
+  @impl Nebulex.Adapter
+  defmacro __before_compile__(_env), do: :ok
+
+  @impl Nebulex.Adapter
+  def init(_opts) do
+    child_spec = Supervisor.child_spec({Agent, fn -> %{} end}, id: {Agent, 1})
+
+    {:ok, child_spec, %{}}
+  end
+end
+```
+
+Now test to see if the adapter loads:
+
+```console
+mix test
+== Compilation error in file test/support/test_cache.ex ==
+** (ArgumentError) expected :adapter option given to Nebulex.Cache to list Nebulex.Adapter.KV as a behaviour
+    (nebulex 3.0.0-rc.2) lib/nebulex/cache/supervisor.ex:50: Nebulex.Cache.Supervisor.compile_config/1
+    test/support/test_cache.ex:2: (module)
+```
+
+The error tells us we need to implement `Nebulex.Adapter.KV`.
+
+### Step 2: Implement Nebulex.Adapter.KV (Required)
+
+The `Nebulex.Adapter.KV` behavior is the core requirement. It provides all
+key-value operations like `fetch`, `put`, `delete`, and more. Here's a complete
+implementation:
+
+```elixir
+defmodule NebulexMemoryAdapter do
+  @behaviour Nebulex.Adapter
+  @behaviour Nebulex.Adapter.KV
 
   import Nebulex.Utils
 
@@ -263,39 +320,96 @@ defmodule NebulexMemoryAdapter do
     {:ok, child_spec, %{}}
   end
 
-  @impl Nebulex.Adapter.Queryable
-  def execute(adapter_meta, %{op: :delete_all} = query_meta, opts) do
-    deleted = Agent.get(adapter_meta.pid, &map_size/1)
+  ## Nebulex.Adapter.KV Implementation
 
-    Agent.update(adapter_meta.pid, fn _state -> %{} end)
+  @impl Nebulex.Adapter.KV
+  def fetch(adapter_meta, key, _opts) do
+    wrap_ok Agent.get(adapter_meta.pid, &Map.get(&1, key))
+  end
 
-    wrap_ok deleted
+  @impl Nebulex.Adapter.KV
+  def put(adapter_meta, key, value, on_write, ttl, _opts) do
+    Agent.update(adapter_meta.pid, &Map.put(&1, key, value))
+    {:ok, true}
+  end
+
+  @impl Nebulex.Adapter.KV
+  def put_all(adapter_meta, entries, on_write, ttl, _opts) do
+    entries = Map.new(entries)
+    Agent.update(adapter_meta.pid, &Map.merge(&1, entries))
+    {:ok, true}
+  end
+
+  @impl Nebulex.Adapter.KV
+  def delete(adapter_meta, key, _opts) do
+    wrap_ok Agent.update(adapter_meta.pid, &Map.delete(&1, key))
+  end
+
+  @impl Nebulex.Adapter.KV
+  def take(adapter_meta, key, _opts) do
+    value = Agent.get(adapter_meta.pid, &Map.get(&1, key))
+    delete(adapter_meta, key, [])
+    {:ok, value}
+  end
+
+  @impl Nebulex.Adapter.KV
+  def update_counter(adapter_meta, key, amount, default, ttl, _opts) do
+    Agent.update(adapter_meta.pid, fn state ->
+      Map.update(state, key, default + amount, fn v -> v + amount end)
+    end)
+
+    wrap_ok Agent.get(adapter_meta.pid, &Map.get(&1, key))
+  end
+
+  @impl Nebulex.Adapter.KV
+  def has_key?(adapter_meta, key, _opts) do
+    wrap_ok Agent.get(adapter_meta.pid, &Map.has_key?(&1, key))
+  end
+
+  @impl Nebulex.Adapter.KV
+  def ttl(_adapter_meta, _key, _opts) do
+    {:ok, nil}
+  end
+
+  @impl Nebulex.Adapter.KV
+  def expire(_adapter_meta, _key, _ttl, _opts) do
+    {:ok, true}
+  end
+
+  @impl Nebulex.Adapter.KV
+  def touch(_adapter_meta, _key, _opts) do
+    {:ok, true}
   end
 end
 ```
 
-Did we make any progress?
+Running the tests again:
 
 ```console
 mix test
 < ... >
 
- 44) test decr/3 decrements a counter by the given amount with default (NebulexMemoryAdapterTest)
-     test/nebulex_memory_adapter_test.exs:355
-     ** (UndefinedFunctionError) function NebulexMemoryAdapter.update_counter/6 is undefined or private
+ 10) test delete_all/2 deletes all entries (NebulexMemoryAdapterTest)
+     test/nebulex_memory_adapter_test.exs:128
+     ** (UndefinedFunctionError) function NebulexMemoryAdapter.execute/3 is undefined or private
      stacktrace:
-       (nebulex_memory_adapter 0.1.0) NebulexMemoryAdapter.update_counter(%{cache: NebulexMemoryAdapter.TestCache, pid: #PID<0.549.0>}, :counter1, -1, :infinity, 10, [default: 10])
-       test/nebulex_memory_adapter_test.exs:356: (test)
+       (nebulex_memory_adapter 0.1.0) NebulexMemoryAdapter.execute(%{cache: NebulexMemoryAdapter.TestCache, pid: #PID<0.549.0>}, %{op: :delete_all, query: {:q, nil}}, [])
+       test/nebulex_memory_adapter_test.exs:129: (test)
 
 
 
 Finished in 5.7 seconds (5.7s async, 0.00s sync)
-54 tests, 44 failures
+54 tests, 10 failures
 ```
 
-We certainly did! From here you can continue to implement necessary callbacks
-one-by-one or define them all in bulk. For posterity, we put a complete
-`NebulexMemoryAdapter` module here that passes all tests.
+Great progress! We've gone from 54 failures to 10. The remaining failures are for
+the `execute/3` function, which is part of the `Nebulex.Adapter.Queryable` behavior.
+
+### Step 3: Add Nebulex.Adapter.Queryable (Optional)
+
+Now we'll add the optional `Nebulex.Adapter.Queryable` behavior to support
+query operations like `delete_all`, `get_all`, and `stream`. Here's the complete
+implementation of both `KV` and `Queryable` that passes all tests:
 
 ```elixir
 defmodule NebulexMemoryAdapter do
@@ -423,7 +537,7 @@ defmodule NebulexMemoryAdapter do
   def do_execute(pid, %{op: :delete_all} = query_meta) do
     deleted = do_execute(pid, %{query_meta | op: :count_all})
 
-    Agent.update(adapter_meta.pid, fn _state -> %{} end)
+    Agent.update(pid, fn _state -> %{} end)
 
     {:ok, deleted}
   end
@@ -449,9 +563,9 @@ defmodule NebulexMemoryAdapter do
     do_stream(adapter_meta.pid, query_meta)
   end
 
-  def stream(pid, %{query: {:q, q}, select: select}) when q in [nil, :all] do
+  def do_stream(pid, %{query: {:q, q}, select: select}) when q in [nil, :all] do
     fun =
-      case Keyword.get(opts, :select) do
+      case select do
         :value ->
           &Map.values/1
 
@@ -465,11 +579,49 @@ defmodule NebulexMemoryAdapter do
     wrap_ok Agent.get(pid, fun)
   end
 
-  def stream(_pid_, query) do
+  def do_stream(_pid_, query) do
     wrap_error Nebulex.QueryError, query: query
   end
 end
 ```
 
-Of course, this isn't a useful adapter in any sense but it should be enough to
-get you started with your own.
+Of course, this isn't a useful adapter for production use, but it demonstrates
+the minimum implementation needed to get both KV and Queryable behaviors working.
+This should give you a solid foundation for building your own adapter.
+
+## Next Steps
+
+Now that you have a working adapter, you can:
+
+1. **Expand the KV behavior** - Implement additional callbacks like `expire/4` and
+   `touch/3` if your adapter supports TTL.
+2. **Add more Queryable operations** - Implement more query operations to support
+   filtering, sorting, and other advanced features.
+3. **Add optional behaviors** - Implement `Transaction`, `Info`, or `Observable`
+   behaviors as needed (consult the Adapter API documentation).
+4. **Optimize for your backend** - Replace the simple `Agent` storage with actual
+   backend calls (Redis, Memcached, database, etc.).
+5. **Add comprehensive tests** - Write tests specific to your adapter beyond the
+   shared Nebulex tests.
+
+## Recommended Reading
+
+- **[Nebulex.TestAdapter](https://github.com/elixir-nebulex/nebulex/blob/main/test/support/test_adapter.exs)**
+  - The canonical reference implementation used by Nebulex itself for testing
+  - Shows correct callback signatures and implementations for KV and Queryable
+  - Reference for handling TTL, entry validation, and error cases
+  - Best for understanding exact callback parameters and return values
+
+- **[Nebulex.Adapters.Local](https://github.com/elixir-nebulex/nebulex/blob/main/lib/nebulex/adapters/local)**
+  - Built-in adapter implementation with all optional behaviors
+  - Shows advanced features like Info API, Transaction support, and Observable
+  - Reference for optimizations and production-ready patterns
+
+- **[nebulex_redis_adapter](https://github.com/elixir-nebulex/nebulex_redis_adapter/)**
+  - Real-world example of a distributed cache adapter
+  - Shows how to integrate with an external backend
+  - Reference for handling complex operations with actual persistence
+
+- **[Adapter Behavior Documentation](http://hexdocs.pm/nebulex/Nebulex.Adapter.html)**
+  - Complete API reference for all adapter behaviors and callbacks
+  - Detailed specifications for KV, Queryable, Transaction, Info, and Observable
