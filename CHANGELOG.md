@@ -9,6 +9,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Enhancements
 
+- [Nebulex.Cache] Added `:telemetry` option as a shared command option,
+  allowing selective override of the global telemetry setting on a per-command
+  basis without needing to start separate cache instances.
 - [Nebulex.Cache] Added `fetch_or_store` callback to the Cache API.
   For more information, see:
   [#240](https://github.com/elixir-nebulex/nebulex/issues/240).

@@ -146,6 +146,7 @@ defmodule Nebulex.Adapter do
         opts
       ) do
     opts = Options.validate_runtime_shared_opts!(opts)
+    {telemetry?, opts} = Keyword.pop_first(opts, :telemetry, telemetry?)
     args = args ++ [opts]
 
     if telemetry? do

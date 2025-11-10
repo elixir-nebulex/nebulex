@@ -62,6 +62,11 @@ defmodule Nebulex.Cache.Options do
       default: true,
       doc: """
       A flag to determine whether to emit the Telemetry cache command events.
+
+      This sets the default behavior for all cache commands. It can be overridden
+      on a per-command basis using the `:telemetry` option when calling a cache
+      function. See the ["Shared options"](#module-shared-options) section for
+      more information.
       """
     ],
     telemetry_prefix: [
@@ -96,6 +101,19 @@ defmodule Nebulex.Cache.Options do
 
   # Telemetry options (runtime)
   telemetry_opts = [
+    telemetry: [
+      type: :boolean,
+      required: false,
+      default: false,
+      doc: """
+      Override the global `:telemetry` setting for a specific cache command.
+
+      This allows you to selectively enable or disable telemetry on a per-command
+      basis without needing to start separate cache instances. For example, you
+      might want to disable telemetry for frequently called read operations
+      while keeping it enabled for write operations, or vice versa.
+      """
+    ],
     telemetry_event: [
       type: {:list, :atom},
       required: false,
