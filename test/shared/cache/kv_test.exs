@@ -437,11 +437,15 @@ defmodule Nebulex.Cache.KVTest do
         assert cache.fetch!("update with nil") == nil
       end
 
-      test "raises because the cache is not started", %{cache: cache, name: name} do
-        :ok = stop_supervised!(name)
+      test "raises because the cache is not started" do
+        defmodule UnknownCache do
+          use Nebulex.Cache,
+            otp_app: :nebulex,
+            adapter: Nebulex.TestAdapter
+        end
 
         assert_raise Nebulex.CacheNotFoundError, ~r"unable to find cache:", fn ->
-          cache.update!("error", 1, &String.to_integer/1)
+          UnknownCache.update!("error", 1, &String.to_integer/1)
         end
       end
     end
