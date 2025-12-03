@@ -120,7 +120,7 @@ defmodule Nebulex.Telemetry.CacheStatsCounterHandler do
          result: {:ok, list},
          adapter_meta: %{stats_counter: ref}
        }) do
-    len = length(list)
+    len = Enum.count(list)
 
     :ok = Stats.incr(ref, :hits, len)
     :ok = Stats.incr(ref, :misses, Enum.count(keys) - len)

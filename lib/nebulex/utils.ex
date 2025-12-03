@@ -146,7 +146,7 @@ defmodule Nebulex.Utils do
       ...>   [keys: [1, 2, 3]],
       ...>   :keys,
       ...>   "a list with at least one element",
-      ...>   &((is_list(&1) and length(&1) > 0) or is_nil(&1))
+      ...>   &(match?([_ | _], &1) or is_nil(&1))
       ...> )
       [1, 2, 3]
 
@@ -154,7 +154,7 @@ defmodule Nebulex.Utils do
       ...>   [],
       ...>   :keys,
       ...>   "a list with at least one element",
-      ...>   &((is_list(&1) and length(&1) > 0) or is_nil(&1))
+      ...>   &(match?([_ | _], &1) or is_nil(&1))
       ...> )
       nil
 
@@ -162,7 +162,7 @@ defmodule Nebulex.Utils do
       ...>   [],
       ...>   :keys,
       ...>   "a list with at least one element",
-      ...>   &((is_list(&1) and length(&1) > 0) or is_nil(&1)),
+      ...>   &(match?([_ | _], &1) or is_nil(&1)),
       ...>   fn -> "default" end
       ...> )
       "default"
@@ -171,7 +171,7 @@ defmodule Nebulex.Utils do
       ...>   [keys: 123],
       ...>   :keys,
       ...>   "non empty list",
-      ...>   &((is_list(&1) and length(&1) > 0) or is_nil(&1))
+      ...>   &(match?([_ | _], &1) or is_nil(&1))
       ...> )
       ** (ArgumentError) invalid value for :keys option: expected non empty list, got: 123
 

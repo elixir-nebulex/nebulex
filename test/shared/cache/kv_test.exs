@@ -441,7 +441,7 @@ defmodule Nebulex.Cache.KVTest do
         defmodule UnknownCache do
           use Nebulex.Cache,
             otp_app: :nebulex,
-            adapter: Nebulex.TestAdapter
+            adapter: Nebulex.Adapters.Nil
         end
 
         assert_raise Nebulex.CacheNotFoundError, ~r"unable to find cache:", fn ->

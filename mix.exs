@@ -68,15 +68,15 @@ defmodule Nebulex.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:stream_data, "~> 1.2", only: [:dev, :test]},
-      {:mimic, "~> 2.1", only: :test},
+      {:mimic, "~> 2.2", only: :test},
       {:doctor, "~> 0.22", only: [:dev, :test]},
 
       # Benchmark Test
-      {:benchee, "~> 1.4", only: [:dev, :test]},
+      {:benchee, "~> 1.5", only: [:dev, :test]},
       {:benchee_html, "~> 1.0", only: [:dev, :test]},
 
       # Docs
-      {:ex_doc, "~> 0.38", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.39", only: [:dev, :test], runtime: false},
       {:makeup_diff, "~> 0.1", only: [:dev, :test], runtime: false}
     ]
   end
