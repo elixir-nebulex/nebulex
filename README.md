@@ -67,8 +67,8 @@ For example, to use the Generational Local Cache
 ```elixir
 def deps do
   [
-    {:nebulex, "~> 3.0.0-rc.2"},
-    {:nebulex_local, "~> 3.0.0-rc.2"}, # Generational local cache adapter
+    {:nebulex, "~> 3.0.0-rc.1"},
+    {:nebulex_local, "~> 3.0.0-rc.1"}, # Generational local cache adapter
     {:decorator, "~> 1.4"},            # Required for caching decorators
     {:telemetry, "~> 1.2"}             # Required for telemetry events
   ]

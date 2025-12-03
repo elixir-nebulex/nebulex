@@ -113,7 +113,7 @@ defmodule Nebulex.Cache.QueryableTest do
         Enum.each(1..2, fn _ ->
           entries = cache_put(cache, 1..50)
 
-          assert cache.get_all!() |> Map.new() |> map_size() == length(entries)
+          assert cache.get_all!() |> Map.new() |> map_size() == Enum.count(entries)
 
           cached = cache.count_all!()
           assert cache.delete_all!() == cached
@@ -136,11 +136,11 @@ defmodule Nebulex.Cache.QueryableTest do
     describe "count_all!/2" do
       test "ok: returns the total number of cached entries", %{cache: cache} do
         for x <- 1..100, do: cache.put(x, x)
-        total = cache.get_all!() |> length()
+        total = cache.get_all!() |> Enum.count()
         assert cache.count_all!() == total
 
         for x <- 1..50, do: cache.delete!(x)
-        total = cache.get_all!() |> length()
+        total = cache.get_all!() |> Enum.count()
         assert cache.count_all!() == total
 
         for x <- 51..60, do: assert(cache.fetch!(x) == x)

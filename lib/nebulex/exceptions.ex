@@ -148,7 +148,9 @@ defmodule Nebulex.Error do
   """
   @spec maybe_format_metadata(binary(), keyword()) :: binary()
   def maybe_format_metadata(msg, metadata) do
-    if Enum.count(metadata) > 0 do
+    if Enum.empty?(metadata) do
+      msg
+    else
       """
       #{msg}
 
@@ -156,8 +158,6 @@ defmodule Nebulex.Error do
 
       #{inspect(metadata)}
       """
-    else
-      msg
     end
   end
 end

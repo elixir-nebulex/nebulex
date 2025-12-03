@@ -28,7 +28,7 @@ defmodule Nebulex.Event.CacheEntryEvent do
   The event target can be a key or a query (for `delete_all` command).
   If the target is a key, it will come in the shape of `{:key, deleted_key}`
   tuple. On the other hand, if the target is a query, it will come in the shape
-  of a `{:query, {:in, deleted_keys}` tuple, or a `{:query, {:q, query}` tuple.
+  of a `{:query, {:in, deleted_keys}}` tuple, or a `{:query, {:q, query}}` tuple.
   """
   @type target() :: {:key, any()} | {:query, {:in, [keys :: any()]} | {:q, query :: any()}}
 

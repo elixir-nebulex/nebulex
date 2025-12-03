@@ -1921,7 +1921,7 @@ if Code.ensure_loaded?(Decorator.Define) do
                 "invalid value for :key option: {:in, [...]} is not " <>
                   "supported for cacheable decorator"
 
-        {{:ok, {:in, keys} = key}, _} when is_list(keys) and length(keys) > 0 ->
+        {{:ok, {:in, [_ | _]} = key}, _} ->
           quote(do: unquote(key))
 
         {{:ok, {:in, keys}}, _} ->
