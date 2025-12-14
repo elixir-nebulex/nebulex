@@ -10,7 +10,7 @@ defmodule Nebulex.Cache.Transaction do
     do_transaction(name, fun, opts)
   end
 
-  @compile {:inline, do_transaction: 3}
+  @compile inline: [do_transaction: 3]
   defcommandp do_transaction(name, fun, opts), command: :transaction
 
   @doc """

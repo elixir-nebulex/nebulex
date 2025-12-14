@@ -24,8 +24,10 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     #{Nebulex.Caching.Options.use_options_docs()}
 
-    See the ["Shared Options"](http://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html#module-shared-options)
-    section in the decorators module for more information.
+    See the ["Shared Options"][shared_opts] section in the decorators module
+    for more information.
+
+    [shared_opts]: http://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html#module-shared-options
 
     > #### `use Nebulex.Caching, opts` {: .info}
     >

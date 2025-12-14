@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.0-rc.3](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0-rc.2) (2025-12-14)
+> [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0-rc.2...v3.0.0-rc.3)
+
+- [Nebulex.Caching.Decorators] Added `:transaction` option to wrap decorated
+  function execution and cache operations in a cache transaction. When set to
+  `true`, the decorator locks the specified cache keys for the duration of the
+  transaction, preventing concurrent processes from accessing or modifying them
+  simultaneously. The transaction intelligently determines which keys to lock
+  based on the decorator options (e.g., `key: {:in, keys}`, `:query`, or
+  generated keys). This feature helps prevent race conditions, cache stampede,
+  and inconsistent updates in concurrent environments. The `:transaction` option
+  can be configured both at the module level (`use Nebulex.Caching`) and at the
+  decorator level, with decorator-level settings overriding module-level
+  defaults.
+  [#248](https://github.com/elixir-nebulex/nebulex/issues/248).
+
+### Enhancements
+
 ## [v3.0.0-rc.2](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0-rc.2) (2025-12-07)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0-rc.1...v3.0.0-rc.2)
 
@@ -31,7 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   [#245](https://github.com/elixir-nebulex/nebulex/issues/245).
 - [Nebulex.Caching.Decorator] Add support for evicting external references in
   `cache_evict` decorator. For more information, see:
-  [#244](https://github.com/elixir-nebulex/nebulex/issues/244)
+  [#244](https://github.com/elixir-nebulex/nebulex/issues/244).
 - [Documentation] Added comprehensive "Declarative Caching" guide
   (`guides/learning/declarative-caching.md`) showcasing patterns, best
   practices, and real-world examples for using caching decorators. The guide

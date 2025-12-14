@@ -13,7 +13,7 @@ defmodule Nebulex.Cache.Info do
     do_info(name, spec, opts)
   end
 
-  @compile {:inline, do_info: 3}
+  @compile inline: [do_info: 3]
   defcommandp do_info(name, spec, opts), command: :info
 
   @doc """

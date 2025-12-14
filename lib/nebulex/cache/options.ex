@@ -201,7 +201,7 @@ defmodule Nebulex.Cache.Options do
       required: false,
       default: 100,
       doc: """
-      The number of entries to load from the cache as we stream
+      The number of entries to load from the cache as we stream.
       """
     ]
   ]
@@ -282,7 +282,7 @@ defmodule Nebulex.Cache.Options do
   ## Convenience functions
 
   # Inline common instructions
-  @compile {:inline, __compile_opts__: 0, __start_opts__: 0, __runtime_shared_opts__: 0}
+  @compile inline: [__compile_opts__: 0, __start_opts__: 0, __runtime_shared_opts__: 0]
 
   @doc """
   Returns the schema for the compilation time options.

@@ -22,7 +22,6 @@ defmodule Nebulex.Caching.Options do
       required: false,
       doc: """
       Defines the default cache for all decorated functions in the module.
-      This can be overridden at the decorator level.
       """
     ],
     on_error: [
@@ -32,14 +31,17 @@ defmodule Nebulex.Caching.Options do
       default: :nothing,
       doc: """
       Defines the default error handling behavior for all decorated functions
-      in the module when a cache error occurs. This can be overridden at the
-      decorator level.
-
-      Possible values:
-
-        * `:nothing` - Ignores cache errors (default).
-        * `:raise` - Raises an exception when a cache error occurs.
-
+      in the module when a cache error occurs.
+      """
+    ],
+    transaction: [
+      type: :boolean,
+      required: false,
+      default: false,
+      doc: """
+      Defines the default transaction behavior for all decorated functions in
+      the module. When set to `true`, decorators wrap the function execution
+      and cache operations in a transaction.
       """
     ],
     match: [
@@ -48,7 +50,7 @@ defmodule Nebulex.Caching.Options do
       required: false,
       doc: """
       Defines the default match function for all decorated functions in the
-      module. This can be overridden at the decorator level.
+      module.
 
       The function must be provided in the format `&Mod.fun/arity`.
 
@@ -171,6 +173,40 @@ defmodule Nebulex.Caching.Options do
 
       When configured, this option overrides the global value (if any) defined
       via `use Nebulex.Caching, on_error: ...`.
+      """
+    ],
+    transaction: [
+      type: :boolean,
+      required: false,
+      default: false,
+      doc: """
+      When set to `true`, wraps the decorated function execution and all cache
+      operations in a transaction. This locks the specified cache keys for the
+      duration of the transaction, preventing concurrent processes from
+      accessing or modifying them simultaneously.
+
+      **Key locking:** The transaction determines which keys to lock based on
+      the decorator options:
+
+        * When `key: {:in, keys}` is provided, all `keys` are locked.
+        * When `:query` is provided without `:key`, the query value is used
+          as the locking key.
+        * When both `:query` and `:key` are provided, both the key and query
+          values are used as locking keys.
+        * Otherwise, the value provided in the `:key` option is used as the
+          locking key (or the generated key if `:key` is not specified).
+
+      **Performance consideration:** Transactions introduce overhead due to
+      locking and coordination. Use when atomicity is critical. For
+      high-throughput, read-heavy workloads where eventual consistency is
+      acceptable, the default `false` is recommended.
+
+      **Adapter support:** Transaction behavior and implementation vary by
+      adapter. See `c:Nebulex.Cache.transaction/2` for details on transaction
+      semantics and nested transaction handling.
+
+      When configured, this option overrides the global value (if any) defined
+      via `use Nebulex.Caching, transaction: true`.
       """
     ],
     opts: [

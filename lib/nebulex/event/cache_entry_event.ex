@@ -68,7 +68,7 @@ defmodule Nebulex.Event.CacheEntryEvent do
   ## API
 
   # Inline common instructions
-  @compile {:inline, __types__: 0, new: 1}
+  @compile inline: [__types__: 0, new: 1]
 
   @doc """
   Returns the event types.

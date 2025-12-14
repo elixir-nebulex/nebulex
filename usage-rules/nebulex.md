@@ -2,20 +2,23 @@
 
 ## Project Overview
 
-Nebulex is a fast, flexible, and extensible caching library for Elixir that provides:
-- Multiple cache adapters (local, distributed, multilevel, partitioned)
-- Declarative decorator-based caching inspired by Spring Cache Abstraction
-- OTP design patterns and fault tolerance
+Nebulex is a fast, flexible, and extensible caching library for Elixir that
+provides:
+- Multiple cache adapters (local, distributed, multilevel, partitioned).
+- Declarative decorator-based caching inspired by Spring Cache Abstraction.
+- OTP design patterns and fault tolerance.
 - Telemetry instrumentation
-- Support for TTL, eviction policies, transactions, and more
+- Support for TTL, eviction policies, transactions, and more.
 
 ## Architecture Patterns
 
 ### Cache Definition
 
-- Caches MUST be defined using `use Nebulex.Cache` with `:otp_app` and `:adapter` options
-- Caches should be started in the application supervision tree, not manually
-- Use descriptive cache module names that indicate their purpose (e.g., `MyApp.LocalCache`, `MyApp.UserCache`)
+- Caches MUST be defined using `use Nebulex.Cache` with `:otp_app` and
+  `:adapter` options.
+- Caches should be started in the application supervision tree, not manually.
+- Use descriptive cache module names that indicate their purpose
+  (e.g., `MyApp.LocalCache`, `MyApp.UserCache`).
 
 **Example**:
 
@@ -29,20 +32,25 @@ end
 
 ### Adapter Pattern
 
-- All adapters MUST implement the `Nebulex.Adapter` behaviour
-- Adapters MUST implement `c:init/1` returning `{:ok, child_spec, adapter_meta}`
-- Adapter functions MUST return `{:ok, value}` or `{:error, reason}` tuples
-- Use `wrap_error/2` from `Nebulex.Utils` to wrap errors consistently
-- Implement optional behaviours as needed: `Nebulex.Adapter.KV`, `Nebulex.Adapter.Queryable`, etc.
-- Leverage `use Nebulex.Adapter.Transaction` and similar modules for default implementations
+- All adapters MUST implement the `Nebulex.Adapter` behaviour.
+- Adapters MUST implement `c:init/1` returning
+  `{:ok, child_spec, adapter_meta}`.
+- Adapter functions MUST return `{:ok, value}` or `{:error, reason}` tuples.
+- Use `wrap_error/2` from `Nebulex.Utils` to wrap errors consistently.
+- Implement optional behaviours as needed: `Nebulex.Adapter.KV`,
+  `Nebulex.Adapter.Queryable`, etc.
+- Leverage `use Nebulex.Adapter.Transaction` and similar modules for default implementations.
 
 ### Command Pattern
 
-- Use `defcommand/2` macro from `Nebulex.Adapter` to build public command wrappers
-- Use `defcommandp/2` for private command wrappers
-- Command functions automatically handle telemetry, metadata, and error wrapping
-- The first parameter to commands should always be `name` (the cache name or PID)
-- The last parameter should always be `opts` (keyword list)
+- Use `defcommand/2` macro from `Nebulex.Adapter` to build public command
+  wrappers.
+- Use `defcommandp/2` for private command wrappers.
+- Command functions automatically handle telemetry, metadata, and error
+  wrapping.
+- The first parameter to commands should always be `name`
+  (the cache name or PID).
+- The last parameter should always be `opts` (keyword list).
 
 **Example**:
 
@@ -55,17 +63,21 @@ defcommandp do_put(name, key, value, on_write, ttl, keep_ttl?, opts), command: :
 
 ### Tuple Returns
 
-- Read operations that can fail MUST return `{:ok, value}` or `{:error, %Nebulex.KeyError{}}` for missing keys
-- Write operations MUST return `{:ok, true}` for success or `{:ok, false}` for conditional failures (e.g., `put_new`)
-- Delete operations MUST return `:ok` regardless of whether the key existed
-- NEVER return bare `:error` atoms; always use `{:error, reason}` tuples
+- Read operations that can fail MUST return `{:ok, value}` or
+  `{:error, %Nebulex.KeyError{}}` for missing keys.
+- Write operations MUST return `{:ok, true}` for success or `{:ok, false}` for
+  conditional failures (e.g., `put_new`).
+- Delete operations MUST return `:ok` regardless of whether the key existed.
+- NEVER return bare `:error` atoms; always use `{:error, reason}` tuples.
 
 ### Bang Functions
 
-- Provide bang versions (`!`) of functions that unwrap `{:ok, value}` or raise exceptions
-- Bang functions MUST use `unwrap_or_raise/1` from `Nebulex.Utils`
-- Functions that return `:ok` should have bang versions that also return `:ok`
-- Functions that return `{:ok, boolean}` should have bang versions that return the boolean
+- Provide bang versions (`!`) of functions that unwrap `{:ok, value}` or raise
+  exceptions.
+- Bang functions MUST use `unwrap_or_raise/1` from `Nebulex.Utils`.
+- Functions that return `:ok` should have bang versions that also return `:ok`.
+- Functions that return `{:ok, boolean}` should have bang versions that return
+  the boolean.
 
 **Example**:
 
@@ -84,12 +96,13 @@ end
 
 ### Options Handling
 
-- Use `Nebulex.Cache.Options` module for option validation
-- Call `Options.validate_runtime_shared_opts!/1` to validate runtime options
-- Use `Options.pop_and_validate_timeout!/2` for TTL and timeout options
-- Use `Options.pop_and_validate_boolean!/2` for boolean options
-- Use `Options.pop_and_validate_integer!/2` for integer options
-- Validate options as early as possible, preferably at the beginning of the function
+- Use `Nebulex.Cache.Options` module for option validation.
+- Call `Options.validate_runtime_shared_opts!/1` to validate runtime options.
+- Use `Options.pop_and_validate_timeout!/2` for TTL and timeout options.
+- Use `Options.pop_and_validate_boolean!/2` for boolean options.
+- Use `Options.pop_and_validate_integer!/2` for integer options.
+- Validate options as early as possible, preferably at the beginning of the
+  function.
 
 **Example**:
 
@@ -104,19 +117,21 @@ end
 
 ### Shared Options
 
-- All cache functions should accept `:telemetry`, `:telemetry_event`, and `:telemetry_metadata` options
-- Support lifecycle hooks: `:before` and `:after_return` for adapter-specific hooks
-- Document adapter-specific options clearly in the module documentation
+- All cache functions should accept `:telemetry`, `:telemetry_event`, and
+  `:telemetry_metadata` options.
+- Document adapter-specific options clearly in the module documentation.
 
 ## Decorators
 
 ### Decorator Usage
 
-- Use `use Nebulex.Caching` to enable decorator support in a module
-- Configure default cache via `use Nebulex.Caching, cache: MyCache`
-- Always use decorators on functions, not on function heads with multiple clauses
-- Prefer module captures over anonymous functions for better performance: `match: &__MODULE__.match_fun/1`
-- Avoid capturing large data structures in decorator lambdas
+- Use `use Nebulex.Caching` to enable decorator support in a module.
+- Configure default cache via `use Nebulex.Caching, cache: MyCache`.
+- Always use decorators on functions, not on function heads with multiple
+  clauses.
+- Prefer module captures over anonymous functions for better performance:
+  `match: &__MODULE__.match_fun/1`.
+- Avoid capturing large data structures in decorator lambdas.
 
 **Invalid**:
 
@@ -145,17 +160,22 @@ end
 
 ### Decorator Options
 
-- Use `:key` option to specify explicit cache keys; avoid relying solely on default key generation
-- Use `:references` for implementing cache key references and memory-efficient caching
-- Use `:match` option to conditionally cache values (e.g., `match: &match_fun/1`)
-- Use `:on_error` option to control error handling (`:raise` or `:nothing`)
-- Specify TTL via `:opts` option: `opts: [ttl: :timer.hours(1)]`
+- Use `:key` option to specify explicit cache keys; avoid relying solely on
+  default key generation.
+- Use `:references` for implementing cache key references and memory-efficient
+  caching.
+- Use `:match` option to conditionally cache values
+  (e.g., `match: &match_fun/1`).
+- Use `:on_error` option to control error handling (`:raise` or `:nothing`).
+- Specify TTL via `:opts` option: `opts: [ttl: :timer.hours(1)]`.
 
 ### `cacheable` Decorator
 
-- Use `@decorate cacheable` for read-through caching patterns
-- Combine with `:references` option when the same value needs multiple cache keys
-- Use `:match` function with references to ensure consistency (e.g., validating email matches)
+- Use `@decorate cacheable` for read-through caching patterns.
+- Combine with `:references` option when the same value needs multiple cache
+  keys.
+- Use `:match` function with references to ensure consistency
+  (e.g., validating email matches).
 
 **Example**:
 
@@ -176,9 +196,10 @@ defp match_email(_, _), do: false
 
 ### `cache_put` Decorator
 
-- Use `@decorate cache_put` for write-through caching patterns
-- Always use `:match` option to conditionally update cache (e.g., only on `{:ok, value}`)
-- Avoid using `cache_put` and `cacheable` on the same function
+- Use `@decorate cache_put` for write-through caching patterns.
+- Always use `:match` option to conditionally update cache
+  (e.g., only on `{:ok, value}`).
+- Avoid using `cache_put` and `cacheable` on the same function.
 
 **Example**:
 
@@ -196,11 +217,12 @@ defp match_ok({:error, _}), do: false
 
 ### `cache_evict` Decorator
 
-- Use `@decorate cache_evict` for cache invalidation
-- Use `key: {:in, keys}` to evict multiple keys at once
-- Use `:all_entries` option to clear the entire cache
-- Use `:before_invocation` option to evict before function execution
-- Use `:query` option for complex eviction patterns based on match specifications
+- Use `@decorate cache_evict` for cache invalidation.
+- Use `key: {:in, keys}` to evict multiple keys at once.
+- Use `:all_entries` option to clear the entire cache.
+- Use `:before_invocation` option to evict before function execution.
+- Use `:query` option for complex eviction patterns based on match
+  specifications.
 
 **Example**:
 
@@ -229,10 +251,11 @@ end
 
 ### Test Structure
 
-- Use `deftests do` macro for shared test suites that can run across multiple adapters
-- Structure tests with `describe` blocks grouping related functionality
-- Use context fixtures with `%{cache: cache}` for test setup
-- Test both successful and error scenarios for each function
+- Use `deftests do` macro for shared test suites that can run across multiple
+  adapters.
+- Structure tests with `describe` blocks grouping related functionality.
+- Use context fixtures with `%{cache: cache}` for test setup.
+- Test both successful and error scenarios for each function.
 
 **Example**:
 
@@ -259,11 +282,12 @@ end
 
 ### Test Assertions
 
-- Use `assert cache.function() == expected_value` for exact equality
-- Use `assert_raise ErrorType, ~r"message pattern"` for exception testing
-- Test edge cases: `nil`, boolean values (`true`, `false`), empty collections
-- Test both normal and bang (`!`) versions of functions
-- Avoid pattern matching in assertions when the full value is known (use direct equality)
+- Use `assert cache.function() == expected_value` for exact equality.
+- Use `assert_raise ErrorType, ~r"message pattern"` for exception testing.
+- Test edge cases: `nil`, boolean values (`true`, `false`), empty collections.
+- Test both normal and bang (`!`) versions of functions.
+- Avoid pattern matching in assertions when the full value is known
+  (use direct equality).
 
 **Invalid**:
 
@@ -281,32 +305,37 @@ assert cache.fetch(:key) == {:ok, expected_value}
 
 ### Telemetry Events
 
-- Emit telemetry events for all cache commands when `:telemetry` option is `true`
-- Use `:telemetry_prefix` option to customize event names (defaults to `[:cache_name, :cache]`)
-- Provide comprehensive metadata: `:adapter_meta`, `:command`, `:args`, `:result`
-- Support custom `:telemetry_event` and `:telemetry_metadata` options per command
+- Emit telemetry events for all cache commands when `:telemetry` option is
+  `true`.
+- Use `:telemetry_prefix` option to customize event names
+  (defaults to `[:cache_name, :cache]`).
+- Provide comprehensive metadata: `:adapter_meta`, `:command`, `:args`,
+  `:result`.
+- Support custom `:telemetry_event` and `:telemetry_metadata` options per
+  command.
 
 ### Telemetry Best Practices
 
-- Use `Nebulex.Telemetry.span/3` for span events (start, stop, exception)
-- Include measurements like `:duration` and `:system_time`
-- Document all telemetry events in module documentation with measurement and metadata keys
-- Provide example telemetry handlers in documentation
+- Use `Nebulex.Telemetry.span/3` for span events (start, stop, exception).
+- Include measurements like `:duration` and `:system_time`.
+- Document all telemetry events in module documentation with measurement and
+  metadata keys.
+- Provide example telemetry handlers in documentation.
 
 ## Error Handling
 
 ### Error Types
 
-- Use `Nebulex.Error` for general cache errors
-- Use `Nebulex.KeyError` for missing key errors
-- Use `Nebulex.CacheNotFoundError` for dynamic cache lookup failures
-- Wrap adapter-specific errors using `wrap_error/2` from `Nebulex.Utils`
+- Use `Nebulex.Error` for general cache errors.
+- Use `Nebulex.KeyError` for missing key errors.
+- Use `Nebulex.CacheNotFoundError` for dynamic cache lookup failures.
+- Wrap adapter-specific errors using `wrap_error/2` from `Nebulex.Utils`.
 
 ### Error Wrapping
 
-- Adapter functions should wrap errors consistently using `wrap_error/2`
-- Include relevant context in error metadata (`:key`, `:command`, `:reason`)
-- Preserve original error information in the `:reason` field
+- Adapter functions should wrap errors consistently using `wrap_error/2`.
+- Include relevant context in error metadata (`:key`, `:command`, `:reason`).
+- Preserve original error information in the `:reason` field.
 
 **Example**:
 
@@ -324,33 +353,46 @@ end
 
 ### Key Generation
 
-- Provide explicit keys in decorators when possible; avoid relying on default key generation
-- For complex keys, use module captures: `key: &MyModule.generate_key/1`
-- Keep captured data in decorator lambdas small; fetch large configs inside functions
+- Provide explicit keys in decorators when possible; avoid relying on default
+  key generation.
+- For complex keys, use module captures: `key: &MyModule.generate_key/1`.
+- Keep captured data in decorator lambdas small; fetch large configs inside
+  functions.
 
 ### Reference Keys
 
-- Use cache key references (`:references` option) to avoid storing duplicate values
-- Store references in a local cache and values in a remote cache (e.g., Redis) for optimization
+- Use cache key references (`:references` option) to avoid storing duplicate
+  values.
+- Store references in a local cache and values in a remote cache (e.g., Redis)
+  for optimization.
 - Set TTL for references to prevent dangling keys
-- Use external references with `keyref(key, cache: AnotherCache)` for cross-cache references
+- Use external references with `keyref(key, cache: AnotherCache)` for
+  cross-cache references.
 
 ### Optimization
 
-- Use `Stream` for large result sets instead of loading all data at once
-- Leverage `Task.async_stream/3` for concurrent cache operations when appropriate
-- Set appropriate TTL values to balance freshness and performance
-- Use `put_all/2` for batch operations instead of multiple `put/3` calls
+- Use `Stream` for large result sets instead of loading all data at once.
+- Leverage `Task.async_stream/3` for concurrent cache operations when
+  appropriate.
+- Set appropriate TTL values to balance freshness and performance.
+- Use `put_all/2` for batch operations instead of multiple `put/3` calls.
 
 ## Documentation Standards
 
 ### Module Documentation
 
-- Start with a clear `@moduledoc` explaining the purpose and main features
-- Include usage examples in module documentation
-- Document all compile-time options
-- Document all runtime shared options
-- Provide telemetry event documentation with measurements and metadata
+- Start with a clear `@moduledoc` explaining the purpose and main features,
+  except the modules using `NimbleOptions`, since they are documenting options.
+- Options documented using `NimbleOptions` should provide functions to insert
+  that documentation into the module docs. Therefore, it is not required to
+  document an option in the `moduledoc` or in the function `@doc` if it is
+  already inserted using `NimbleOptions`. For example,
+  `#{Nebulex.Cache.Options.start_link_options_docs()}`.
+- Options docummented using
+- Include usage examples in module documentation.
+- Document all compile-time options.
+- Document all runtime shared options.
+- Provide telemetry event documentation with measurements and metadata.
 - The maximum text length is 80 characters, and you should aim to adhere to this
   limit. However, there are special cases where exceeding it is acceptable. For
   example, you may exceed the limit for a link (e.g., ["my link"](http://github.com/elixir-nebulex))
@@ -361,12 +403,12 @@ end
 
 ### Function Documentation
 
-- Use `@doc` for all public functions
-- Include `@typedoc` for all custom types
-- Provide examples in function documentation using doctests when applicable
-- Document all options with descriptions and default values
-- Group related functions using `@doc group: "Group Name"`
-- The maximum text length is 80 characters, and you should aim to adhere to this
+- Use `@doc` for all public functions.
+- Include `@typedoc` for all custom types.
+- Provide examples in function documentation using doctests when applicable.
+- Document all options with descriptions and default values.
+- Group related functions using `@doc group: "Group Name"`.
+- The maximum text length is 80 characters, and you should aim to adhere to this.
   limit. However, there are special cases where exceeding it is acceptable. For
   example, you may exceed the limit for a link (e.g., ["my link"](http://github.com/elixir-nebulex))
   or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
@@ -376,77 +418,83 @@ end
 
 ### Code Comments
 
-- Avoid obvious comments; code should be self-explanatory
-- Use comments for complex algorithms or non-obvious business logic
-- Mark internal functions with `@doc false` or `@moduledoc false`
-- Use `# Inline common instructions` followed by `@compile {:inline, function_name: arity}`
-- The maximum text length is 80 characters, use multiple lines if the comment
+- Avoid obvious comments; code should be self-explanatory.
+- Use comments for complex algorithms or non-obvious business logic.
+- Mark internal functions with `@doc false` or `@moduledoc false`.
+- Use `# Inline common instructions` followed by
+  `@compile inline: [function_name: arity]`.
+- The maximum text length is 80 characters, use multiple lines if the comment.
   exceeds the limit.
 
 ## Naming Conventions
 
 ### Modules
 
-- Adapter modules: `Nebulex.Adapters.*` (e.g., `Nebulex.Adapters.Local`)
-- Cache modules: `<App>.Cache` or `<App>.<Context>Cache` (e.g., `MyApp.Cache`, `MyApp.UserCache`)
-- Behaviour modules: `Nebulex.Adapter.<Feature>` (e.g., `Nebulex.Adapter.KV`)
+- Adapter modules: `Nebulex.Adapters.*` (e.g., `Nebulex.Adapters.Local`).
+- Cache modules: `<App>.Cache` or `<App>.<Context>Cache`
+  (e.g., `MyApp.Cache`, `MyApp.UserCache`).
+- Behaviour modules: `Nebulex.Adapter.<Feature>` (e.g., `Nebulex.Adapter.KV`).
 
 ### Functions
 
-- Use descriptive function names: `fetch/2`, `put/3`, `delete/2`, `has_key?/1`
-- Bang versions: `fetch!/2`, `put!/3`, `delete!/2`
-- Private helpers: prefix with `do_` (e.g., `do_fetch/3`, `do_put/7`)
-- Predicate functions: suffix with `?` (e.g., `has_key?/1`, `expired?/2`)
+- Use descriptive function names: `fetch/2`, `put/3`, `delete/2`, `has_key?/1`.
+- Bang versions: `fetch!/2`, `put!/3`, `delete!/2`.
+- Private helpers: prefix with `do_` (e.g., `do_fetch/3`, `do_put/7`).
+- Predicate functions: suffix with `?` (e.g., `has_key?/1`, `expired?/2`).
 
 ### Variables
 
-- Cache instance: `cache`
-- Adapter metadata: `adapter_meta`
-- Options: `opts`
-- Keys: `key` or `keys`
-- Values: `value` or `values`
-- TTL: `ttl`
+- Cache instance: `cache`.
+- Adapter metadata: `adapter_meta`.
+- Options: `opts`.
+- Keys: `key` or `keys`.
+- Values: `value` or `values`.
+- TTL: `ttl`.
 
 ## Code Organization
 
 ### File Structure
 
-- Main cache API: `lib/nebulex/cache.ex`
-- Adapter behaviour: `lib/nebulex/adapter.ex`
-- Adapter implementations: `lib/nebulex/adapters/<adapter_name>.ex`
-- Cache features: `lib/nebulex/cache/<feature>.ex`
-- Decorators: `lib/nebulex/caching/decorators.ex`
-- Mix tasks: `lib/mix/tasks/<task_name>.ex`
+- Main cache API: `lib/nebulex/cache.ex`.
+- Adapter behaviour: `lib/nebulex/adapter.ex`.
+- Adapter implementations: `lib/nebulex/adapters/<adapter_name>.ex`.
+- Cache features: `lib/nebulex/cache/<feature>.ex`.
+- Decorators: `lib/nebulex/caching/decorators.ex`.
+- Mix tasks: `lib/mix/tasks/<task_name>.ex`.
 
 ### Module Grouping
 
-- Keep related functionality together (e.g., all KV operations in `Nebulex.Cache.KV`)
-- Use nested modules for options, helpers, and internal implementation details
-- Separate public API from internal implementation
+- Keep related functionality together (e.g., all KV operations in `Nebulex.Cache.KV`).
+- Use nested modules for options, helpers, and internal implementation details.
+- Separate public API from internal implementation.
 
 ## Common Pitfalls to Avoid
 
-- **Do NOT** use decorators on multi-clause functions without proper wrapper functions
-- **Do NOT** forget to validate options at the beginning of functions
-- **Do NOT** return inconsistent error types; always use tuples or raise exceptions via bang functions
-- **Do NOT** capture large data structures in decorator lambdas
-- **Do NOT** forget to handle `nil`, boolean, and edge case values in tests
-- **Do NOT** use `cache_put` and `cacheable` decorators on the same function
-- **Do NOT** forget to evict cache references when using `:references` option; use TTL or explicit eviction
-- **Do NOT** implement adapter callbacks without proper error wrapping
-- **Do NOT** skip telemetry support in adapter implementations
-- **Do NOT** use pattern matching in test assertions when the full value is known
+- **Do NOT** use decorators on multi-clause functions without proper wrapper
+  functions.
+- **Do NOT** forget to validate options at the beginning of functions.
+- **Do NOT** return inconsistent error types; always use tuples or raise
+  exceptions via bang functions.
+- **Do NOT** capture large data structures in decorator lambdas.
+- **Do NOT** forget to handle `nil`, boolean, and edge case values in tests.
+- **Do NOT** use `cache_put` and `cacheable` decorators on the same function.
+- **Do NOT** forget to evict cache references when using `:references` option;
+  use TTL or explicit eviction.
+- **Do NOT** implement adapter callbacks without proper error wrapping.
+- **Do NOT** skip telemetry support in adapter implementations.
+- **Do NOT** use pattern matching in test assertions when the full value is
+  known.
 
 ## Backward Compatibility
 
-- Maintain backward compatibility when adding new options (use default values)
-- Deprecate old APIs before removal; provide migration path in documentation
-- Follow semantic versioning strictly: major version for breaking changes
-- Test against multiple Elixir and OTP versions in CI
+- Maintain backward compatibility when adding new options (use default values).
+- Deprecate old APIs before removal; provide migration path in documentation.
+- Follow semantic versioning strictly: major version for breaking changes.
+- Test against multiple Elixir and OTP versions in CI.
 
 ## Dependencies
 
-- Keep dependencies minimal and well-justified
-- Prefer standard library solutions over external dependencies
-- Use optional dependencies for non-core features
-- Document all dependencies in README with their purpose
+- Keep dependencies minimal and well-justified.
+- Prefer standard library solutions over external dependencies.
+- Use optional dependencies for non-core features.
+- Document all dependencies in README with their purpose.

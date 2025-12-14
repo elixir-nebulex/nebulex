@@ -50,7 +50,7 @@ defmodule Nebulex.Adapter do
   ## API
 
   # Inline common instructions
-  @compile {:inline, lookup_meta: 1}
+  @compile inline: [lookup_meta: 1]
 
   @doc """
   Returns the adapter metadata from its `c:init/1` callback.

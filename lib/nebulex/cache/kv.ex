@@ -6,6 +6,9 @@ defmodule Nebulex.Cache.KV do
 
   alias Nebulex.Cache.Options
 
+  # Inline common instructions
+  @compile inline: [do_put: 7, do_put_all: 5, do_expire: 4, do_incr: 6]
+
   @doc """
   Implementation for `c:Nebulex.Cache.fetch/2`.
   """
@@ -93,7 +96,6 @@ defmodule Nebulex.Cache.KV do
     do_put(name, key, value, on_write, ttl, keep_ttl?, opts)
   end
 
-  @compile {:inline, do_put: 7}
   defcommandp do_put(name, key, value, on_write, ttl, keep_ttl?, opts), command: :put
 
   @doc """
@@ -142,7 +144,6 @@ defmodule Nebulex.Cache.KV do
     do_put_all(name, entries, on_write, ttl, opts)
   end
 
-  @compile {:inline, do_put_all: 5}
   defcommandp do_put_all(name, entries, on_write, ttl, opts), command: :put_all
 
   @doc """
@@ -197,7 +198,6 @@ defmodule Nebulex.Cache.KV do
     do_expire(name, key, ttl, opts)
   end
 
-  @compile {:inline, do_expire: 4}
   defcommandp do_expire(name, key, ttl, opts), command: :expire
 
   @doc """
@@ -236,7 +236,6 @@ defmodule Nebulex.Cache.KV do
           "invalid value for amount argument: expected integer, got: #{inspect(amount)}"
   end
 
-  @compile {:inline, do_incr: 6}
   defcommandp do_incr(name, key, amount, default, ttl, opts), command: :update_counter
 
   @doc """

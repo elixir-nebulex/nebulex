@@ -44,7 +44,7 @@ defmodule Nebulex.Cache.Observable do
   ## Private functions
 
   # Inline common instructions
-  @compile {:inline, do_register_event_listener: 5}
+  @compile inline: [do_register_event_listener: 5]
 
   # Stream wrapper
   defcommandp do_register_event_listener(name, listener, filter, metadata, opts),

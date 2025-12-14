@@ -1829,6 +1829,12 @@ if Code.ensure_loaded?(Decorator.Define) do
       # Get the options to be given to the cache commands
       opts_var = Keyword.get_lazy(attrs, :opts, fn -> Keyword.fetch!(use_opts, :opts) end)
 
+      # Get the on error option
+      on_error = on_error_opt(attrs, fn -> Keyword.fetch!(use_opts, :on_error) end)
+
+      # Get the transaction option
+      txn_enabled? = get_boolean(attrs, :transaction) || get_boolean(use_opts, :transaction)
+
       # Build the action block
       action_block =
         action_block(
@@ -1836,11 +1842,12 @@ if Code.ensure_loaded?(Decorator.Define) do
           block,
           attrs,
           keygen_block,
-          on_error_opt(attrs, fn -> Keyword.fetch!(use_opts, :on_error) end),
+          on_error,
           Keyword.get_lazy(attrs, :match, fn ->
             Keyword.get(use_opts, :match, &__MODULE__.default_match/1)
           end)
         )
+        |> maybe_add_txn_wrapper(attrs, keygen_block, on_error, txn_enabled?)
 
       quote do
         # Set common vars
@@ -1848,7 +1855,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         opts = unquote(opts_var)
 
         # Set the decorator context
-        _ = Process.put(unquote(@decorator_context_key), unquote(context))
+        _ignore = Process.put(unquote(@decorator_context_key), unquote(context))
 
         try do
           # Execute the decorated function's code block
@@ -1975,13 +1982,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     defp action_block(:cache_evict, block, attrs, keygen, on_error, _match) do
       before_invocation? = get_boolean(attrs, :before_invocation)
       all_entries? = get_boolean(attrs, :all_entries)
-
-      key =
-        case {Keyword.fetch(attrs, :query), Keyword.fetch(attrs, :key)} do
-          {{:ok, q}, {:ok, _k}} -> quote(do: {:"$nbx_query", unquote(q), unquote(keygen)})
-          {{:ok, q}, :error} -> quote(do: {:"$nbx_query", unquote(q)})
-          _else -> keygen
-        end
+      key = cache_evict_key(attrs, keygen)
 
       quote do
         unquote(__MODULE__).eval_cache_evict(
@@ -1995,12 +1996,49 @@ if Code.ensure_loaded?(Decorator.Define) do
       end
     end
 
-    defp on_error_opt(attrs, default) do
-      get_option(attrs, :on_error, ":raise or :nothing", &(&1 in [:raise, :nothing]), default)
+    defp cache_evict_key(attrs, keygen) do
+      case {Keyword.fetch(attrs, :query), Keyword.fetch(attrs, :key)} do
+        {{:ok, q}, {:ok, _k}} -> quote(do: {:"$nbx_query", unquote(q), unquote(keygen)})
+        {{:ok, q}, :error} -> quote(do: {:"$nbx_query", unquote(q)})
+        _else -> keygen
+      end
     end
 
-    defp get_boolean(attrs, key) do
-      get_option(attrs, key, "a boolean", &Kernel.is_boolean/1, false)
+    defp maybe_add_txn_wrapper(block, _attrs, _keygen, _on_error, false) do
+      quote do
+        unquote(block)
+      end
+    end
+
+    defp maybe_add_txn_wrapper(block, attrs, keygen, on_error, true) do
+      key = cache_evict_key(attrs, keygen)
+
+      quote do
+        context = unquote(__MODULE__).get_context()
+        cache = unquote(__MODULE__).eval_cache(cache, context)
+        key = unquote(__MODULE__).eval_key(unquote(key), context)
+
+        txn_keys =
+          case key do
+            {:in, keys} -> keys
+            {:query, q} -> [q]
+            {:query, q, {:in, keys}} -> [q | keys]
+            {:query, q, k} -> [q, k]
+            _else -> [key]
+          end
+
+        result =
+          unquote(__MODULE__).run_cmd(
+            cache,
+            :transaction,
+            [fn -> unquote(block) end, [keys: txn_keys]],
+            unquote(on_error)
+          )
+
+        with {:ok, result} <- result do
+          result
+        end
+      end
     end
 
     ## Internal API
@@ -2016,7 +2054,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc group: "Internal API"
     @spec eval_cacheable(any(), any(), references(), keyword(), match(), on_error(), fun()) :: any()
     def eval_cacheable(cache, key, references, opts, match, on_error, block_fun) do
-      context = Process.get(@decorator_context_key)
+      context = get_context()
       cache = eval_cache(cache, context)
       key = eval_key(key, context)
 
@@ -2048,7 +2086,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         fn value ->
           with false <- do_eval_cache_put(ref_cache, ref_key, value, opts, on_error, match) do
             # The match returned `false`, remove the parent's key reference
-            _ = do_apply(cache, :delete, [key])
+            _ignore = do_apply(cache, :delete, [key])
 
             false
           end
@@ -2057,7 +2095,7 @@ if Code.ensure_loaded?(Decorator.Define) do
           case eval_function(match, value) do
             false ->
               # Remove the parent's key reference
-              _ = do_apply(cache, :delete, [key])
+              _ignore = do_apply(cache, :delete, [key])
 
               block_fun.()
 
@@ -2134,7 +2172,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc group: "Internal API"
     @spec eval_cache_evict(any(), any(), boolean(), boolean(), on_error(), fun()) :: any()
     def eval_cache_evict(cache, key, before?, all_entries?, on_error, block_fun) do
-      context = Process.get(@decorator_context_key)
+      context = get_context()
       cache = eval_cache(cache, context)
       key = eval_key(key, context)
 
@@ -2142,7 +2180,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     end
 
     defp do_eval_cache_evict(cache, key, true, all_entries?, on_error, block_fun) do
-      _ = do_evict(all_entries?, cache, key, on_error)
+      _ignore = do_evict(all_entries?, cache, key, on_error)
 
       block_fun.()
     end
@@ -2150,7 +2188,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     defp do_eval_cache_evict(cache, key, false, all_entries?, on_error, block_fun) do
       result = block_fun.()
 
-      _ = do_evict(all_entries?, cache, key, on_error)
+      _ignore = do_evict(all_entries?, cache, key, on_error)
 
       result
     end
@@ -2172,7 +2210,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     end
 
     defp do_evict(false, cache, {:query, q, k}, on_error) do
-      _ = run_cmd(cache, :delete_all, [[{:query, q}]], on_error)
+      _ignore = run_cmd(cache, :delete_all, [[{:query, q}]], on_error)
 
       do_evict(false, cache, k, on_error)
     end
@@ -2196,7 +2234,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     @doc group: "Internal API"
     @spec eval_cache_put(any(), any(), any(), keyword(), on_error(), match()) :: any()
     def eval_cache_put(cache, key, value, opts, on_error, match) do
-      context = Process.get(@decorator_context_key)
+      context = get_context()
       cache = eval_cache(cache, context)
       key = eval_key(key, context)
 
@@ -2219,12 +2257,12 @@ if Code.ensure_loaded?(Decorator.Define) do
     defp do_eval_cache_put(cache, key, value, opts, on_error, match) do
       case eval_function(match, value) do
         {true, cache_value} ->
-          _ = run_cmd(__MODULE__, :cache_put, [cache, key, cache_value, opts], on_error)
+          _ignore = run_cmd(__MODULE__, :cache_put, [cache, key, cache_value, opts], on_error)
 
           true
 
         {true, cache_value, new_opts} ->
-          _ =
+          _ignore =
             run_cmd(
               __MODULE__,
               :cache_put,
@@ -2235,7 +2273,7 @@ if Code.ensure_loaded?(Decorator.Define) do
           true
 
         true ->
-          _ = run_cmd(__MODULE__, :cache_put, [cache, key, value, opts], on_error)
+          _ignore = run_cmd(__MODULE__, :cache_put, [cache, key, value, opts], on_error)
 
           true
 
@@ -2345,26 +2383,54 @@ if Code.ensure_loaded?(Decorator.Define) do
       end
     end
 
+    @doc """
+    Convenience function for getting the decorator context.
+
+    > #### NOTE {: .info}
+    >
+    > _**This function is for internal purposes only.**_
+    """
+    @doc group: "Internal API"
+    @compile inline: [get_context: 0]
+    @spec get_context() :: context() | nil
+    def get_context, do: Process.get(@decorator_context_key)
+
     ## Private functions
+
+    defp on_error_opt(attrs, default) do
+      get_option(attrs, :on_error, ":raise or :nothing", &(&1 in [:raise, :nothing]), default)
+    end
+
+    defp get_boolean(attrs, key) do
+      get_option(attrs, key, "a boolean", &Kernel.is_boolean/1, false)
+    end
+
+    defp do_apply(dynamic_cache(cache: cache, name: name), fun, args) do
+      default_dynamic_cache = cache.get_dynamic_cache()
+
+      try do
+        _ignore = cache.put_dynamic_cache(name)
+
+        apply(cache, fun, args)
+      after
+        _ignore = cache.put_dynamic_cache(default_dynamic_cache)
+      end
+    end
+
+    defp do_apply(mod, fun, args) do
+      apply(mod, fun, args)
+    end
 
     defp eval_function(fun, arg) when is_function(fun, 1) do
       fun.(arg)
     end
 
     defp eval_function(fun, arg) when is_function(fun, 2) do
-      fun.(arg, Process.get(@decorator_context_key))
+      fun.(arg, get_context())
     end
 
     defp eval_function(other, _arg) do
       other
-    end
-
-    defp do_apply(dynamic_cache(cache: cache, name: name), fun, args) do
-      apply(cache, fun, [name | args])
-    end
-
-    defp do_apply(mod, fun, args) do
-      apply(mod, fun, args)
     end
 
     defp group_by_cache(keys, default_cache) do
@@ -2381,7 +2447,7 @@ if Code.ensure_loaded?(Decorator.Define) do
       )
     end
 
-    @compile {:inline, raise_invalid_cache: 1}
+    @compile inline: [raise_invalid_cache: 1]
     @spec raise_invalid_cache(any()) :: no_return()
     defp raise_invalid_cache(cache) do
       raise ArgumentError,

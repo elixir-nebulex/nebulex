@@ -465,7 +465,7 @@ defmodule Nebulex.Cache do
       end
 
       # Iniline common instructions
-      @compile {:inline, get_dynamic_cache: 0}
+      @compile inline: [get_dynamic_cache: 0]
 
       @impl true
       def get_dynamic_cache do

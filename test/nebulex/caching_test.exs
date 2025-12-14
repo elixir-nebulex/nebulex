@@ -45,6 +45,7 @@ defmodule Nebulex.CachingTest do
           default_key_generator: &:erlang.phash2/1,
           cache: Cache,
           on_error: :raise,
+          transaction: true,
           match: &__MODULE__.match/1,
           opts: [ttl: :timer.seconds(10)]
 
@@ -943,6 +944,84 @@ defmodule Nebulex.CachingTest do
     end
   end
 
+  describe "option :transaction in annotation" do
+    setup_with_cache ErrorCache
+
+    test "cacheable" do
+      assert cacheable_with_txn(1) == 1
+      assert Cache.get!(1) == 1
+    end
+
+    test "cacheable with function key" do
+      assert cacheable_with_txn_and_fun(1) == 1
+      assert Cache.get!(1) == 1
+    end
+
+    test "cacheable returns transaction error" do
+      assert cacheable_with_txn_returns_error(1) == {:error, %Nebulex.Error{reason: :error}}
+    end
+
+    test "cache_put" do
+      assert put_with_txn(1) == 1
+      assert Cache.get!(1) == 1
+    end
+
+    test "cache_put with function key" do
+      assert put_with_txn_and_fun(1) == 1
+      assert Cache.get!(1) == 1
+    end
+
+    test "cache_put with multiple keys" do
+      assert put_with_txn_and_keys(1, 2) == {1, 2}
+      assert Cache.get!(1) == {1, 2}
+      assert Cache.get!(2) == {1, 2}
+    end
+
+    test "cache_put raises an exception on transaction" do
+      assert_raise Nebulex.Error, ~r"command failed", fn ->
+        put_with_txn_and_error_cache(1)
+      end
+    end
+
+    test "cache_evict" do
+      assert evict_with_txn(1) == 1
+      refute Cache.get!(1)
+    end
+
+    test "cache_evict with function key" do
+      assert evict_with_txn_and_fun(1) == 1
+      refute Cache.get!(1)
+    end
+
+    test "cache_evict with multiple keys" do
+      assert evict_with_txn_and_keys(1, 2) == {1, 2}
+      refute Cache.get!(1)
+      refute Cache.get!(2)
+    end
+
+    test "cache_evict with query" do
+      assert evict_with_txn_and_query(1) == 1
+      refute Cache.get!(1)
+    end
+
+    test "cache_evict with query and key" do
+      assert evict_with_txn_and_query_and_key(1) == 1
+      refute Cache.get!(1)
+    end
+
+    test "cache_evict with query and multiple keys" do
+      assert evict_with_txn_and_query_and_keys(1, 2) == {1, 2}
+      refute Cache.get!(1)
+      refute Cache.get!(2)
+    end
+
+    test "cache_evict raises an exception on transaction" do
+      assert_raise Nebulex.Error, ~r"command failed", fn ->
+        evict_with_txn_and_error_cache(1)
+      end
+    end
+  end
+
   ## Annotated Functions
 
   @cache Cache
@@ -1254,6 +1333,78 @@ defmodule Nebulex.CachingTest do
   @decorate cache_put(key: {:in, [x, keyref(y, cache: Cache), keyref(z, cache: YetAnotherCache)]})
   def put_keys_with_refs(x, y, z) do
     {x, y, z}
+  end
+
+  ## Transaction
+
+  @decorate cacheable(key: x, transaction: true)
+  def cacheable_with_txn(x) do
+    x
+  end
+
+  @decorate cacheable(key: &hd(&1.args), transaction: true)
+  def cacheable_with_txn_and_fun(x) do
+    x
+  end
+
+  @decorate cacheable(cache: ErrorCache, key: x, transaction: true)
+  def cacheable_with_txn_returns_error(x) do
+    x
+  end
+
+  @decorate cache_put(key: x, transaction: true)
+  def put_with_txn(x) do
+    x
+  end
+
+  @decorate cache_put(key: &hd(&1.args), transaction: true)
+  def put_with_txn_and_fun(x) do
+    x
+  end
+
+  @decorate cache_put(key: {:in, [x, y]}, transaction: true)
+  def put_with_txn_and_keys(x, y) do
+    {x, y}
+  end
+
+  @decorate cache_put(cache: ErrorCache, key: x, transaction: true, on_error: :raise)
+  def put_with_txn_and_error_cache(x) do
+    x
+  end
+
+  @decorate cache_evict(key: x, transaction: true)
+  def evict_with_txn(x) do
+    x
+  end
+
+  @decorate cache_evict(key: &hd(&1.args), transaction: true)
+  def evict_with_txn_and_fun(x) do
+    x
+  end
+
+  @decorate cache_evict(key: {:in, [x, y]}, transaction: true)
+  def evict_with_txn_and_keys(x, y) do
+    {x, y}
+  end
+
+  @decorate cache_evict(query: fn -> nil end, transaction: true)
+  def evict_with_txn_and_query(x) do
+    x
+  end
+
+  @decorate cache_evict(query: fn -> nil end, key: x, transaction: true)
+  def evict_with_txn_and_query_and_key(x) do
+    x
+  end
+
+  @decorate cache_evict(query: fn -> nil end, key: {:in, [x, y]}, transaction: true)
+  def evict_with_txn_and_query_and_keys(x, y) do
+    {x, y}
+  end
+
+  @decorate cache_evict(cache: ErrorCache, key: x, transaction: true, on_error: :raise)
+  def evict_with_txn_and_error_cache(x) do
+    x
   end
 
   ## Helpers

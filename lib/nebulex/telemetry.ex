@@ -3,7 +3,7 @@ defmodule Nebulex.Telemetry do
   @moduledoc false
 
   # Inline common instructions
-  @compile {:inline, execute: 3, span: 3, attach_many: 4, detach: 1}
+  @compile inline: [execute: 3, span: 3, attach_many: 4, detach: 1]
 
   if Code.ensure_loaded?(:telemetry) do
     @doc false

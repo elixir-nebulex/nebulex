@@ -67,7 +67,7 @@ defmodule Nebulex.Cache.Queryable do
   ## Private functions
 
   # Inline common instructions
-  @compile {:inline, execute: 3, do_stream: 3}
+  @compile inline: [execute: 3, do_stream: 3]
 
   # Execute wrapper
   defcommandp execute(name, query_meta, opts)

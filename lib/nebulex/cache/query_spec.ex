@@ -73,7 +73,7 @@ defmodule Nebulex.Cache.QuerySpec do
 
   ## Validation API
 
-  @compile {:inline, validate!: 1}
+  @compile inline: [validate!: 1]
   @spec validate!(keyword()) :: keyword()
   def validate!(opts) do
     NimbleOptions.validate!(opts, @query_spec_schema)
