@@ -70,9 +70,7 @@ defmodule Nebulex.Adapters.Nil do
   @behaviour Nebulex.Adapter
   @behaviour Nebulex.Adapter.KV
   @behaviour Nebulex.Adapter.Queryable
-
-  # Inherit default transaction implementation
-  use Nebulex.Adapter.Transaction
+  @behaviour Nebulex.Adapter.Transaction
 
   # Inherit default info implementation
   use Nebulex.Adapters.Common.Info
@@ -167,6 +165,18 @@ defmodule Nebulex.Adapters.Nil do
   @impl true
   def stream(_, _, opts) do
     with_hooks(opts, {:ok, Stream.each([], & &1)})
+  end
+
+  ## Nebulex.Adapter.Transaction
+
+  @impl true
+  def transaction(_, fun, opts) do
+    with_hooks(opts, {:ok, fun.()})
+  end
+
+  @impl true
+  def in_transaction?(_, opts) do
+    with_hooks(opts, {:ok, false})
   end
 
   ## Private functions

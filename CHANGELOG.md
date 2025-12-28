@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v3.0.0-rc.3](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0-rc.2) (2025-12-14)
+## [v3.0.0-rc.3](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0-rc.3) (2025-12-14)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0-rc.2...v3.0.0-rc.3)
 
 - [Nebulex.Caching.Decorators] Added `:transaction` option to wrap decorated
@@ -19,6 +19,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   decorator level, with decorator-level settings overriding module-level
   defaults.
   [#248](https://github.com/elixir-nebulex/nebulex/issues/248).
+
+### Backwards incompatible changes
+
+- [Nebulex.Adapter.Transaction] The default transaction implementation has been
+  removed from the core Nebulex library. Each adapter is now responsible for
+  providing its own transaction implementation tailored to its specific needs.
+  This change keeps the core library more generic and allows adapters to
+  optimize transaction handling for their particular use cases (e.g., local
+  ETS-based locking for single-node caches vs. distributed locking for
+  multi-node setups). Adapters that support transactions must implement
+  the `Nebulex.Adapter.Transaction` behaviour independently.
+  [#249](https://github.com/elixir-nebulex/nebulex/issues/249).
 
 ### Enhancements
 

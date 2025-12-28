@@ -39,7 +39,6 @@ end
 - Use `wrap_error/2` from `Nebulex.Utils` to wrap errors consistently.
 - Implement optional behaviours as needed: `Nebulex.Adapter.KV`,
   `Nebulex.Adapter.Queryable`, etc.
-- Leverage `use Nebulex.Adapter.Transaction` and similar modules for default implementations.
 
 ### Command Pattern
 
@@ -419,7 +418,10 @@ end
 ### Code Comments
 
 - Avoid obvious comments; code should be self-explanatory.
-- Use comments for complex algorithms or non-obvious business logic.
+- Use comments for complex algorithms or non-obvious business logic. Use a
+  sigle `#` for code comments. E.g., `# My comment ...`.
+- For separating sectionn in a module, use `##`. E.g., `## API`,
+  `## Private functions`, etc.
 - Mark internal functions with `@doc false` or `@moduledoc false`.
 - Use `# Inline common instructions` followed by
   `@compile inline: [function_name: arity]`.

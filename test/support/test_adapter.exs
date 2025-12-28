@@ -30,9 +30,7 @@ defmodule Nebulex.TestAdapter do
   @behaviour Nebulex.Adapter
   @behaviour Nebulex.Adapter.KV
   @behaviour Nebulex.Adapter.Queryable
-
-  # Inherit default transaction implementation
-  use Nebulex.Adapter.Transaction
+  @behaviour Nebulex.Adapter.Transaction
 
   # Inherit default info implementation
   use Nebulex.Adapters.Common.Info
@@ -271,10 +269,96 @@ defmodule Nebulex.TestAdapter do
     end
   end
 
+  ## Nebulex.Adapter.Transaction
+
+  @impl true
+  def transaction(%{cache: cache, pid: pid} = adapter_meta, fun, opts) do
+    opts = Keyword.validate!(opts, keys: [], nodes: [node()], retries: :infinity)
+
+    adapter_meta
+    |> do_in_transaction?()
+    |> do_transaction(
+      pid,
+      adapter_meta[:name] || cache,
+      Keyword.fetch!(opts, :keys),
+      Keyword.get(opts, :nodes, [node()]),
+      Keyword.fetch!(opts, :retries),
+      fun
+    )
+  end
+
+  @impl true
+  def in_transaction?(adapter_meta, _opts) do
+    wrap_ok do_in_transaction?(adapter_meta)
+  end
+
   ## Helpers
 
   defp entry_ttl(%Entry{exp: :infinity}), do: :infinity
   defp entry_ttl(%Entry{exp: exp}), do: exp - Time.now()
+
+  defp do_in_transaction?(%{pid: pid}) do
+    !!Process.get({pid, self()})
+  end
+
+  defp do_transaction(true, _pid, _name, _keys, _nodes, _retries, fun) do
+    {:ok, fun.()}
+  end
+
+  defp do_transaction(false, pid, name, keys, nodes, retries, fun) do
+    ids = lock_ids(name, keys)
+
+    case set_locks(ids, nodes, retries) do
+      true ->
+        try do
+          _ = Process.put({pid, self()}, %{keys: keys, nodes: nodes})
+
+          {:ok, fun.()}
+        after
+          _ = Process.delete({pid, self()})
+
+          del_locks(ids, nodes)
+        end
+
+      false ->
+        wrap_error Nebulex.Error,
+          reason: :transaction_aborted,
+          cache: name,
+          nodes: nodes,
+          cache: name
+    end
+  end
+
+  defp set_locks(ids, nodes, retries) do
+    maybe_set_lock = fn id, {:ok, acc} ->
+      case :global.set_lock(id, nodes, retries) do
+        true -> {:cont, {:ok, [id | acc]}}
+        false -> {:halt, {:error, acc}}
+      end
+    end
+
+    case Enum.reduce_while(ids, {:ok, []}, maybe_set_lock) do
+      {:ok, _} ->
+        true
+
+      {:error, locked_ids} ->
+        :ok = del_locks(locked_ids, nodes)
+
+        false
+    end
+  end
+
+  defp del_locks(ids, nodes) do
+    Enum.each(ids, &:global.del_lock(&1, nodes))
+  end
+
+  defp lock_ids(name, []) do
+    [{name, self()}]
+  end
+
+  defp lock_ids(name, keys) do
+    Enum.map(keys, &{{name, &1}, self()})
+  end
 end
 
 defmodule Nebulex.TestAdapter.KV do
@@ -517,7 +601,7 @@ defmodule Nebulex.TestAdapter.KV do
     {:reply, {:ok, %{memory: memory(map)}}, state}
   end
 
-  ## Private Functions
+  ## Helpers
 
   defp stream_unexpired(map, max_entries, select, now) do
     map

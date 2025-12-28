@@ -182,3 +182,52 @@ Copyright (c) 2014 Chris McCord, licensed under the MIT License.
 - Read the docs and options before using tasks (by using `mix help task_name`)
 - To debug test failures, run tests in a specific file with `mix test test/my_test.exs` or run all previously failed tests with `mix test --failed`
 - `mix deps.clean --all` is **almost never needed**. **Avoid** using it unless you have good reason
+
+## Elixir Style
+
+- Primarily, follow the [The Elixir Style Guide](https://github.com/christopheradams/elixir_style_guide/blob/master/README.md).
+
+- Use a blank line for the return or final statement (unless it is a single line).
+
+  **Avoid**:
+
+      def some_function(arg) do
+        Logger.info("Arg: #{inspect(some_data)}")
+        :ok
+      end
+
+  **Prefer**:
+
+      def some_function(some_data) do
+        Logger.info("Arg: #{inspect(some_data)}")
+
+        :ok
+      end
+
+  **Prefer**:
+
+      def some_function(some_data) do
+        some_data |> other_function() |> List.first()
+      end
+
+- Use `with` when only one case has to be handled, either the success or the error.
+
+  **Avoid**: `case` forwarding the same result
+
+      case some_call() do
+        :ok ->
+          :ok
+
+        {:error, reason} = error ->
+          Logger.error("Error: #{inspect(reason)}")
+
+          error
+      end
+
+  **Prefer**: `with` handling only the needed case
+
+      with {:error, reason} = error <- some_call() do
+        Logger.error("Error: #{inspect(reason)}")
+
+        error
+      end

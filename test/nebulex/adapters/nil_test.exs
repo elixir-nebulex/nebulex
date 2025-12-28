@@ -108,12 +108,6 @@ defmodule Nebulex.Adapters.NilTest do
 
     test "in_transaction?", %{cache: cache} do
       assert cache.in_transaction?() == {:ok, false}
-
-      cache.transaction(fn ->
-        :ok = cache.put(1, 11)
-
-        assert cache.in_transaction?() == {:ok, true}
-      end)
     end
   end
 

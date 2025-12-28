@@ -8,6 +8,23 @@ defmodule Nebulex.Adapters.CacheTest do
 
   setup_with_dynamic_cache Nebulex.TestCache.Cache, __MODULE__
 
+  describe "error" do
+    test "because cache is stopped", %{cache: cache, name: name} do
+      :ok = stop_supervised!(name)
+
+      ops = [
+        fn -> cache.put(1, 13) end,
+        fn -> cache.put!(1, 13) end,
+        fn -> cache.get!(1) end,
+        fn -> cache.delete!(1) end
+      ]
+
+      for fun <- ops do
+        assert_raise Nebulex.CacheNotFoundError, ~r/unable to find cache: #{inspect(name)}/, fun
+      end
+    end
+  end
+
   describe "KV:" do
     test "get_and_update", %{cache: cache} do
       fun = fn
@@ -176,19 +193,35 @@ defmodule Nebulex.Adapters.CacheTest do
     end
   end
 
-  describe "error" do
-    test "because cache is stopped", %{cache: cache, name: name} do
-      :ok = stop_supervised!(name)
+  describe "transaction" do
+    test "aborted", %{name: name, cache: cache} do
+      key = {name, :aborted}
 
-      ops = [
-        fn -> cache.put(1, 13) end,
-        fn -> cache.put!(1, 13) end,
-        fn -> cache.get!(1) end,
-        fn -> cache.delete!(1) end
-      ]
+      Task.start_link(fn ->
+        _ = cache.put_dynamic_cache(name)
 
-      for fun <- ops do
-        assert_raise Nebulex.CacheNotFoundError, ~r/unable to find cache: #{inspect(name)}/, fun
+        cache.transaction(
+          fn ->
+            :ok = cache.put(key, true)
+
+            Process.sleep(1100)
+          end,
+          keys: [key],
+          retries: 1
+        )
+      end)
+
+      :ok = Process.sleep(200)
+
+      assert_raise Nebulex.Error, ~r/transaction aborted\n\nError metadata:/, fn ->
+        {:error, %Nebulex.Error{} = reason} =
+          cache.transaction(
+            fn -> cache.get(key) end,
+            keys: [key],
+            retries: 1
+          )
+
+        raise reason
       end
     end
   end
