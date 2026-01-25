@@ -1,11 +1,14 @@
 defmodule Nebulex.CacheErrorTest do
   use ExUnit.Case, async: true
-  use Mimic
 
   # Inherit error tests
   use Nebulex.Cache.KVErrorTest
   use Nebulex.Cache.KVExpirationErrorTest
   use Nebulex.Cache.QueryableErrorTest
+
+  import Mimic, only: [verify_on_exit!: 1, stub: 3]
+
+  setup :verify_on_exit!
 
   setup do
     Nebulex.Cache.Registry

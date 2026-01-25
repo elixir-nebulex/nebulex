@@ -1,7 +1,7 @@
 defmodule Nebulex.Cache.InfoStatsTest do
   use ExUnit.Case, async: true
-  use Mimic
 
+  import Mimic, only: [expect: 3]
   import Nebulex.CacheCase
 
   alias Nebulex.Adapters.Common.Info.Stats

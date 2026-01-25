@@ -60,7 +60,7 @@ defmodule Nebulex.Event.CacheEntryEvent do
 
   # Event structure
   @enforce_keys [:cache, :pid, :type, :target, :command]
-  defstruct cache: nil, name: nil, pid: nil, type: nil, target: nil, command: nil, metadata: []
+  defstruct [:cache, :name, :pid, :type, :target, :command, metadata: []]
 
   # Supported event types
   @event_types ~w(deleted expired inserted updated)a

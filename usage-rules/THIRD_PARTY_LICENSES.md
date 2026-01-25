@@ -69,3 +69,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+---
+
+## Elixir Style Guide
+
+**Source**: https://github.com/christopheradams/elixir_style_guide
+
+**Files affected**: `elixir-style.md`
+
+**License**: Creative Commons Attribution 3.0 Unported (CC-BY-3.0)
+
+This work is licensed under a Creative Commons Attribution 3.0 Unported License.
+
+https://creativecommons.org/licenses/by/3.0/
+
+Copyright (c) Christopher Adams and contributors.

@@ -6,7 +6,7 @@ defmodule Nebulex.TestAdapter do
   defmodule Entry do
     @moduledoc false
 
-    defstruct value: nil, touched: nil, exp: nil
+    defstruct [:value, :touched, :exp]
 
     alias Nebulex.Time
 
@@ -374,7 +374,7 @@ defmodule Nebulex.TestAdapter.KV do
   ## Internals
 
   # Internal state
-  defstruct map: nil, adapter_meta: nil
+  defstruct [:map, :adapter_meta]
 
   ## API
 

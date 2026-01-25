@@ -38,3 +38,6 @@ erl_crash.dump
 /priv
 .sobelow*
 /config
+
+# Claude Code
+CLAUDE.md

@@ -1,7 +1,7 @@
 defmodule Mix.NebulexTest do
   use ExUnit.Case, async: true
-  use Mimic
 
+  import Mimic, only: [expect: 3]
   import Mix.Nebulex
 
   test "fail because umbrella project" do

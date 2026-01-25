@@ -730,7 +730,7 @@ if Code.ensure_loaded?(Decorator.Define) do
             }
 
       # Context struct
-      defstruct decorator: nil, module: nil, function_name: nil, arity: 0, args: []
+      defstruct [:decorator, :module, :function_name, arity: 0, args: []]
     end
 
     # Decorator definitions
