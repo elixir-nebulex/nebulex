@@ -25,12 +25,18 @@ defmodule Nebulex.Event.CacheEntryEvent do
   @typedoc """
   Type for the event target.
 
-  The event target can be a key or a query (for `delete_all` command).
-  If the target is a key, it will come in the shape of `{:key, deleted_key}`
-  tuple. On the other hand, if the target is a query, it will come in the shape
-  of a `{:query, {:in, deleted_keys}}` tuple, or a `{:query, {:q, query}}` tuple.
+  The event can target a single key, a list of keys, or a query.
+
+    * A single key: `{:key, key}`. A command writing or deleting a single key
+      will use this target. E.g., `put`, `put_new`, `replace`, `delete`, etc.
+    * A list of keys: `{:in, [key1, key2, ...]}`. A command writing or deleting
+      multiple keys will use this target. E.g., `put_all`, `put_new_all`, and
+      `delete_all`.
+    * A query: `{:q, query}`. A command deleting entries matching a query will
+      use this target. E.g., `delete_all`.
+
   """
-  @type target() :: {:key, any()} | {:query, {:in, [keys :: any()]} | {:q, query :: any()}}
+  @type target() :: {:key, key :: any()} | {:in, [key :: any()]} | {:q, query :: any()}
 
   @typedoc """
   Type for a cache entry event.

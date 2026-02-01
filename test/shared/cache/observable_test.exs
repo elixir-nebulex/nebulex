@@ -60,7 +60,7 @@ defmodule Nebulex.Cache.ObservableTest do
         assert_receive ^deleted
 
         entries = [foo: :bar, bar: :foo]
-        inserted_all = %{event | target: {:keys, Keyword.keys(entries)}, command: :put_all}
+        inserted_all = %{event | target: {:in, Keyword.keys(entries)}, command: :put_all}
 
         assert cache.put_all(entries) == :ok
         assert_receive ^inserted_all
@@ -74,7 +74,7 @@ defmodule Nebulex.Cache.ObservableTest do
 
         inserted_new_all = %{
           inserted_all
-          | target: {:keys, Keyword.keys(entries)},
+          | target: {:in, Keyword.keys(entries)},
             command: :put_new_all
         }
 
@@ -84,7 +84,7 @@ defmodule Nebulex.Cache.ObservableTest do
         deleted_all = %{
           event
           | type: :deleted,
-            target: {:query, {:in, [:foo, :bar]}},
+            target: {:in, [:foo, :bar]},
             command: :delete_all
         }
 
@@ -187,7 +187,7 @@ defmodule Nebulex.Cache.ObservableTest do
         deleted_all = %{
           event
           | type: :deleted,
-            target: {:query, {:q, nil}},
+            target: {:q, nil},
             command: :delete_all
         }
 

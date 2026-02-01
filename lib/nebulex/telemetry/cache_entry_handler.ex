@@ -106,7 +106,7 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
 
   defp do_handle(:put_all, [entries, :put_new | _], {:ok, true}, event_attrs, config) do
     [
-      target: {:keys, Enum.map(entries, &elem(&1, 0))},
+      target: {:in, Enum.map(entries, &elem(&1, 0))},
       command: :put_new_all
     ]
     |> Kernel.++(event_attrs)
@@ -116,7 +116,7 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
 
   defp do_handle(:put_all, [entries | _], {:ok, true}, event_attrs, config) do
     [
-      target: {:keys, Enum.map(entries, &elem(&1, 0))},
+      target: {:in, Enum.map(entries, &elem(&1, 0))},
       command: :put_all
     ]
     |> Kernel.++(event_attrs)
@@ -184,7 +184,7 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
        )
        when count > 0 do
     [
-      target: {:query, query},
+      target: query,
       command: :delete_all
     ]
     |> Kernel.++(event_attrs)
