@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [v3.0.0-rc.3](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0-rc.3) (2025-12-14)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0-rc.2...v3.0.0-rc.3)
 
+### Enhancements
+
 - [Nebulex.Caching.Decorators] Added `:transaction` option to wrap decorated
   function execution and cache operations in a cache transaction. When set to
   `true`, the decorator locks the specified cache keys for the duration of the
@@ -19,6 +21,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   decorator level, with decorator-level settings overriding module-level
   defaults.
   [#248](https://github.com/elixir-nebulex/nebulex/issues/248).
+- [Nebulex.Adapters.Coherent] Added new coherent cache adapter to
+  `nebulex_distributed`. The coherent adapter provides a "local cache with
+  distributed invalidation" pattern where each node maintains its own
+  independent local cache, but writes trigger invalidation events across the
+  cluster via `Nebulex.Streams`. Key features include maximum read performance
+  (pure local lookups), distributed invalidation via Phoenix.PubSub, and a
+  write-invalidate protocol that minimizes network overhead by only broadcasting
+  invalidation events. Ideal for read-heavy workloads, configuration/reference
+  data caching, and session caches.
 
 ### Backwards incompatible changes
 
