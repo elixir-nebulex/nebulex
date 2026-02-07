@@ -800,18 +800,19 @@ defmodule Nebulex.Adapters.Replicated.Bootstrap do
   end
 
   defp stream_entries(meta, node, acc) do
-    stream_fun = fn ->
-      meta
-      |> Replicated.stream(nil, return: :entry, page_size: 100)
-      |> Stream.filter(&(not Entry.expired?(&1)))
-      |> Stream.map(& &1)
-      |> Enum.to_list()
-    end
-
-    case :rpc.call(node, Kernel, :apply, [stream_fun, []]) do
+    case :rpc.call(node, __MODULE__, :do_stream_entries, [meta]) do
       {:badrpc, _} -> {:cont, acc}
       entries -> {:halt, entries}
     end
+  end
+
+  @doc false
+  def do_stream_entries(meta) do
+    meta
+    |> Replicated.stream(nil, return: :entry, page_size: 100)
+    |> Stream.filter(&(not Entry.expired?(&1)))
+    |> Stream.map(& &1)
+    |> Enum.to_list()
   end
 
   defp dispatch_bootstrap_error(adapter_meta, measurements, metadata) do
