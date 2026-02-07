@@ -976,9 +976,10 @@ if Code.ensure_loaded?(Decorator.Define) do
       keys = get_keys(attrs)
 
       key =
-        if is_list(keys) and length(keys) > 0,
-          do: {:"$keys", keys},
-          else: keygen
+        case keys do
+          [_ | _] -> {:"$keys", keys}
+          _ -> keygen
+        end
 
       quote do
         result = unquote(block)
@@ -1024,7 +1025,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         all_entries? == true ->
           quote(do: unquote(__MODULE__).run_cmd(cache, :delete_all, [], on_error, 0))
 
-        is_list(keys) and length(keys) > 0 ->
+        is_list(keys) and keys != [] ->
           delete_keys_block(keys)
 
         true ->
@@ -1043,7 +1044,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         attrs,
         :keys,
         "a list with at least one element",
-        &((is_list(&1) and length(&1) > 0) or is_nil(&1))
+        &((is_list(&1) and &1 != []) or is_nil(&1))
       )
     end
 

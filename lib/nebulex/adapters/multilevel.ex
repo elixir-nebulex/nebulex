@@ -267,7 +267,7 @@ defmodule Nebulex.Adapters.Multilevel do
         opts,
         :levels,
         "a list with at least one level definition",
-        &(Keyword.keyword?(&1) && length(&1) > 0)
+        &(Keyword.keyword?(&1) && &1 != [])
       )
 
     # Get multilevel-cache model

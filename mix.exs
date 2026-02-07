@@ -15,13 +15,6 @@ defmodule Nebulex.MixProject do
 
       # Testing
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        check: :test,
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test
-      ],
 
       # Dialyzer
       dialyzer: dialyzer(),
@@ -33,6 +26,18 @@ defmodule Nebulex.MixProject do
       # Docs
       name: "Nebulex",
       docs: docs()
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        check: :test,
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -53,21 +58,21 @@ defmodule Nebulex.MixProject do
       {:telemetry, "~> 0.4 or ~> 1.0", optional: true},
 
       # Test & Code Analysis
-      {:ex2ms, "~> 1.6", only: :test},
+      {:ex2ms, "~> 1.7", only: :test},
       {:mock, "~> 0.3", only: :test},
       {:excoveralls, "~> 0.18", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
-      {:stream_data, "~> 1.1", only: [:dev, :test]},
-      {:doctor, "~> 0.21", only: [:dev, :test]},
+      {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
+      {:stream_data, "~> 1.2", only: [:dev, :test]},
+      {:doctor, "~> 0.22", only: [:dev, :test]},
 
       # Benchmark Test
-      {:benchee, "~> 1.3", only: [:dev, :test]},
+      {:benchee, "~> 1.5", only: [:dev, :test]},
       {:benchee_html, "~> 1.0", only: [:dev, :test]},
 
       # Docs
-      {:ex_doc, "~> 0.34", only: [:dev, :test], runtime: false}
+      {:ex_doc, "~> 0.40", only: [:dev, :test], runtime: false}
     ]
   end
 

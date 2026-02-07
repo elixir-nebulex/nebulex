@@ -345,7 +345,7 @@ defmodule Nebulex.Adapters.Local do
   @backends ~w(ets shards)a
 
   # Inline common instructions
-  @compile {:inline, list_gen: 1, newer_gen: 1, test_ms: 0}
+  @compile {:inline, list_gen: 1, newer_gen: 1, test_ms: 0, entry_keys: 1}
 
   ## Nebulex.Adapter
 
@@ -758,6 +758,10 @@ defmodule Nebulex.Adapters.Local do
     |> hd()
   end
 
+  defp entry_keys(entries) do
+    for entry(key: key) <- entries, do: key
+  end
+
   defp get_entry(tab, key, default, backend) do
     case backend.lookup(tab, key) do
       [] -> default
@@ -807,7 +811,7 @@ defmodule Nebulex.Adapters.Local do
   defp put_new_entries(meta_tab, backend, entries, batch_size) when is_list(entries) do
     do_put_new_entries(meta_tab, backend, entries, fn newer_gen, older_gen ->
       with true <- backend.insert_new(older_gen, entries) do
-        keys = Enum.map(entries, fn entry(key: key) -> key end)
+        keys = entry_keys(entries)
 
         _ = do_delete_all(backend, older_gen, keys, batch_size)
 
@@ -844,16 +848,19 @@ defmodule Nebulex.Adapters.Local do
       [newer_gen, older_gen] ->
         with false <- backend.update_element(newer_gen, key, updates),
              entry() = entry <- pop_entry(older_gen, key, false, backend) do
-          entry =
-            Enum.reduce(updates, entry, fn
-              {3, value}, acc -> entry(acc, value: value)
-              {4, value}, acc -> entry(acc, touched: value)
-              {5, value}, acc -> entry(acc, ttl: value)
-            end)
+          entry = entry_updates(updates, entry)
 
           backend.insert(newer_gen, entry)
         end
     end
+  end
+
+  defp entry_updates(updates, entry) do
+    Enum.reduce(updates, entry, fn
+      {3, value}, acc -> entry(acc, value: value)
+      {4, value}, acc -> entry(acc, touched: value)
+      {5, value}, acc -> entry(acc, ttl: value)
+    end)
   end
 
   defp do_delete_all(backend, tab, keys, batch_size) do
