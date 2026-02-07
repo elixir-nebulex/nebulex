@@ -1,8 +1,8 @@
 # Nebulex 🌌
 > In-memory and distributed caching toolkit for Elixir.
 
-![CI](https://github.com/cabol/nebulex/workflows/CI/badge.svg)
-[![Coverage Status](https://img.shields.io/coveralls/cabol/nebulex.svg)](https://coveralls.io/github/cabol/nebulex)
+![CI](https://github.com/elixir-nebulex/nebulex/workflows/CI/badge.svg)
+[![Coverage Status](https://img.shields.io/coveralls/elixir-nebulex/nebulex.svg)](https://coveralls.io/github/elixir-nebulex/nebulex)
 [![Hex Version](https://img.shields.io/hexpm/v/nebulex.svg)](https://hex.pm/packages/nebulex)
 [![Docs](https://img.shields.io/badge/docs-hexpm-blue.svg)](https://hexdocs.pm/nebulex)
 [![License](https://img.shields.io/hexpm/l/nebulex.svg)](LICENSE)
@@ -56,8 +56,8 @@ Ecto Postgres table | Nebulex.Adapters.Ecto | [nebulex_adapters_ecto][nbx_ecto_p
 [ra]: http://hexdocs.pm/nebulex/Nebulex.Adapters.Replicated.html
 [ma]: http://hexdocs.pm/nebulex/Nebulex.Adapters.Multilevel.html
 [nil]: http://hexdocs.pm/nebulex/Nebulex.Adapters.Nil.html
-[nbx_cachex]: https://github.com/cabol/nebulex_adapters_cachex
-[nbx_redis]: https://github.com/cabol/nebulex_redis_adapter
+[nbx_cachex]: https://github.com/elixir-nebulex/nebulex_adapters_cachex
+[nbx_redis]: https://github.com/elixir-nebulex/nebulex_redis_adapter
 [nbx_horde]: https://github.com/eliasdarruda/nebulex_adapters_horde
 [nbx_local_multilevel]: https://github.com/slab/nebulex_local_multilevel_adapter
 [nbx_ecto_postgres]: https://github.com/hissssst/nebulex_adapters_ecto
@@ -200,7 +200,7 @@ defmodule MyApp.Accounts do
 end
 ```
 
-See more [Nebulex examples](https://github.com/cabol/nebulex_examples).
+See more [Nebulex examples](https://github.com/elixir-nebulex/nebulex_examples).
 
 ## Important links
 
@@ -209,7 +209,7 @@ See more [Nebulex examples](https://github.com/cabol/nebulex_examples).
   * [Cache Usage Patterns](http://hexdocs.pm/nebulex/cache-usage-patterns.html)
   * [Instrumenting the Cache with Telemetry](http://hexdocs.pm/nebulex/telemetry.html)
   * [Migrating to v2.x](http://hexdocs.pm/nebulex/migrating-to-v2.html)
-  * [Examples](https://github.com/cabol/nebulex_examples)
+  * [Examples](https://github.com/elixir-nebulex/nebulex_examples)
 
 ## Testing
 
@@ -256,15 +256,15 @@ $ MIX_ENV=test mix run benchmarks/local_with_shards_bench.exs
 ```
 
 Additionally, you can also run performance tests using `:basho_bench`.
-See [nebulex_bench example](https://github.com/cabol/nebulex_examples/tree/master/nebulex_bench)
+See [nebulex_bench example](https://github.com/elixir-nebulex/nebulex_examples/tree/master/nebulex_bench)
 for more information.
 
 ## Contributing
 
 Contributions to Nebulex are very welcome and appreciated!
 
-Use the [issue tracker](https://github.com/cabol/nebulex/issues) for bug reports
-or feature requests. Open a [pull request](https://github.com/cabol/nebulex/pulls)
+Use the [issue tracker](https://github.com/elixir-nebulex/nebulex/issues) for bug reports
+or feature requests. Open a [pull request](https://github.com/elixir-nebulex/nebulex/pulls)
 when you are ready to contribute.
 
 When submitting a pull request you should not update the [CHANGELOG.md](CHANGELOG.md),

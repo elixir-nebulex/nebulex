@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide is an introduction to [Nebulex](https://github.com/cabol/nebulex),
+This guide is an introduction to [Nebulex](https://github.com/elixir-nebulex/nebulex),
 a local and distributed caching toolkit for Elixir. Nebulex API is pretty much
 inspired by [Ecto](https://github.com/elixir-ecto/ecto), taking advantage of
 its simplicity, flexibility and pluggable architecture. In the same way
@@ -567,7 +567,7 @@ iex> Blog.PartitionedCache.put("foo", "bar", timeout: 10)
 
 To learn more about how partitioned cache works, please check
 `Nebulex.Adapters.Partitioned` documentation, and also it is recommended see the
-[partitioned cache example](https://github.com/cabol/nebulex_examples/tree/master/partitioned_cache)
+[partitioned cache example](https://github.com/elixir-nebulex/nebulex_examples/tree/master/partitioned_cache)
 
 ## Multilevel Cache
 
@@ -668,7 +668,7 @@ iex> Blog.NearCache.get("foo")
 
 To learn more about how multilevel-cache works, please check
 `Nebulex.Adapters.Multilevel` documentation, and also it is recommended see the
-[near cache example](https://github.com/cabol/nebulex_examples/tree/master/near_cache)
+[near cache example](https://github.com/elixir-nebulex/nebulex_examples/tree/master/near_cache)
 
 ## Next
 

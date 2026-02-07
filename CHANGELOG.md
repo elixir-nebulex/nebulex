@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.6.6](https://github.com/elixir-nebulex/nebulex/tree/v2.6.6) (2026-02-07)
+
+[Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v2.6.5...v2.6.6)
+
+**Merged pull requests:**
+
+- Fix Replicated cache data loss on rolling deploy
+  [#250](https://github.com/elixir-nebulex/nebulex/pull/250)
+  ([pierre-pretorius](https://github.com/pierre-pretorius))
+
 ## [v2.6.5](https://github.com/elixir-nebulex/nebulex/tree/v2.6.5) (2025-06-01)
 
 [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v2.6.4...v2.6.5)
