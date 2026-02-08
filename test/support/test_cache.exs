@@ -32,14 +32,7 @@ defmodule Nebulex.TestCache do
         with {:ok, stream} <- stream(name, [], []) do
           stream
           |> Stream.chunk_every(Keyword.get(opts, :entries_per_line, 10))
-          |> Enum.each(fn chunk ->
-            bin =
-              chunk
-              |> :erlang.term_to_binary(get_compression(opts))
-              |> Base.encode64()
-
-            :ok = IO.puts(io_dev, bin)
-          end)
+          |> Enum.each(&io_puts(&1, io_dev, opts))
         end
       end)
     end
@@ -50,14 +43,7 @@ defmodule Nebulex.TestCache do
         io_dev
         |> IO.stream(:line)
         |> Stream.map(&String.trim/1)
-        |> Enum.each(fn line ->
-          entries =
-            line
-            |> Base.decode64!()
-            |> :erlang.binary_to_term([:safe])
-
-          put_all(name, entries, opts)
-        end)
+        |> Enum.each(&load_entries(&1, name, opts))
       end)
     end
 
@@ -87,6 +73,24 @@ defmodule Nebulex.TestCache do
         _ ->
           [:compressed]
       end
+    end
+
+    defp io_puts(chunk, io_dev, opts) do
+      bin =
+        chunk
+        |> :erlang.term_to_binary(get_compression(opts))
+        |> Base.encode64()
+
+      IO.puts(io_dev, bin)
+    end
+
+    defp load_entries(line, name, opts) do
+      entries =
+        line
+        |> Base.decode64!()
+        |> :erlang.binary_to_term([:safe])
+
+      put_all(name, entries, opts)
     end
   end
 

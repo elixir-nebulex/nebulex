@@ -1,11 +1,9 @@
 # Declarative Caching: Patterns and Best Practices
 
 This guide provides comprehensive examples and best practices for using
-Nebulex's caching decorators. While the [Decorators API documentation][decorators_api]
-covers all options and basic usage, this guide focuses on real-world
-scenarios, adapter-specific optimizations, and advanced patterns.
-
-[decorators_api]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html
+Nebulex's caching decorators. While the `Nebulex.Caching.Decorators`
+documentation covers all options and basic usage, this guide focuses on
+real-world scenarios, adapter-specific optimizations, and advanced patterns.
 
 ---
 
@@ -24,7 +22,14 @@ maintainable code.
 
 ### Setup
 
-First, enable caching decorators in your module:
+Caching decorators require the `:decorator` dependency. Add it to your
+`mix.exs`:
+
+```elixir
+{:decorator, "~> 1.4"}
+```
+
+Then enable caching decorators in your module:
 
 ```elixir
 defmodule MyApp.Products do
@@ -49,7 +54,7 @@ functions in the module:
 ## Quick Start: Basic Usage
 
 Let's start with a simple product catalog to illustrate the basics. For complete
-API documentation on all three decorators, see [Nebulex.Caching.Decorators API][decorators_api].
+API documentation on all three decorators, see `Nebulex.Caching.Decorators`.
 
 ### Reading with `@cacheable`
 
@@ -110,7 +115,7 @@ end
 
 The `cache_evict` decorator supports several powerful patterns for
 cache invalidation. For detailed API documentation and option reference, see
-[`cache_evict/3`](http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html#cache_evict/3).
+[`cache_evict/3`](`Nebulex.Caching.Decorators.cache_evict/3`).
 
 ### Evicting Multiple Keys
 
@@ -203,7 +208,7 @@ working with cached data. This section covers features introduced in recent
 versions that make cache management more intuitive and maintainable.
 
 For complete API documentation, see the
-["Local Adapter: Advanced Reference Eviction"](http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html#cache_evict/3-local-adapter-advanced-reference-eviction)
+["Local Adapter: Advanced Reference Eviction"](`m:Nebulex.Caching.Decorators#cache_evict/3-local-adapter-advanced-reference-eviction`)
 section in `cache_evict/3`.
 
 ### Building Queries with QueryHelper
@@ -367,9 +372,7 @@ multiple keys, avoiding data duplication and ensuring consistency.
 [query_helper_section]: https://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.html#module-building-match-specs-with-queryhelper
 
 For complete API documentation on the `:references` option, see
-[`cacheable/3` - Referenced keys][cacheable_refs_api].
-
-[cacheable_refs_api]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html#cacheable/3-referenced-keys
+[`cacheable/3` - Referenced keys](`m:Nebulex.Caching.Decorators#cacheable/3-referenced-keys`).
 
 **Basic reference usage:**
 
@@ -1266,14 +1269,10 @@ Enable telemetry logging to debug cache behavior:
 
 ### Recommended Reading
 
-- [Cache Usage Patterns](http://hexdocs.pm/nebulex/3.0.0-rc.2/cache-usage-patterns.html)
-  - Overview of caching patterns.
-- [Nebulex.Caching.Decorators API](http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html)
-  - Complete API reference.
-- [Info API Guide](http://hexdocs.pm/nebulex/3.0.0-rc.2/info-api.html)
-  - Monitoring and observability.
-- [Nebulex.Adapters.Local Documentation](https://hexdocs.pm/nebulex_local)
-  - Local adapter features.
+- [Cache Usage Patterns](cache-usage-patterns.md) – Overview of caching patterns.
+- [Nebulex.Caching.Decorators API](`Nebulex.Caching.Decorators`) – Complete API reference.
+- [Info API Guide](info-api.md) – Monitoring and observability.
+- [Nebulex.Adapters.Local Documentation](https://hexdocs.pm/nebulex_local) – Local adapter features.
 
 ---
 

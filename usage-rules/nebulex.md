@@ -4,11 +4,42 @@
 
 Nebulex is a fast, flexible, and extensible caching library for Elixir that
 provides:
-- Multiple cache adapters (local, distributed, multilevel, partitioned).
+- Multiple cache adapters (local, distributed, multilevel, partitioned,
+  coherent).
 - Declarative decorator-based caching inspired by Spring Cache Abstraction.
 - OTP design patterns and fault tolerance.
-- Telemetry instrumentation
+- Telemetry instrumentation.
+- Event streaming via `Nebulex.Streams` for distributed invalidation.
 - Support for TTL, eviction policies, transactions, and more.
+
+## Package Structure (v3)
+
+Nebulex v3 separates adapters into dedicated packages:
+- `nebulex` - Core library with Cache API, decorators, and behaviours.
+- `nebulex_local` - Local cache adapter (`Nebulex.Adapters.Local`).
+- `nebulex_distributed` - Distributed adapters (`Nebulex.Adapters.Partitioned`,
+  `Nebulex.Adapters.Multilevel`, `Nebulex.Adapters.Coherent`).
+
+Add the required dependencies to your `mix.exs`:
+
+```elixir
+defp deps do
+  [
+    {:nebulex, "~> 3.0"},
+    {:nebulex_local, "~> 3.0"},
+    # For distributed caching
+    {:nebulex_distributed, "~> 3.0"},
+    # Required for caching decorators
+    {:decorator, "~> 1.4"},
+    # Optional but highly recommended for observability
+    {:telemetry, "~> 1.0"}
+  ]
+end
+```
+
+> **Note**: The `:telemetry` dependency is optional but highly recommended for
+> production environments. It enables cache metrics, monitoring, and
+> integration with observability tools.
 
 ## Architecture Patterns
 
@@ -19,6 +50,8 @@ provides:
 - Caches should be started in the application supervision tree, not manually.
 - Use descriptive cache module names that indicate their purpose
   (e.g., `MyApp.LocalCache`, `MyApp.UserCache`).
+- Use `adapter_opts` for compile-time adapter options like
+  `:primary_storage_adapter`.
 
 **Example**:
 
@@ -28,6 +61,55 @@ defmodule MyApp.Cache do
     otp_app: :my_app,
     adapter: Nebulex.Adapters.Local
 end
+```
+
+**With compile-time adapter options** (Partitioned/Coherent adapters):
+
+```elixir
+defmodule MyApp.PartitionedCache do
+  use Nebulex.Cache,
+    otp_app: :my_app,
+    adapter: Nebulex.Adapters.Partitioned,
+    adapter_opts: [primary_storage_adapter: Nebulex.Adapters.Local]
+end
+```
+
+**Avoid** putting adapter options at the top level:
+
+```elixir
+# WRONG - will raise an error
+defmodule MyApp.PartitionedCache do
+  use Nebulex.Cache,
+    otp_app: :my_app,
+    adapter: Nebulex.Adapters.Partitioned,
+    primary_storage_adapter: Nebulex.Adapters.Local
+end
+```
+
+### Cache Topologies
+
+Nebulex supports multiple cache topologies:
+
+- **Local** (`Nebulex.Adapters.Local`): Single-node generational cache with
+  automatic garbage collection.
+- **Partitioned** (`Nebulex.Adapters.Partitioned`): Distributed cache with
+  data sharded across cluster nodes using consistent hashing.
+- **Multilevel** (`Nebulex.Adapters.Multilevel`): Hierarchical cache with
+  multiple levels (e.g., L1 local + L2 distributed).
+- **Coherent** (`Nebulex.Adapters.Coherent`): Local cache with distributed
+  invalidation via `Nebulex.Streams`. Ideal for read-heavy workloads.
+
+### Multilevel Cache Configuration
+
+Use `inclusion_policy` (not the deprecated `model`) for multilevel caches:
+
+```elixir
+config :my_app, MyApp.NearCache,
+  inclusion_policy: :inclusive,
+  levels: [
+    {MyApp.NearCache.L1, gc_interval: :timer.hours(12)},
+    {MyApp.NearCache.L2, primary: [gc_interval: :timer.hours(12)]}
+  ]
 ```
 
 ### Adapter Pattern
@@ -90,6 +172,31 @@ def put!(name, key, value, opts) do
   :ok
 end
 ```
+
+### Fetch-or-Store Pattern
+
+Use `fetch_or_store/3` and `get_or_store/3` for read-through caching:
+
+```elixir
+# Returns {:ok, value} or {:error, reason}
+cache.fetch_or_store("user:123", fn ->
+  case Repo.get(User, 123) do
+    nil -> {:error, :not_found}
+    user -> {:ok, user}
+  end
+end)
+
+# Returns value directly (raises on error)
+cache.get_or_store!("user:123", fn ->
+  Repo.get!(User, 123)
+end)
+```
+
+- `fetch_or_store/3` - Returns `{:ok, value}` from cache or fallback function.
+  If the fallback returns `{:error, reason}`, it propagates the error without
+  caching.
+- `get_or_store/3` - Simpler variant that stores the direct return value from
+  the fallback function.
 
 ## Options and Validation
 
@@ -167,6 +274,17 @@ end
   (e.g., `match: &match_fun/1`).
 - Use `:on_error` option to control error handling (`:raise` or `:nothing`).
 - Specify TTL via `:opts` option: `opts: [ttl: :timer.hours(1)]`.
+- Use `:transaction` option to wrap cache operations in a transaction,
+  preventing race conditions and cache stampede.
+
+**Transaction example** (prevents concurrent updates to the same key):
+
+```elixir
+@decorate cacheable(key: id, transaction: true)
+def get_user(id) do
+  Repo.get(User, id)
+end
+```
 
 ### `cacheable` Decorator
 
@@ -244,6 +362,70 @@ end
 def query_for_tag(%{args: [tag]}) do
   [{:entry, :"$1", %{tag: :"$2"}, :_, :_}, [{:"=:=", :"$2", tag}], [true]]
 end
+```
+
+## Nebulex.Streams
+
+`Nebulex.Streams` provides event streaming for cache operations, enabling
+distributed cache invalidation patterns.
+
+### Enabling Streams
+
+Add `use Nebulex.Streams` to your cache module:
+
+```elixir
+defmodule MyApp.Cache do
+  use Nebulex.Cache,
+    otp_app: :my_app,
+    adapter: Nebulex.Adapters.Local
+
+  use Nebulex.Streams
+end
+```
+
+### Stream Handlers
+
+Implement custom stream handlers by using `Nebulex.Streams.Handler`:
+
+```elixir
+defmodule MyApp.CacheEventHandler do
+  use Nebulex.Streams.Handler
+
+  @impl true
+  def handle_event(event, state) do
+    # Handle cache events (put, delete, etc.)
+    {:cont, state}
+  end
+end
+```
+
+### Coherent Cache Pattern
+
+The `Nebulex.Adapters.Coherent` adapter uses `Nebulex.Streams` to provide
+local caching with distributed invalidation:
+
+- Each node maintains its own local cache.
+- Write operations trigger invalidation events via Phoenix.PubSub.
+- Other nodes delete the invalidated keys from their local caches.
+- Next read on other nodes results in a cache miss, fetching fresh data.
+
+```elixir
+defmodule MyApp.CoherentCache do
+  use Nebulex.Cache,
+    otp_app: :my_app,
+    adapter: Nebulex.Adapters.Coherent,
+    adapter_opts: [primary_storage_adapter: Nebulex.Adapters.Local]
+end
+```
+
+Configuration:
+
+```elixir
+config :my_app, MyApp.CoherentCache,
+  primary: [
+    gc_interval: :timer.hours(12),
+    max_size: 1_000_000
+  ]
 ```
 
 ## Testing Patterns
@@ -394,7 +576,7 @@ end
 - Provide telemetry event documentation with measurements and metadata.
 - The maximum text length is 80 characters, and you should aim to adhere to this
   limit. However, there are special cases where exceeding it is acceptable. For
-  example, you may exceed the limit for a link (e.g., ["my link"](http://github.com/elixir-nebulex))
+  example, you may exceed the limit for a link (e.g., ["my link"](https://github.com/elixir-nebulex))
   or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
   If a code snippet exceeds the 80-character limit by more than 1 or 2 haracters,
   format it using the Elixir formatter.
@@ -409,7 +591,7 @@ end
 - Group related functions using `@doc group: "Group Name"`.
 - The maximum text length is 80 characters, and you should aim to adhere to this.
   limit. However, there are special cases where exceeding it is acceptable. For
-  example, you may exceed the limit for a link (e.g., ["my link"](http://github.com/elixir-nebulex))
+  example, you may exceed the limit for a link (e.g., ["my link"](https://github.com/elixir-nebulex))
   or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
   If a code snippet exceeds the 80-character limit by more than 1 or 2 haracters,
   format it using the Elixir formatter.
@@ -470,7 +652,38 @@ end
 - Use nested modules for options, helpers, and internal implementation details.
 - Separate public API from internal implementation.
 
+## Mix Tasks
+
+Nebulex provides `mix nbx.gen.cache` to generate a cache module:
+
+```
+mix nbx.gen.cache -c MyApp.Cache
+```
+
+This generates a cache using `Nebulex.Adapters.Local` by default. For other
+adapters (Partitioned, Multilevel, Coherent), manually update the generated
+module:
+
+```elixir
+# Generated (Local adapter by default)
+defmodule MyApp.Cache do
+  use Nebulex.Cache,
+    otp_app: :my_app,
+    adapter: Nebulex.Adapters.Local
+end
+
+# Manually update for Partitioned
+defmodule MyApp.PartitionedCache do
+  use Nebulex.Cache,
+    otp_app: :my_app,
+    adapter: Nebulex.Adapters.Partitioned,
+    adapter_opts: [primary_storage_adapter: Nebulex.Adapters.Local]
+end
+```
+
 ## Common Pitfalls to Avoid
+
+### General
 
 - **Do NOT** use decorators on multi-clause functions without proper wrapper
   functions.
@@ -483,6 +696,18 @@ end
 - **Do NOT** forget to evict cache references when using `:references` option;
   use TTL or explicit eviction.
 - **Do NOT** implement adapter callbacks without proper error wrapping.
+
+### v3-Specific
+
+- **Do NOT** use `primary_storage_adapter` at the top level; wrap it in
+  `adapter_opts: [primary_storage_adapter: ...]`.
+- **Do NOT** use the deprecated `model` option for multilevel caches; use
+  `inclusion_policy` instead.
+- **Do NOT** use `mix nbx.gen.cache.partitioned` or `mix nbx.gen.cache.multilevel`
+  (they don't exist); use `mix nbx.gen.cache` and manually configure the adapter.
+- **Do NOT** use the old `all/2` callback; use `get_all/2` with query spec instead.
+- **Do NOT** use `:keys` option in decorators; use `key: {:in, keys}` instead.
+- **Do NOT** use `:key_generator` option; use `key: &MyModule.generate_key/1`.
 - **Do NOT** skip telemetry support in adapter implementations.
 - **Do NOT** use pattern matching in test assertions when the full value is
   known.

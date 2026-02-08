@@ -2,7 +2,7 @@ defmodule Nebulex.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-nebulex/nebulex"
-  @version "3.0.0-rc.2"
+  @version "3.0.0-dev"
 
   def project do
     [
@@ -68,7 +68,7 @@ defmodule Nebulex.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
       {:stream_data, "~> 1.2", only: [:dev, :test]},
-      {:mimic, "~> 2.2", only: :test},
+      {:mimic, "~> 2.3", only: :test},
       {:doctor, "~> 0.22", only: [:dev, :test]},
 
       # Benchmark Test
@@ -76,7 +76,7 @@ defmodule Nebulex.MixProject do
       {:benchee_html, "~> 1.0", only: [:dev, :test]},
 
       # Docs
-      {:ex_doc, "~> 0.39", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.40", only: [:dev, :test], runtime: false},
       {:makeup_diff, "~> 0.1", only: [:dev, :test], runtime: false}
     ]
   end
@@ -114,7 +114,7 @@ defmodule Nebulex.MixProject do
     [
       main: "Nebulex",
       source_ref: "v#{@version}",
-      canonical: "http://hexdocs.pm/nebulex",
+      canonical: "https://hexdocs.pm/nebulex",
       source_url: @source_url,
       extra_section: "GUIDES",
       extras: extras(),

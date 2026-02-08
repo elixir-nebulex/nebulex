@@ -19,16 +19,14 @@ defmodule Nebulex do
       elegant way of annotating functions to be cached or evicted. Caching
       decorators also enable the adoption or implementation of cache usage
       patterns such as **Read-through**, **Write-through**, **Cache-as-SoR**,
-      etc. See the [Cache Usage Patterns][cache-patterns] guide.
-
-  [cache-patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.2/cache-usage-patterns.html
+      etc. See the [Cache Usage Patterns](cache-usage-patterns.md) guide.
 
   The following sections will provide an overview of those components and their
   usage. Feel free to access their respective module documentation for more
   specific examples, options, and configurations.
 
   If you want to check a sample application using Nebulex quickly, please check
-  the [getting started guide](http://hexdocs.pm/nebulex/3.0.0-rc.2/getting-started.html).
+  the [getting started guide](getting-started.md).
 
   ## Caches
 
@@ -74,7 +72,7 @@ defmodule Nebulex do
 
   ## Declarative decorator-based caching
 
-  See [Nebulex.Caching](http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.html).
+  See `Nebulex.Caching` for more information.
   """
 
   ## API

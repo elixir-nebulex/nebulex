@@ -128,9 +128,8 @@ if Code.ensure_loaded?(Decorator.Define) do
           # the logic for retrieving the book ...
         end
 
-    > See ["Dynamic caches"][dynamic-caches] for more information.
-
-    [dynamic-caches]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Cache.html#module-dynamic-caches
+    > See ["Dynamic caches"](`m:Nebulex.Cache#module-dynamic-caches`)
+    for more information.
 
     ### Anonymous function
 
@@ -659,8 +658,8 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Further readings
 
-      * [Cache Usage Patterns Guide](http://hexdocs.pm/nebulex/3.0.0-rc.2/cache-usage-patterns.html).
-      * [Declarative Caching Guide](declarative-caching.html).
+      * [Cache Usage Patterns Guide](cache-usage-patterns.md).
+      * [Declarative Caching Guide](declarative-caching.md).
 
     """
 
@@ -2120,12 +2119,19 @@ if Code.ensure_loaded?(Decorator.Define) do
           )
 
         other ->
-          handle_cacheable(other, on_error, block_fun, fn result ->
-            with {:ok, reference} <- eval_cacheable_ref(references, result),
-                 true <- eval_cache_put(cache, reference, result, opts, on_error, match) do
-              :ok = cache_put(cache, key, reference, opts)
-            end
-          end)
+          handle_cacheable(
+            other,
+            on_error,
+            block_fun,
+            &handle_cacheable_ref(&1, cache, key, references, opts, match, on_error)
+          )
+      end
+    end
+
+    defp handle_cacheable_ref(result, cache, key, references, opts, match, on_error) do
+      with {:ok, reference} <- eval_cacheable_ref(references, result),
+           true <- eval_cache_put(cache, reference, result, opts, on_error, match) do
+        :ok = cache_put(cache, key, reference, opts)
       end
     end
 

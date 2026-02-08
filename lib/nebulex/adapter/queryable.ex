@@ -56,9 +56,8 @@ defmodule Nebulex.Adapter.Queryable do
 
   The field `:select` defines the fields of the cached entry to return.
 
-  See [Nebulex.Cache.get_all/2 options][get_all_opts] for the possible values.
-
-  [get_all_opts]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Cache.html#c:get_all/2-options
+  See [Nebulex.Cache.get_all/2 options](`m:Nebulex.Cache#c:get_all/2-options`)
+  for the possible values.
   """
   @type query_meta() :: %{
           op: :get_all | :count_all | :delete_all,

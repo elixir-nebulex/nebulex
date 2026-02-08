@@ -8,13 +8,14 @@ to review the adapter's documentation you're using.
 
 > See `c:Nebulex.Cache.info/2` for more information.
 
-Nebulex also provides a simple implementation
-[`Nebulex.Adapters.Common.Info`][nbx_common_info], which is used by the
-`Nebulex.Adapters.Local` adapter. This implementation uses a Telemetry
-handler to aggregate the stats and keep them updated, therefore, it requires
-`:telemetry` to be available.
+Nebulex also provides a simple implementation `Nebulex.Adapters.Common.Info`,
+which is used by the `Nebulex.Adapters.Local` adapter. This implementation uses
+a Telemetry handler to aggregate the stats and keep them updated, therefore,
+it requires `:telemetry` to be available.
 
-[nbx_common_info]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Adapters.Common.Info.html
+> **Note**: The `:telemetry` dependency is optional but highly recommended
+> for production environments. Add `{:telemetry, "~> 1.0"}` to your `mix.exs`
+> to enable cache metrics and observability.
 
 ## Usage
 

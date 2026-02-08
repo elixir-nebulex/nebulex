@@ -1,14 +1,15 @@
 # Cache Usage Patterns with Caching Decorators
 
 Nebulex supports several common cache access patterns via
-[caching decorators][nbx_caching].
-
-[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html
+[caching decorators](`Nebulex.Caching.Decorators`).
 
 > The following documentation about caching patterns is based on
 > [EHCache Docs][EHCache]
 
 [EHCache]: https://www.ehcache.org/documentation/3.10/caching-patterns.html
+
+> **Note**: Caching decorators require the `:decorator` dependency. Add
+> `{:decorator, "~> 1.4"}` to your `mix.exs`.
 
 ---
 
@@ -228,7 +229,7 @@ For more details and advanced usage, see the Declarative Caching guide.
 Now that you understand the common caching patterns, learn how to implement them
 in your Nebulex applications:
 
-- **[Declarative Caching with Decorators](http://hexdocs.pm/nebulex/3.0.0-rc.2/declarative-caching.html)**
+- **[Declarative Caching with Decorators](declarative-caching.md)**
   - Comprehensive guide to using `@cacheable`, `@cache_put`, and `@cache_evict`
     decorators with real-world examples and advanced patterns
   - Reference documentation for all decorator options and behaviors

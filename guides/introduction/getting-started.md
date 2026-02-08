@@ -49,18 +49,16 @@ end
 To provide more flexibility and load only the needed dependencies, Nebulex makes
 all dependencies optional, including the adapters. For example:
 
-  * **For enabling [declarative decorator-based caching][nbx_caching]**:
+  * **For enabling [declarative decorator-based caching](`Nebulex.Caching`)**:
     Add `:decorator` to the dependency list.
 
   * **For enabling Telemetry events**: Add `:telemetry` to the dependency list.
-    See the [Info API guide](http://hexdocs.pm/nebulex/3.0.0-rc.2/info-api.html)
-    for monitoring cache stats and metrics.
+    See the [Info API guide](info-api.md) for monitoring cache stats and
+    metrics.
 
   * **For intensive workloads** when using `Nebulex.Adapters.Local` adapter:
     You may want to use `:shards` as the backend for partitioned ETS tables.
     In such cases, add `:shards` to the dependency list.
-
-[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.html
 
 Install these dependencies by running:
 
@@ -990,28 +988,41 @@ end
 ```
 
 Let's set up the partitioned cache by using the `mix` task
-`mix nbx.gen.cache.partitioned`:
+`mix nbx.gen.cache`:
 
 ```
-mix nbx.gen.cache.partitioned -c Blog.PartitionedCache
+mix nbx.gen.cache -c Blog.PartitionedCache
 ```
 
-As we saw previously, this command will generate the cache in
-`lib/bolg/partitioned_cache.ex` (in this case using the partitioned adapter)
-module along with the initial configuration in `config/config.exs`.
+This command generates the cache module in `lib/blog/partitioned_cache.ex`
+along with the initial configuration in `config/config.exs`. By default,
+the generated cache uses `Nebulex.Adapters.Local`. To use the partitioned
+adapter, update the generated cache module as follows:
 
-The cache:
+```elixir
+defmodule Blog.PartitionedCache do
+  use Nebulex.Cache,
+    otp_app: :blog,
+    adapter: Nebulex.Adapters.Partitioned
+end
+```
+
+The partitioned adapter uses `Nebulex.Adapters.Local` as primary storage
+by default. To use a different adapter, provide the
+`adapter_opts: [primary_storage_adapter: ...]` option:
 
 ```elixir
 defmodule Blog.PartitionedCache do
   use Nebulex.Cache,
     otp_app: :blog,
     adapter: Nebulex.Adapters.Partitioned,
-    primary_storage_adapter: Nebulex.Adapters.Local
+    adapter_opts: [primary_storage_adapter: Nebulex.Adapters.Cachex]
 end
 ```
 
-And the config:
+Then update the generated configuration. The partitioned adapter stores
+data in a local cache on each node, so the configuration options must be
+wrapped in the `primary: [...]` option:
 
 ```elixir
 config :blog, Blog.PartitionedCache,
@@ -1068,18 +1079,9 @@ Nebulex also provides the adapter `Nebulex.Adapters.Multilevel`, which allows to
 setup a multi-level caching hierarchy. The adapter is also included in the
 `:nebulex_distributed` dependency.
 
-Let's set up the multilevel cache by using the `mix` task
-`mix nbx.gen.cache.multilevel`:
-
-```
-mix nbx.gen.cache.multilevel -c Blog.NearCache
-```
-
-By default, the command generates a 2-level near-cache topology. The first
-level or `L1` using `Nebulex.Adapters.Local` adapter, and the second one or `L2`
-using `Nebulex.Adapters.Partitioned` adapter.
-
-The generated cache module `lib/blog/near_cache.ex`:
+Let's set up a multilevel cache. Unlike the local adapter, the multilevel
+adapter requires defining the cache levels manually. Create the cache module
+`lib/blog/near_cache.ex` with the following structure:
 
 ```elixir
 defmodule Blog.NearCache do
@@ -1089,14 +1091,14 @@ defmodule Blog.NearCache do
 
   ## Cache Levels
 
-  # Default auto-generated L1 cache (local)
+  # L1 cache (local)
   defmodule L1 do
     use Nebulex.Cache,
       otp_app: :blog,
       adapter: Nebulex.Adapters.Local
   end
 
-  # Default auto-generated L2 cache (partitioned cache)
+  # L2 cache (partitioned cache)
   defmodule L2 do
     use Nebulex.Cache,
       otp_app: :blog,
@@ -1105,13 +1107,16 @@ defmodule Blog.NearCache do
 end
 ```
 
-And the configuration (`config/config.exs`):
+This defines a 2-level near-cache topology with `L1` using the local adapter
+and `L2` using the partitioned adapter.
+
+Then add the configuration to `config/config.exs`:
 
 ```elixir
 config :blog, Blog.NearCache,
-  model: :inclusive,
+  inclusion_policy: :inclusive,
   levels: [
-    # Default auto-generated L1 cache (local)
+    # L1 cache (local)
     {
       Blog.NearCache.L1,
       # GC interval for pushing new generation: 12 hrs
@@ -1119,7 +1124,7 @@ config :blog, Blog.NearCache,
       # Max 1 million entries in cache
       max_size: 1_000_000
     },
-    # Default auto-generated L2 cache (partitioned cache)
+    # L2 cache (partitioned cache)
     {
       Blog.NearCache.L2,
       primary: [
@@ -1164,6 +1169,4 @@ To learn more about how multilevel-cache works, please check
 
 ## Next
 
-* [Decorators-based DSL for cache usage patterns][cache-usage-patterns].
-
-[cache-usage-patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.2/cache-usage-patterns.html
+* [Decorators-based DSL for cache usage patterns](cache-usage-patterns.md).

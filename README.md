@@ -8,10 +8,10 @@
 
 ---
 
-![CI](http://github.com/elixir-nebulex/nebulex/workflows/CI/badge.svg)
+![CI](https://github.com/elixir-nebulex/nebulex/workflows/CI/badge.svg)
 [![Codecov](http://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)](http://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)
 [![Hex.pm](http://img.shields.io/hexpm/v/nebulex.svg)](http://hex.pm/packages/nebulex)
-[![Documentation](http://img.shields.io/badge/Documentation-ff69b4)](http://hexdocs.pm/nebulex)
+[![Documentation](http://img.shields.io/badge/Documentation-ff69b4)](https://hexdocs.pm/nebulex)
 
 ## 🚀 About
 
@@ -33,9 +33,9 @@ among others.
 [cachex]: https://github.com/whitfin/cachex
 [redis]: https://redis.io/
 [memcached]: https://memcached.org/
-[nbx_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.Caching.Decorators.html
-[info_api]: http://hexdocs.pm/nebulex/3.0.0-rc.2/info-api.html
-[cache_patterns]: http://hexdocs.pm/nebulex/3.0.0-rc.2/cache-usage-patterns.html
+[nbx_caching]: https://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html
+[info_api]: https://hexdocs.pm/nebulex/info-api.html
+[cache_patterns]: https://hexdocs.pm/nebulex/cache-usage-patterns.html
 [cache_topologies]: https://docs.oracle.com/en/middleware/fusion-middleware/coherence/14.1.2/develop-applications/introduction-coherence-caches.html
 
 ---
@@ -46,8 +46,8 @@ among others.
 > version on Hex. Please refer to the [getting started guide][getting_started]
 > and the [official documentation][docs] for the latest stable release.
 
-[getting_started]: http://hexdocs.pm/nebulex/getting-started.html
-[docs]: http://hexdocs.pm/nebulex/Nebulex.html
+[getting_started]: https://hexdocs.pm/nebulex/getting-started.html
+[docs]: https://hexdocs.pm/nebulex/Nebulex.html
 
 ---
 
@@ -59,7 +59,7 @@ dependencies in your `mix.exs` file.
 > _**For more information about available adapters, check out the
 > [Nebulex adapters][nbx_adapters] guide.**_
 
-[nbx_adapters]: http://hexdocs.pm/nebulex/3.0.0-rc.2/nbx-adapters.html
+[nbx_adapters]: https://hexdocs.pm/nebulex/nbx-adapters.html
 
 For example, to use the Generational Local Cache
 (`Nebulex.Adapters.Local` adapter), add the following to your `mix.exs`:
@@ -67,10 +67,10 @@ For example, to use the Generational Local Cache
 ```elixir
 def deps do
   [
-    {:nebulex, "~> 3.0.0-rc.2"},
-    {:nebulex_local, "~> 3.0.0-rc.2"}, # Generational local cache adapter
-    {:decorator, "~> 1.4"},            # Required for caching decorators
-    {:telemetry, "~> 1.3"}             # Required for telemetry events
+    {:nebulex, "~> 3.0"},
+    {:nebulex_local, "~> 3.0"}, # Generational local cache adapter
+    {:decorator, "~> 1.4"},     # Required for caching decorators
+    {:telemetry, "~> 1.3"}      # Required for telemetry events
   ]
 end
 ```
@@ -122,10 +122,10 @@ iex> MyApp.Cache.fetch("foo")
 
 For more detailed information, see the
 [getting started guide][getting_started-rc1] and
-[online documentation][docs-rc1].
+[online documentation][hex-docs].
 
-[getting_started-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.2/getting-started.html
-[docs-rc1]: http://hexdocs.pm/nebulex/3.0.0-rc.2/Nebulex.html
+[getting_started-rc1]: https://hexdocs.pm/nebulex/getting-started.html
+[hex-docs]: https://hexdocs.pm/nebulex/Nebulex.html
 
 ---
 
@@ -230,9 +230,9 @@ end
 * [Examples][examples] - Example applications.
 
 [examples]: https://github.com/elixir-nebulex/nebulex_examples
-[upgrading_to_v3]: http://hexdocs.pm/nebulex/3.0.0-rc.2/v3-0.html
+[upgrading_to_v3]: https://hexdocs.pm/nebulex/v3-0.html
 [nebulex_streams]: https://github.com/elixir-nebulex/nebulex_streams
-[declarative_caching]: http://hexdocs.pm/nebulex/3.0.0-rc.2/declarative-caching.html
+[declarative_caching]: https://hexdocs.pm/nebulex/declarative-caching.html
 
 ---
 

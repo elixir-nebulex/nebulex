@@ -291,7 +291,7 @@ Now test to see if the adapter loads:
 mix test
 == Compilation error in file test/support/test_cache.ex ==
 ** (ArgumentError) expected :adapter option given to Nebulex.Cache to list Nebulex.Adapter.KV as a behaviour
-    (nebulex 3.0.0-rc.2) lib/nebulex/cache/supervisor.ex:50: Nebulex.Cache.Supervisor.compile_config/1
+    (nebulex 3.0.0) lib/nebulex/cache/supervisor.ex:50: Nebulex.Cache.Supervisor.compile_config/1
     test/support/test_cache.ex:2: (module)
 ```
 
@@ -622,6 +622,6 @@ Now that you have a working adapter, you can:
   - Shows how to integrate with an external backend
   - Reference for handling complex operations with actual persistence
 
-- **[Adapter Behavior Documentation](http://hexdocs.pm/nebulex/Nebulex.Adapter.html)**
+- **[Adapter Behavior Documentation](`Nebulex.Adapter`)**
   - Complete API reference for all adapter behaviors and callbacks
   - Detailed specifications for KV, Queryable, Transaction, Info, and Observable

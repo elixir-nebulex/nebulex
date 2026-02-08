@@ -37,7 +37,7 @@ defmodule Nebulex.Cache do
 
   #{Nebulex.Cache.Options.start_link_options_docs()}
 
-  [local_adapter]: http://hexdocs.pm/nebulex_local/3.0.0-rc.2/Nebulex.Adapters.Local.html
+  [local_adapter]: https://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.html
 
   ## Shared options
 
@@ -123,9 +123,6 @@ defmodule Nebulex.Cache do
         &MyApp.Telemetry.handle_event/4,
         :no_config
       )
-
-  See the [telemetry documentation](http://hexdocs.pm/nebulex/3.0.0-rc.2/telemetry.html)
-  for more information.
 
   The following are the events you should expect from Nebulex. All examples
   below consider a cache named `MyApp.Cache`:
@@ -2456,7 +2453,7 @@ defmodule Nebulex.Cache do
   `Nebulex.Adapters.Local` adapter provides several advanced features for more
   sophisticated cache management, including tags, references, query helpers,
   and more. For detailed information on all available capabilities, see the
-  [Local Adapter documentation](https://hexdocs.pm/nebulex_local/3.0.0-rc.2/Nebulex.Adapters.Local.html).
+  [Local Adapter documentation](https://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.html).
   """
   @doc group: "Query API"
   @callback get_all(query_spec(), opts()) :: ok_error_tuple([any()])

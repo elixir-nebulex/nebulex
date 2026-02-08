@@ -8,16 +8,7 @@ defmodule Nebulex.CacheErrorTest do
 
   import Mimic, only: [verify_on_exit!: 1, stub: 3]
 
-  setup :verify_on_exit!
-
-  setup do
-    Nebulex.Cache.Registry
-    |> stub(:lookup, fn _ ->
-      %{adapter: Nebulex.FakeAdapter, telemetry: true, telemetry_prefix: [:nebulex, :test]}
-    end)
-
-    {:ok, cache: Nebulex.TestCache.Cache, name: __MODULE__}
-  end
+  setup [:verify_on_exit!, :setup_cache]
 
   describe "put!/3" do
     test "raises an error due to a timeout", %{cache: cache} do
@@ -44,5 +35,14 @@ defmodule Nebulex.CacheErrorTest do
       assert cache.fetch_or_store(:error, fn -> {:ok, "value"} end) ==
                {:error, %Nebulex.Error{reason: :error}}
     end
+  end
+
+  defp setup_cache(_ctx) do
+    Nebulex.Cache.Registry
+    |> stub(:lookup, fn _ ->
+      %{adapter: Nebulex.FakeAdapter, telemetry: true, telemetry_prefix: [:nebulex, :test]}
+    end)
+
+    {:ok, cache: Nebulex.TestCache.Cache, name: __MODULE__}
   end
 end
