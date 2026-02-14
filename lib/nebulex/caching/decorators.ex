@@ -663,75 +663,6 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     """
 
-    defmodule Context do
-      @moduledoc """
-      Decorator context.
-      """
-
-      @typedoc """
-      Decorator context type.
-
-      The decorator context defines the following keys:
-
-        * `:decorator` - Decorator's name.
-        * `:module` - The invoked module.
-        * `:function_name` - The invoked function name
-        * `:arity` - The arity of the invoked function.
-        * `:args` - The arguments that are given to the invoked function.
-
-      ## Caveats about the `:args`
-
-      The following are some caveats about the context's `:args`
-      to keep in mind:
-
-        * Only arguments explicitly assigned to a variable will be included.
-        * Ignored or underscored arguments will be ignored.
-        * Pattern-matching expressions without a variable assignment will be
-          ignored. Therefore, if there is a pattern-matching and you want to
-          include its value, it has to be explicitly assigned to a variable.
-
-      For example, suppose you have a module with a decorated function:
-
-          defmodule MyApp.SomeModule do
-            use Nebulex.Caching
-
-            alias MyApp.Cache
-
-            @decorate cacheable(cache: Cache, key: &__MODULE__.key_generator/1)
-            def get_something(x, _y, _, {_, _}, [_, _], %{a: a}, %{} = z) do
-              # Function's logic
-            end
-
-            def key_generator(context) do
-              # Key generation logic
-            end
-          end
-
-      The generator will be invoked like so:
-
-          key_generator(%Nebulex.Caching.Decorators.Context{
-            decorator: :cacheable,
-            module: MyApp.SomeModule,
-            function_name: :get_something,
-            arity: 7,
-            args: [x, z]
-          })
-
-      As you may notice, only the arguments `x` and `z` are included in the
-      context args when calling the `key_generator/1` function.
-      """
-      @type t() :: %__MODULE__{
-              decorator: :cacheable | :cache_evict | :cache_put,
-              module: module(),
-              function_name: atom(),
-              arity: non_neg_integer(),
-              args: [any()]
-            }
-
-      # Context struct
-      defstruct [:decorator, :module, :function_name, arity: 0, args: []]
-    end
-
     # Decorator definitions
     use Decorator.Define,
       cacheable: 0,
@@ -743,6 +674,8 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     import Nebulex.Utils, only: [get_option: 5]
     import Record
+
+    alias __MODULE__.{Context, Runtime}
 
     ## Records
 
@@ -849,9 +782,6 @@ if Code.ensure_loaded?(Decorator.Define) do
             keyref()
             | (result :: any() -> keyref() | any())
             | (result :: any(), context() -> keyref() | any())
-
-    # Decorator context key
-    @decorator_context_key {__MODULE__, :decorator_context}
 
     ## Decorator API
 
@@ -1853,15 +1783,15 @@ if Code.ensure_loaded?(Decorator.Define) do
         cache = unquote(cache_var)
         opts = unquote(opts_var)
 
-        # Set the decorator context
-        _ignore = Process.put(unquote(@decorator_context_key), unquote(context))
+        # Push the decorator context onto the stack
+        Context.push(unquote(context))
 
         try do
           # Execute the decorated function's code block
           unquote(action_block)
         after
-          # Reset decorator context
-          Process.delete(unquote(@decorator_context_key))
+          # Pop the decorator context from the stack
+          Context.pop()
         end
       end
     end
@@ -1949,7 +1879,7 @@ if Code.ensure_loaded?(Decorator.Define) do
       references = Keyword.get(attrs, :references)
 
       quote do
-        unquote(__MODULE__).eval_cacheable(
+        Runtime.eval_cacheable(
           cache,
           unquote(keygen),
           unquote(references),
@@ -1965,7 +1895,7 @@ if Code.ensure_loaded?(Decorator.Define) do
       quote do
         result = unquote(block)
 
-        unquote(__MODULE__).eval_cache_put(
+        Runtime.eval_cache_put(
           cache,
           unquote(keygen),
           result,
@@ -1984,7 +1914,7 @@ if Code.ensure_loaded?(Decorator.Define) do
       key = cache_evict_key(attrs, keygen)
 
       quote do
-        unquote(__MODULE__).eval_cache_evict(
+        Runtime.eval_cache_evict(
           cache,
           unquote(key),
           unquote(before_invocation?),
@@ -2013,9 +1943,9 @@ if Code.ensure_loaded?(Decorator.Define) do
       key = cache_evict_key(attrs, keygen)
 
       quote do
-        context = unquote(__MODULE__).get_context()
-        cache = unquote(__MODULE__).eval_cache(cache, context)
-        key = unquote(__MODULE__).eval_key(unquote(key), context)
+        context = Context.get()
+        cache = Runtime.eval_cache(cache, context)
+        key = Runtime.eval_key(unquote(key), context)
 
         txn_keys =
           case key do
@@ -2027,7 +1957,7 @@ if Code.ensure_loaded?(Decorator.Define) do
           end
 
         result =
-          unquote(__MODULE__).run_cmd(
+          Runtime.run_cmd(
             cache,
             :transaction,
             [fn -> unquote(block) end, [keys: txn_keys]],
@@ -2040,367 +1970,6 @@ if Code.ensure_loaded?(Decorator.Define) do
       end
     end
 
-    ## Internal API
-
-    @doc """
-    Convenience function for wrapping and/or encapsulating
-    the **cacheable** decorator logic.
-
-    > #### NOTE {: .info}
-    >
-    > _**This function is for internal purposes only.**_
-    """
-    @doc group: "Internal API"
-    @spec eval_cacheable(any(), any(), references(), keyword(), match(), on_error(), fun()) :: any()
-    def eval_cacheable(cache, key, references, opts, match, on_error, block_fun) do
-      context = get_context()
-      cache = eval_cache(cache, context)
-      key = eval_key(key, context)
-
-      do_eval_cacheable(cache, key, references, opts, match, on_error, block_fun)
-    end
-
-    defp do_eval_cacheable(cache, key, nil, opts, match, on_error, block_fun) do
-      do_apply(cache, :fetch, [key, opts])
-      |> handle_cacheable(
-        on_error,
-        block_fun,
-        &__MODULE__.eval_cache_put(cache, key, &1, opts, on_error, match)
-      )
-    end
-
-    defp do_eval_cacheable(
-           ref_cache,
-           ref_key,
-           {:"$nbx_parent_keyref", keyref(cache: cache, key: key)},
-           opts,
-           match,
-           on_error,
-           block_fun
-         ) do
-      do_apply(ref_cache, :fetch, [ref_key, opts])
-      |> handle_cacheable(
-        on_error,
-        block_fun,
-        fn value ->
-          with false <- do_eval_cache_put(ref_cache, ref_key, value, opts, on_error, match) do
-            # The match returned `false`, remove the parent's key reference
-            _ignore = do_apply(cache, :delete, [key])
-
-            false
-          end
-        end,
-        fn value ->
-          case eval_function(match, value) do
-            false ->
-              # Remove the parent's key reference
-              _ignore = do_apply(cache, :delete, [key])
-
-              block_fun.()
-
-            _else ->
-              value
-          end
-        end
-      )
-    end
-
-    defp do_eval_cacheable(cache, key, references, opts, match, on_error, block_fun) do
-      case do_apply(cache, :fetch, [key, opts]) do
-        {:ok, keyref(cache: ref_cache, key: ref_key)} ->
-          eval_cacheable(
-            ref_cache || cache,
-            ref_key,
-            {:"$nbx_parent_keyref", keyref(cache: cache, key: key)},
-            opts,
-            match,
-            on_error,
-            block_fun
-          )
-
-        other ->
-          handle_cacheable(
-            other,
-            on_error,
-            block_fun,
-            &handle_cacheable_ref(&1, cache, key, references, opts, match, on_error)
-          )
-      end
-    end
-
-    defp handle_cacheable_ref(result, cache, key, references, opts, match, on_error) do
-      with {:ok, reference} <- eval_cacheable_ref(references, result),
-           true <- eval_cache_put(cache, reference, result, opts, on_error, match) do
-        :ok = cache_put(cache, key, reference, opts)
-      end
-    end
-
-    defp eval_cacheable_ref(references, result) do
-      case eval_function(references, result) do
-        nil -> :halt
-        keyref() = ref -> {:ok, ref}
-        referenced_key -> {:ok, keyref(key: referenced_key)}
-      end
-    end
-
-    # Handle fetch result
-    defp handle_cacheable(result, on_error, block_fn, key_err_fn, on_ok \\ nil)
-
-    defp handle_cacheable({:ok, value}, _on_error, _block_fn, _key_err_fn, nil) do
-      value
-    end
-
-    defp handle_cacheable({:ok, value}, _on_error, _block_fn, _key_err_fn, on_ok) do
-      on_ok.(value)
-    end
-
-    defp handle_cacheable({:error, %Nebulex.KeyError{}}, _on_error, block_fn, key_err_fn, _on_ok) do
-      block_fn.()
-      |> tap(key_err_fn)
-    end
-
-    defp handle_cacheable({:error, _}, :nothing, block_fn, _key_err_fn, _on_ok) do
-      block_fn.()
-    end
-
-    defp handle_cacheable({:error, reason}, :raise, _block_fn, _key_err_fn, _on_ok) do
-      raise reason
-    end
-
-    @doc """
-    Convenience function for wrapping and/or encapsulating
-    the **cache_evict** decorator logic.
-
-    > #### NOTE {: .info}
-    >
-    > _**This function is for internal purposes only.**_
-    """
-    @doc group: "Internal API"
-    @spec eval_cache_evict(any(), any(), boolean(), boolean(), on_error(), fun()) :: any()
-    def eval_cache_evict(cache, key, before?, all_entries?, on_error, block_fun) do
-      context = get_context()
-      cache = eval_cache(cache, context)
-      key = eval_key(key, context)
-
-      do_eval_cache_evict(cache, key, before?, all_entries?, on_error, block_fun)
-    end
-
-    defp do_eval_cache_evict(cache, key, true, all_entries?, on_error, block_fun) do
-      _ignore = do_evict(all_entries?, cache, key, on_error)
-
-      block_fun.()
-    end
-
-    defp do_eval_cache_evict(cache, key, false, all_entries?, on_error, block_fun) do
-      result = block_fun.()
-
-      _ignore = do_evict(all_entries?, cache, key, on_error)
-
-      result
-    end
-
-    defp do_evict(false, cache, {:in, keys}, on_error) do
-      keys
-      |> group_by_cache(cache)
-      |> Enum.each(fn
-        {cache, [key]} ->
-          run_cmd(cache, :delete, [key, []], on_error)
-
-        {cache, keys} ->
-          run_cmd(cache, :delete_all, [[in: keys]], on_error)
-      end)
-    end
-
-    defp do_evict(false, cache, {:query, _} = q, on_error) do
-      run_cmd(cache, :delete_all, [[q]], on_error)
-    end
-
-    defp do_evict(false, cache, {:query, q, k}, on_error) do
-      _ignore = run_cmd(cache, :delete_all, [[{:query, q}]], on_error)
-
-      do_evict(false, cache, k, on_error)
-    end
-
-    defp do_evict(false, cache, key, on_error) do
-      run_cmd(cache, :delete, [key, []], on_error)
-    end
-
-    defp do_evict(true, cache, _key, on_error) do
-      run_cmd(cache, :delete_all, [], on_error)
-    end
-
-    @doc """
-    Convenience function for wrapping and/or encapsulating
-    the **cache_put** decorator logic.
-
-    > #### NOTE {: .info}
-    >
-    > _**This function is for internal purposes only.**_
-    """
-    @doc group: "Internal API"
-    @spec eval_cache_put(any(), any(), any(), keyword(), on_error(), match()) :: any()
-    def eval_cache_put(cache, key, value, opts, on_error, match) do
-      context = get_context()
-      cache = eval_cache(cache, context)
-      key = eval_key(key, context)
-
-      do_eval_cache_put(cache, key, value, opts, on_error, match)
-    end
-
-    defp do_eval_cache_put(
-           cache,
-           keyref(cache: ref_cache, key: ref_key, ttl: ttl),
-           value,
-           opts,
-           on_error,
-           match
-         ) do
-      opts = if ttl, do: Keyword.put(opts, :ttl, ttl), else: opts
-
-      eval_cache_put(ref_cache || cache, ref_key, value, opts, on_error, match)
-    end
-
-    defp do_eval_cache_put(cache, key, value, opts, on_error, match) do
-      case eval_function(match, value) do
-        {true, cache_value} ->
-          _ignore = run_cmd(__MODULE__, :cache_put, [cache, key, cache_value, opts], on_error)
-
-          true
-
-        {true, cache_value, new_opts} ->
-          _ignore =
-            run_cmd(
-              __MODULE__,
-              :cache_put,
-              [cache, key, cache_value, Keyword.merge(opts, new_opts)],
-              on_error
-            )
-
-          true
-
-        true ->
-          _ignore = run_cmd(__MODULE__, :cache_put, [cache, key, value, opts], on_error)
-
-          true
-
-        false ->
-          false
-      end
-    end
-
-    @doc """
-    Convenience function for the `cache_put` decorator.
-
-    > #### NOTE {: .info}
-    >
-    > _**This function is for internal purposes only.**_
-    """
-    @doc group: "Internal API"
-    @spec cache_put(cache_value(), {:in, [any()]} | any(), any(), keyword()) :: :ok
-    def cache_put(cache, key, value, opts)
-
-    def cache_put(cache, {:in, keys}, value, opts) do
-      keys
-      |> group_by_cache(cache)
-      |> Enum.each(fn
-        {cache, [key]} ->
-          do_apply(cache, :put, [key, value, opts])
-
-        {cache, keys} ->
-          do_apply(cache, :put_all, [Enum.map(keys, &{&1, value}), opts])
-      end)
-    end
-
-    def cache_put(cache, key, value, opts) do
-      do_apply(cache, :put, [key, value, opts])
-    end
-
-    @doc """
-    Convenience function for evaluating the `cache` argument.
-
-    > #### NOTE {: .info}
-    >
-    > _**This function is for internal purposes only.**_
-    """
-    @doc group: "Internal API"
-    @spec eval_cache(any(), context()) :: cache_value()
-    def eval_cache(cache, ctx)
-
-    def eval_cache(cache, _ctx) when is_atom(cache), do: cache
-    def eval_cache(dynamic_cache() = cache, _ctx), do: cache
-    def eval_cache(cache, ctx) when is_function(cache, 1), do: cache.(ctx)
-    def eval_cache(cache, _ctx) when is_function(cache, 0), do: cache.()
-    def eval_cache(cache, _ctx), do: raise_invalid_cache(cache)
-
-    @doc """
-    Convenience function for evaluating the `key` argument.
-
-    > #### NOTE {: .info}
-    >
-    > _**This function is for internal purposes only.**_
-    """
-    @doc group: "Internal API"
-    @spec eval_key(any(), context()) :: any()
-    def eval_key(key, ctx)
-
-    # cache_evict: only a query is provided
-    def eval_key({:"$nbx_query", q}, ctx) do
-      {:query, eval_key(q, ctx)}
-    end
-
-    # cache_evict: a query and a key are provided
-    def eval_key({:"$nbx_query", q, k}, ctx) do
-      {:query, eval_key(q, ctx), eval_key(k, ctx)}
-    end
-
-    # The key is a function that expects the context
-    def eval_key(key, ctx) when is_function(key, 1) do
-      key.(ctx)
-    end
-
-    # The key is a function that expects no arguments
-    def eval_key(key, _ctx) when is_function(key, 0) do
-      key.()
-    end
-
-    # The key is a term
-    def eval_key(key, _ctx) do
-      key
-    end
-
-    @doc """
-    Convenience function for running a cache command.
-
-    > #### NOTE {: .info}
-    >
-    > _**This function is for internal purposes only.**_
-    """
-    @doc group: "Internal API"
-    @spec run_cmd(module(), atom(), [any()], on_error()) :: any()
-    def run_cmd(cache, fun, args, on_error)
-
-    def run_cmd(cache, fun, args, :nothing) do
-      do_apply(cache, fun, args)
-    end
-
-    def run_cmd(cache, fun, args, :raise) do
-      with {:error, reason} <- do_apply(cache, fun, args) do
-        raise reason
-      end
-    end
-
-    @doc """
-    Convenience function for getting the decorator context.
-
-    > #### NOTE {: .info}
-    >
-    > _**This function is for internal purposes only.**_
-    """
-    @doc group: "Internal API"
-    @compile inline: [get_context: 0]
-    @spec get_context() :: context() | nil
-    def get_context, do: Process.get(@decorator_context_key)
-
     ## Private functions
 
     defp on_error_opt(attrs, default) do
@@ -2409,56 +1978,6 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     defp get_boolean(attrs, key) do
       get_option(attrs, key, "a boolean", &Kernel.is_boolean/1, false)
-    end
-
-    defp do_apply(dynamic_cache(cache: cache, name: name), fun, args) do
-      default_dynamic_cache = cache.get_dynamic_cache()
-
-      try do
-        _ignore = cache.put_dynamic_cache(name)
-
-        apply(cache, fun, args)
-      after
-        _ignore = cache.put_dynamic_cache(default_dynamic_cache)
-      end
-    end
-
-    defp do_apply(mod, fun, args) do
-      apply(mod, fun, args)
-    end
-
-    defp eval_function(fun, arg) when is_function(fun, 1) do
-      fun.(arg)
-    end
-
-    defp eval_function(fun, arg) when is_function(fun, 2) do
-      fun.(arg, get_context())
-    end
-
-    defp eval_function(other, _arg) do
-      other
-    end
-
-    defp group_by_cache(keys, default_cache) do
-      Enum.group_by(
-        keys,
-        fn
-          keyref(cache: cache) when not is_nil(cache) -> cache
-          _else -> default_cache
-        end,
-        fn
-          keyref(key: key) -> key
-          key -> key
-        end
-      )
-    end
-
-    @compile inline: [raise_invalid_cache: 1]
-    @spec raise_invalid_cache(any()) :: no_return()
-    defp raise_invalid_cache(cache) do
-      raise ArgumentError,
-            "invalid value for :cache option: expected " <>
-              "t:Nebulex.Caching.Decorators.cache/0, got: #{inspect(cache)}"
     end
   end
 end

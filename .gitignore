@@ -39,5 +39,6 @@ erl_crash.dump
 .sobelow*
 /config
 
-# Claude Code
+# AI agent files
+AGENTS.md
 CLAUDE.md

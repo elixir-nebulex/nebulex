@@ -123,7 +123,7 @@ defmodule Nebulex.MixProject do
         # Caching decorators
         group_for_function("Decorator API"),
         group_for_function("Decorator Helpers"),
-        group_for_function("Internal API"),
+        group_for_function("Decorator Advanced Functions"),
 
         # Cache API
         group_for_function("User callbacks"),

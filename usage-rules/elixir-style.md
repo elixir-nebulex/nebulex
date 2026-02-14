@@ -307,6 +307,110 @@ The rules in this section may not be applied by the code formatter, but they are
   defguard is_very_cool(var) when var == "very cool"
   ```
 
+### Comments
+
+- Write expressive code and try to convey your program's intention through control-flow, structure and naming.
+
+- Comments longer than a word are capitalized, and sentences use punctuation. Use one space after periods.
+
+```elixir
+# not preferred
+# these lowercase comments are missing punctuation
+
+# preferred
+# Capitalization example
+# Use punctuation for complete sentences.
+```
+
+- Limit comment lines to 80 characters.
+
+#### Comment Annotations
+
+- Annotations should usually be written on the line immediately above the relevant code.
+
+- The annotation keyword is uppercase, and is followed by a colon and a space, then a note describing the problem.
+
+```elixir
+# TODO: Deprecate in v1.5.
+def some_function(arg), do: {:ok, arg}
+```
+
+- In cases where the problem is so obvious that any documentation would be redundant, annotations may be left with no note. This usage should be the exception and not the rule.
+
+```elixir
+start_task()
+
+# FIXME
+Process.sleep(5000)
+```
+
+- Use `TODO` to note missing features or functionality that should be added at a later date.
+
+- Use `FIXME` to note broken code that needs to be fixed.
+
+- Use `OPTIMIZE` to note slow or inefficient code that may cause performance problems.
+
+- Use `HACK` to note code smells where questionable coding practices were used and should be refactored away.
+
+- Use `REVIEW` to note anything that should be looked at to confirm it is working as intended. For example: `REVIEW: Are we sure this is how the client does X currently?`
+
+- Use other custom annotation keywords if it feels appropriate, but be sure to document them in your project's `README` or similar.
+
+### Comment Constants
+
+- When defining a constant, pick a descriptive name that reflects the intention or usage of the constant and add a comment with a short description.
+
+**Not preferred:**
+
+```elixir
+@retries 10
+```
+
+**Preferred:**
+
+```elixir
+# Default HTTP retries
+@http_retries 10
+```
+
+- When the constant is a timeout in milliseconds, use `:timer` module instead of explicit value (e.g., `:timer.seconds/1`, `:timer.minutes/1`, `:timer.hours/1`).
+
+**Not preferred:**
+
+```elixir
+# Default HTTP request timeout in milliseconds
+@http_rrequest_timeout 10_000
+```
+
+**Preferred:**
+
+```elixir
+# Default HTTP request timeout in milliseconds
+@http_rrequest_timeout :timer.seconds(10)
+```
+
+- When the constant is a list of atoms or strings, a regex, or anything that can be expressed using a "Sigils", then use "Sigils".
+
+**Not preferred:**
+
+```elixir
+# User types
+@user_types [:admin, :editor, :customer]
+
+# Supported country codes
+@user_types ["US", "ES", "CO"]
+```
+
+**Preferred:**
+
+```elixir
+# User types
+@user_types ~w(admin editor customer)a
+
+# Supported country codes
+@user_types ~w(US ES CO)
+```
+
 ### Modules
 
 - List module attributes, directives, and macros in the following order:

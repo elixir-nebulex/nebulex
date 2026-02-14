@@ -1,6 +1,8 @@
 defmodule Nebulex.CachingTest do
   use ExUnit.Case, async: true
 
+  doctest Nebulex.Caching.Decorators.Context
+
   defmodule Cache do
     @moduledoc false
     use Nebulex.Cache,
@@ -929,6 +931,25 @@ defmodule Nebulex.CachingTest do
     end
   end
 
+  describe "nested decorators" do
+    test "inner decorator does not corrupt the outer decorator context" do
+      refute Cache.get!(:outer)
+      refute Cache.get!(:inner)
+
+      assert nested_outer(:outer) == {:outer, :inner}
+
+      assert Cache.get!(:outer) == {:outer, :inner}
+      assert Cache.get!(:inner) == :inner
+    end
+
+    test "inner decorator works independently" do
+      refute Cache.get!(:solo)
+
+      assert nested_inner(:solo) == :solo
+      assert Cache.get!(:solo) == :solo
+    end
+  end
+
   describe "option :cache raises an exception" do
     test "due to invalid cache value" do
       assert_raise ArgumentError, ~r/invalid value for :cache option/, fn ->
@@ -1152,6 +1173,20 @@ defmodule Nebulex.CachingTest do
 
   def multiple_clauses(x, y) do
     {x, y}
+  end
+
+  ## Nested decorators
+
+  @decorate cacheable(key: x)
+  def nested_outer(x) do
+    inner = nested_inner(:inner)
+
+    {x, inner}
+  end
+
+  @decorate cacheable(key: x)
+  def nested_inner(x) do
+    x
   end
 
   ## Custom key generation
