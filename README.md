@@ -9,7 +9,7 @@
 ---
 
 ![CI](https://github.com/elixir-nebulex/nebulex/workflows/CI/badge.svg)
-[![Codecov](http://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)](http://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)
+[![Codecov](http://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)](http://codecov.io/gh/elixir-nebulex/nebulex)
 [![Hex.pm](http://img.shields.io/hexpm/v/nebulex.svg)](http://hex.pm/packages/nebulex)
 [![Documentation](http://img.shields.io/badge/Documentation-ff69b4)](https://hexdocs.pm/nebulex)
 
