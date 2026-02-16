@@ -42,3 +42,5 @@ erl_crash.dump
 # AI agent files
 AGENTS.md
 CLAUDE.md
+/.claude
+/.cursor
