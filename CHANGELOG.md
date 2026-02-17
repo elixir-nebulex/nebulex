@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v3.0.0](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0-rc.3) (2026-02-08)
+## [v3.0.0](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0) (2026-02-17)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0-rc.2...v3.0.0)
 
 ### Enhancements
@@ -43,8 +43,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   multi-node setups). Adapters that support transactions must implement
   the `Nebulex.Adapter.Transaction` behaviour independently.
   [#249](https://github.com/elixir-nebulex/nebulex/issues/249).
-
-### Enhancements
 
 ## [v3.0.0-rc.2](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0-rc.2) (2025-12-07)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0-rc.1...v3.0.0-rc.2)

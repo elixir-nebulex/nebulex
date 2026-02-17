@@ -2,7 +2,7 @@
 The following rules are sourced from [UsageRules](https://github.com/ash-project/usage_rules),
 with modifications and additions.
 
-SPDX-FileCopyrightText: 2025 usage_rules contributors <https://github.com/ash-project/usage_rules/graphs.contributors>
+SPDX-FileCopyrightText: 2025 usage_rules contributors <https://github.com/ash-project/usage_rules/graphs/contributors>
 
 SPDX-License-Identifier: MIT
 -->
@@ -62,7 +62,7 @@ SPDX-License-Identifier: MIT
 - Limit the number of failed tests with `mix test --max-failures n`
 - Use `@tag` to tag specific tests, and `mix test --only tag` to run only those tests
 - Use `assert_raise` for testing expected exceptions: `assert_raise ArgumentError, fn -> invalid_function() end`
-- Use `mix help test` to for full documentation on running tests
+- Use `mix help test` for full documentation on running tests
 
 ## Debugging
 
@@ -84,14 +84,14 @@ Copyright (c) 2014 Chris McCord, licensed under the MIT License.
       mylist = ["blue", "green"]
       mylist[i]
 
-  Instead, **always** use `Enum.at`, pattern matching, or `List` for index based list access, ie:
+  Instead, **always** use `Enum.at`, pattern matching, or `List` for index based list access, i.e.:
 
       i = 0
       mylist = ["blue", "green"]
       Enum.at(mylist, i)
 
 - Elixir variables are immutable, but can be rebound, so for block expressions like `if`, `case`, `cond`, etc
-  you *must* bind the result of the expression to a variable if you want to use it and you CANNOT rebind the result inside the expression, ie:
+  you *must* bind the result of the expression to a variable if you want to use it and you CANNOT rebind the result inside the expression, i.e.:
 
       # INVALID: we are rebinding inside the `if` and the result never gets assigned
       if connected?(socket) do
@@ -109,8 +109,16 @@ Copyright (c) 2014 Chris McCord, licensed under the MIT License.
 - Elixir's standard library has everything necessary for date and time manipulation. Familiarize yourself with the common `Time`, `Date`, `DateTime`, and `Calendar` interfaces by accessing their documentation as necessary. **Never** install additional dependencies unless asked or for date/time parsing (which you can use the `date_time_parser` package)
 - Don't use `String.to_atom/1` on user input (memory leak risk)
 - Predicate function names should not start with `is_` and should end in a question mark. Names like `is_thing` should be reserved for guards
-- Elixir's builtin OTP primitives like `DynamicSupervisor` and `Registry`, require names in the child spec, such as `{DynamicSupervisor, name: MyApp.MyDynamicSup}`, then you can use `DynamicSupervisor.start_child(MyApp.MyDynamicSup, child_spec)`
+- Elixir's built-in OTP primitives, such as `DynamicSupervisor` and `Registry`, require names in the child spec, such as `{DynamicSupervisor, name: MyApp.MyDynamicSup}`, then you can use `DynamicSupervisor.start_child(MyApp.MyDynamicSup, child_spec)`
 - Use `Task.async_stream(collection, callback, options)` for concurrent enumeration with back-pressure. The majority of times you will want to pass `timeout: :infinity` as option
+
+## Mix guidelines
+
+- Read the docs and options before using tasks (by using `mix help task_name`)
+- To debug test failures, run tests in a specific file with `mix test test/my_test.exs` or run all previously failed tests with `mix test --failed`
+- `mix deps.clean --all` is **almost never needed**. **Avoid** using it unless you have good reason
+
+## Extra Elixir guidelines
 
 - The `in` operator in guards requires a compile-time known value on the right side (literal list or range)
 
@@ -176,9 +184,3 @@ Copyright (c) 2014 Chris McCord, licensed under the MIT License.
         }
         |> Map.merge(attrs)
       end
-
-## Mix guidelines
-
-- Read the docs and options before using tasks (by using `mix help task_name`)
-- To debug test failures, run tests in a specific file with `mix test test/my_test.exs` or run all previously failed tests with `mix test --failed`
-- `mix deps.clean --all` is **almost never needed**. **Avoid** using it unless you have good reason

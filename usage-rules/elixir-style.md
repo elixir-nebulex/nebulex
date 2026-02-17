@@ -108,13 +108,13 @@
   @type name() :: atom
   ```
 
-## Gneral guidelines
+## General guidelines
 
 The rules in this section may not be applied by the code formatter, but they are generally preferred practice.
 
 ### Expressions
 
-- Run single-line `def`s that match for the same function together, but separate multiline `def`s with a blank line. For example:
+- Keep single-line `def` clauses of the same function together, but separate multiline `def`s with a blank line. For example:
 
   ```elixir
   def some_function(nil), do: {:error, "No Value"}
@@ -205,7 +205,7 @@ The rules in this section may not be applied by the code formatter, but they are
   end
   ```
 
-- Use `do:` for single line `if/unless` statements.
+- Use `do:` for single-line `if/unless` statements.
 
   ```elixir
   # preferred
@@ -379,17 +379,17 @@ Process.sleep(5000)
 
 ```elixir
 # Default HTTP request timeout in milliseconds
-@http_rrequest_timeout 10_000
+@http_request_timeout 10_000
 ```
 
 **Preferred:**
 
 ```elixir
 # Default HTTP request timeout in milliseconds
-@http_rrequest_timeout :timer.seconds(10)
+@http_request_timeout :timer.seconds(10)
 ```
 
-- When the constant is a list of atoms or strings, a regex, or anything that can be expressed using a "Sigils", then use "Sigils".
+- When the constant is a list of atoms or strings, a regex, or anything that can be expressed using Sigils, then use Sigils.
 
 **Not preferred:**
 
@@ -485,6 +485,7 @@ Process.sleep(5000)
 
     def name(%__MODULE__{name: name}), do: name
   end
+  ```
 
 ### Typespecs
 
@@ -526,6 +527,7 @@ Process.sleep(5000)
   def some_function(some_data) do
     {:ok, some_data}
   end
+  ```
 
 ### Structs
 
@@ -650,7 +652,7 @@ Process.sleep(5000)
   assert expected.atom == :atom
   assert expected.int == 123
 
-  # preferred - if the right side is known, even it it is a tuple
+  # preferred - if the right side is known, even if it is a tuple
   assert actual_function(11) == {:ok, %{atom: :atom, int: 123}}
 
   # preferred - if the right side is known (using a variable)

@@ -282,13 +282,8 @@ for bug reports or feature requests. Open a
 [pull request](https://github.com/elixir-nebulex/nebulex/pulls)
 when you're ready to contribute.
 
-When submitting a pull request:
-- **Do not update** the [CHANGELOG.md](CHANGELOG.md)
-- **Ensure** you test your changes thoroughly
-- **Include** unit tests alongside new or changed code
-
-Before submitting a PR, it is highly recommended to run `mix test.ci` and ensure
-all checks run successfully.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution
+workflow, PR expectations, commit message conventions, and validation steps.
 
 ---
 

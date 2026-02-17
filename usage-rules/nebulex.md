@@ -12,13 +12,39 @@ provides:
 - Event streaming via `Nebulex.Streams` for distributed invalidation.
 - Support for TTL, eviction policies, transactions, and more.
 
+## Key Files
+
+| Path | Purpose |
+|------|---------|
+| `lib/nebulex/cache.ex` | Main Cache API |
+| `lib/nebulex/cache/` | Cache feature modules (KV, Options, etc.) |
+| `lib/nebulex/adapter.ex` | Adapter behaviour and macros |
+| `lib/nebulex/adapters/` | Built-in adapter modules in core (e.g., Nil, common helpers) |
+| `lib/nebulex/caching/decorators.ex` | Decorator implementation |
+| `lib/nebulex/caching/` | Caching internals (Context, Runtime) |
+| `lib/nebulex/event.ex` | Cache event types |
+| `lib/nebulex/telemetry.ex` | Telemetry instrumentation |
+| `lib/nebulex/utils.ex` | Shared utilities |
+| `mix.exs` | Dependencies and project config |
+| `CHANGELOG.md` | Release history and breaking changes |
+| `test/` | Test suite (mirrors `lib/` structure) |
+| `guides/` | User-facing guides, behavioral references, and examples |
+| `guides/introduction/` | Getting started, available adapters |
+| `guides/learning/` | Declarative caching, cache patterns, adapter creation, info API |
+| `guides/upgrading/v3.0.md` | v3 migration guide |
+
 ## Package Structure (v3)
 
 Nebulex v3 separates adapters into dedicated packages:
-- `nebulex` - Core library with Cache API, decorators, and behaviours.
-- `nebulex_local` - Local cache adapter (`Nebulex.Adapters.Local`).
-- `nebulex_distributed` - Distributed adapters (`Nebulex.Adapters.Partitioned`,
-  `Nebulex.Adapters.Multilevel`, `Nebulex.Adapters.Coherent`).
+- `nebulex` - Core.
+- `nebulex_local` - Local cache adapter.
+- `nebulex_distributed` - Partitioned, multilevel, and coherent adapters.
+- `nebulex_redis_adapter` - Adapter for Redis (including Redis Cluster).
+- `nebulex_adapters_cachex` - Adapter for `cachex` library.
+- `nebulex_disk_lfu` - Persistent disk-based cache adapter with LFU eviction for Nebulex.
+
+> See `guides/introduction/nbx-adapters.md` for more information about the
+> available adapters.
 
 Add the required dependencies to your `mix.exs`:
 
@@ -405,7 +431,7 @@ The `Nebulex.Adapters.Coherent` adapter uses `Nebulex.Streams` to provide
 local caching with distributed invalidation:
 
 - Each node maintains its own local cache.
-- Write operations trigger invalidation events via Phoenix.PubSub.
+- Write operations trigger invalidation events via `Phoenix.PubSub`.
 - Other nodes delete the invalidated keys from their local caches.
 - Next read on other nodes results in a cache miss, fetching fresh data.
 
@@ -546,7 +572,7 @@ end
   values.
 - Store references in a local cache and values in a remote cache (e.g., Redis)
   for optimization.
-- Set TTL for references to prevent dangling keys
+- Set TTL for references to prevent dangling keys.
 - Use external references with `keyref(key, cache: AnotherCache)` for
   cross-cache references.
 
@@ -563,23 +589,22 @@ end
 ### Module Documentation
 
 - Start with a clear `@moduledoc` explaining the purpose and main features,
-  except the modules using `NimbleOptions`, since they are documenting options.
+  except modules that use `NimbleOptions` for option documentation.
 - Options documented using `NimbleOptions` should provide functions to insert
   that documentation into the module docs. Therefore, it is not required to
   document an option in the `moduledoc` or in the function `@doc` if it is
   already inserted using `NimbleOptions`. For example,
   `#{Nebulex.Cache.Options.start_link_options_docs()}`.
-- Options docummented using
 - Include usage examples in module documentation.
 - Document all compile-time options.
 - Document all runtime shared options.
 - Provide telemetry event documentation with measurements and metadata.
 - The maximum text length is 80 characters, and you should aim to adhere to this
   limit. However, there are special cases where exceeding it is acceptable. For
-  example, you may exceed the limit for a link (e.g., ["my link"](https://github.com/elixir-nebulex))
+  example, you may exceed the limit for a link (e.g., [my link](https://github.com/elixir-nebulex))
   or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
-  If a code snippet exceeds the 80-character limit by more than 1 or 2 haracters,
-  format it using the Elixir formatter.
+  If a code snippet exceeds the 80-character limit by more than 1 or 2
+  characters, format it using the Elixir formatter.
 - When you make a change to the documentation, use `mix docs` to validate it.
 
 ### Function Documentation
@@ -589,25 +614,22 @@ end
 - Provide examples in function documentation using doctests when applicable.
 - Document all options with descriptions and default values.
 - Group related functions using `@doc group: "Group Name"`.
-- The maximum text length is 80 characters, and you should aim to adhere to this.
-  limit. However, there are special cases where exceeding it is acceptable. For
-  example, you may exceed the limit for a link (e.g., ["my link"](https://github.com/elixir-nebulex))
-  or a code snippet that only exceeds the limit by a few characters (e.g., 1 or 2).
-  If a code snippet exceeds the 80-character limit by more than 1 or 2 haracters,
-  format it using the Elixir formatter.
+- Follow the same 80-character line-length guidance described in
+  "Module Documentation," including the same exceptions for links and short
+  formatter-friendly code snippets.
 - When you make a change to the documentation, use `mix docs` to validate it.
 
 ### Code Comments
 
 - Avoid obvious comments; code should be self-explanatory.
 - Use comments for complex algorithms or non-obvious business logic. Use a
-  sigle `#` for code comments. E.g., `# My comment ...`.
-- For separating sectionn in a module, use `##`. E.g., `## API`,
+  single `#` for code comments. E.g., `# My comment ...`.
+- For separating sections in a module, use `##`. E.g., `## API`,
   `## Private functions`, etc.
 - Mark internal functions with `@doc false` or `@moduledoc false`.
 - Use `# Inline common instructions` followed by
   `@compile inline: [function_name: arity]`.
-- The maximum text length is 80 characters, use multiple lines if the comment.
+- The maximum text length is 80 characters; use multiple lines if the comment
   exceeds the limit.
 
 ## Naming Conventions
@@ -621,10 +643,10 @@ end
 
 ### Functions
 
-- Use descriptive function names: `fetch/2`, `put/3`, `delete/2`, `has_key?/1`.
+- Use descriptive function names: `fetch/2`, `put/3`, `delete/2`, `has_key?/2`.
 - Bang versions: `fetch!/2`, `put!/3`, `delete!/2`.
-- Private helpers: prefix with `do_` (e.g., `do_fetch/3`, `do_put/7`).
-- Predicate functions: suffix with `?` (e.g., `has_key?/1`, `expired?/2`).
+- Private helpers: prefix with `do_` (e.g., `do_fetch`, `do_put`).
+- Predicate functions: suffix with `?` (e.g., `has_key?/2`, `expired?/2`).
 
 ### Variables
 
