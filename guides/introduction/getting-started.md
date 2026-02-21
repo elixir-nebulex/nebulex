@@ -281,7 +281,7 @@ iex> Enum.map(1..3, &(Blog.Cache.get!(&1).first_name))
 ["Galileo", "Charles", "Albert"]
 ```
 
-There is a function `has_key?` to check if a key exist in cache:
+There is a function `has_key?` to check if a key exists in the cache:
 
 ```elixir
 iex> Blog.Cache.has_key?(1)
@@ -311,12 +311,12 @@ iex> Blog.Cache.update(1, initial, &(%{&1 | first_name: "Y"}))
 ```
 
 > You can also use the version with the trailing bang (`!`) `get_and_update!`
-> and `!update`.
+> and `update!`.
 
 ## Fetch or Store and Get or Store
 
 Nebulex provides two powerful functions for lazy loading and caching:
-`fetch_or_store` and `get_or_store`. These functions are particularly useful in\
+`fetch_or_store` and `get_or_store`. These functions are particularly useful in
 scenarios where you want to:
 
 - **Lazy load data**: Only fetch data from an external source when it's actually
@@ -410,7 +410,7 @@ iex> Blog.Cache.get_or_store("api:invalid", fn ->
 ## Counters
 
 The function `incr` is provided to increment or decrement a counter; by default,
-a counter is initialized to `0`. Let's see how counters works:
+a counter is initialized to `0`. Let's see how counters work:
 
 ```elixir
 # by default, the counter is incremented by 1
@@ -447,7 +447,7 @@ iex> Blog.Cache.delete!(1)
 ### Take
 
 This is another way not only for deleting an entry but also for retrieving it
-before its delete it:
+before deleting it:
 
 ```elixir
 iex> Blog.Cache.take(1)
@@ -572,7 +572,7 @@ the matched entries but also remove them from the cache at once, in one single
 execution.
 
 The first example is flushing the cache, delete all cached entries (which is
-the default behavior when none query is provided):
+the default behavior when no query is provided):
 
 ```elixir
 iex> Blog.Cache.delete_all()
@@ -965,7 +965,7 @@ end
 
 ### Partitioned Cache
 
-Nebulex provides the adapter `Nebulex.Adapters.Partitioned`, which allows to
+Nebulex provides the adapter `Nebulex.Adapters.Partitioned`, which allows you to
 set up a partitioned cache topology. First of all, we need to add
 `:nebulex_distributed` to the dependencies in the `mix.exs`:
 
@@ -1041,7 +1041,7 @@ config :blog, Blog.PartitionedCache,
 ```
 
 And remember to add the new cache `Blog.PartitionedCache` to your application's
-supervision tree (such as we did it previously):
+supervision tree (as we did previously):
 
 ```elixir
 def start(_type, _args) do
@@ -1070,13 +1070,13 @@ iex> Blog.PartitionedCache.put("foo", "bar", timeout: 10)
 ```
 
 To learn more about how partitioned cache works, please check
-`Nebulex.Adapters.Partitioned` documentation, and also it is recommended see the
+`Nebulex.Adapters.Partitioned` documentation, and we also recommend checking the
 [partitioned cache example](https://github.com/elixir-nebulex/nebulex_examples/tree/main/partitioned_cache).
 
 ### Multilevel Cache
 
-Nebulex also provides the adapter `Nebulex.Adapters.Multilevel`, which allows to
-setup a multi-level caching hierarchy. The adapter is also included in the
+Nebulex also provides the adapter `Nebulex.Adapters.Multilevel`, which allows you to
+set up a multi-level caching hierarchy. The adapter is also included in the
 `:nebulex_distributed` dependency.
 
 Let's set up a multilevel cache. Unlike the local adapter, the multilevel
@@ -1140,7 +1140,7 @@ config :blog, Blog.NearCache,
 > Remember you can add `backend: :shards` to use Shards as backend.
 
 Finally, add the new cache `Blog.NearCache` to your application's supervision
-tree (such as we did it previously):
+tree (as we did previously):
 
 ```elixir
 def start(_type, _args) do
@@ -1164,7 +1164,7 @@ iex> Blog.NearCache.get!("foo")
 ```
 
 To learn more about how multilevel-cache works, please check
-`Nebulex.Adapters.Multilevel` documentation, and also it is recommended see the
+`Nebulex.Adapters.Multilevel` documentation, and we also recommend checking the
 [near cache example](https://github.com/elixir-nebulex/nebulex_examples/tree/main/near_cache).
 
 ## Next

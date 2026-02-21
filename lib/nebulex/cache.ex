@@ -652,7 +652,7 @@ defmodule Nebulex.Cache do
   @callback config() :: keyword()
 
   @doc """
-  Starts a supervision and return `{:ok, pid}` or just `:ok` if nothing
+  Starts a supervision tree and returns `{:ok, pid}` or just `:ok` if nothing
   needs to be done.
 
   Returns `{:error, {:already_started, pid}}` if the cache is already
@@ -1798,7 +1798,7 @@ defmodule Nebulex.Cache do
       ...> end)
       {:ok, {"value!", "new value!"}}
 
-  Pop/remove value if exist:
+  Pop/remove value if it exists:
 
       iex> MyCache.get_and_update(:a, fn _ -> :pop end)
       {:ok, {"new value!", nil}}
@@ -2724,8 +2724,9 @@ defmodule Nebulex.Cache do
 
   ## Examples
 
-      iex> = MyCache.stream(MyCache1, [], [])
-      {:ok, _stream}
+      iex> {:ok, stream} = MyCache.stream(MyCache1, [], [])
+      iex> Enum.to_list(stream)
+      []
 
   """
   @doc group: "Query API"

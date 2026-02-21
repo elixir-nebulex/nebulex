@@ -47,9 +47,9 @@ iex> MyApp.Cache.info!()
 %{
   server: %{
     nbx_version: "3.0.0",
-    cache_module: "MyCache",
+    cache_module: "MyApp.Cache",
     cache_adapter: "Nebulex.Adapters.Local",
-    cache_name: "MyCache",
+    cache_name: "MyApp.Cache",
     cache_pid: #PID<0.111.0>
   },
   memory: %{
@@ -68,7 +68,7 @@ iex> MyApp.Cache.info!()
 }
 ```
 
-You could also request for a specific item or items:
+You could also request a specific item or items:
 
 ```elixir
 iex> MyApp.Cache.info!(:stats)
@@ -115,7 +115,7 @@ The stats map includes the following metrics:
 These metrics are useful for understanding cache behavior and health. For example:
 
 ```elixir
-iex> stats = MyApp.Cache.info!(:stats).stats
+iex> stats = MyApp.Cache.info!(:stats)
 iex> hit_rate = stats.hits / (stats.hits + stats.misses)
 iex> IO.inspect(hit_rate, label: "Cache hit rate")
 ```

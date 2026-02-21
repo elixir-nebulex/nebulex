@@ -7,7 +7,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     will apply a caching behavior checking whether the function has been already
     executed and its result cached for the given arguments. If it has, then the
     cached result is returned without having to execute the actual function;
-    if it has not, then function is executed, the result cached and returned
+    if it has not, then the function is executed, the result cached and returned
     to the user so that, the next time the method is invoked, the cached result
     is returned. This way, expensive functions (whether CPU or IO bound) can be
     executed only once for a given set of parameters and the result reused

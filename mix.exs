@@ -154,8 +154,7 @@ defmodule Nebulex.MixProject do
           Nebulex.Adapter.Observable
         ],
         "Built-in adapters": [
-          Nebulex.Adapters.Nil,
-          Nebulex.Adapters.Nil.Options
+          Nebulex.Adapters.Nil
         ],
         "Built-in info implementation": [
           Nebulex.Adapters.Common.Info,

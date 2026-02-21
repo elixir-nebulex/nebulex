@@ -9,7 +9,7 @@ so you can consult this repo as an example.
 ## Mix Project
 
 Nebulex's main repo contains some very useful shared tests that we are going to
-take advantage of. To do so we will need to checkout Nebulex from Github as the
+take advantage of. To do so we will need to checkout Nebulex from GitHub as the
 version published to Hex does not contain test code. To accommodate this
 workflow we will start by creating a new project.
 
@@ -17,7 +17,7 @@ workflow we will start by creating a new project.
 mix new nebulex_memory_adapter
 ```
 
-Now let's modify `mix.exs` so that we could fetch Nebulex repository.
+Now let's modify `mix.exs` so that we can fetch the Nebulex repository.
 
 ```elixir
 defmodule NebulexMemoryAdapter.MixProject do
@@ -75,7 +75,7 @@ end
 ```
 
 As you can see here we define a `mix nbx.setup` task that will fetch a Nebulex
-version to a folder specified in `NEBULEX_PATH` environmental variable. Let's
+version to a folder specified in the `NEBULEX_PATH` environment variable. Let's
 run it.
 
 ```console
@@ -83,7 +83,7 @@ export NEBULEX_PATH=nebulex
 mix nbx.setup
 ```
 
-Now is the good time to fetch other dependencies
+Now is a good time to fetch other dependencies.
 
 ```console
 mix deps.get

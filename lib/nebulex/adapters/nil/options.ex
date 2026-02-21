@@ -1,7 +1,5 @@
 defmodule Nebulex.Adapters.Nil.Options do
-  @moduledoc """
-  Options for the `Nebulex.Adapters.Nil` adapter.
-  """
+  @moduledoc false
 
   # Runtime shared options
   runtime_shared_opts = [

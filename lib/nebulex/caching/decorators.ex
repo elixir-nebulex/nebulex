@@ -68,7 +68,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     functions that perform cache eviction, which are functions that act as
     triggers for removing data from the cache. Just like its sibling,
     `cache_evict` requires specifying the cache that will be affected by the
-    action, allows to provide a key or a list of keys to be evicted, but in
+    action, allows you to provide a key or a list of keys to be evicted, but in
     addition, features an extra option `:all_entries` which indicates whether
     a cache-wide eviction needs to be performed rather than just one or a few
     entries (based on `:key` or `:keys` option):
@@ -428,7 +428,7 @@ if Code.ensure_loaded?(Decorator.Define) do
     `key: id` for instance, we will get errors and/or warnings, since the
     decorator is expecting the attribute `id` to be present, but it is not
     in the first function clause. In other words, when we take this approach,
-    is like the decorator was applied to all function clauses separately.
+    is as if the decorator were applied to all function clauses separately.
     To overcome this issue, the arguments used in the decorator must be
     present in the function clauses, which could be achieved in different
     ways. A simple way would be to decorate a wrapper function with the
