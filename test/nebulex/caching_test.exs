@@ -245,6 +245,14 @@ defmodule Nebulex.CachingTest do
       refute Cache.get!(1)
     end
 
+    test "with invalid opts" do
+      assert_raise NimbleOptions.ValidationError,
+                   ~r"invalid value for :telemetry_metadata option: expected map, got: :invalid",
+                   fn ->
+                     get_with_invalid_opts(1)
+                   end
+    end
+
     test "with match function" do
       refute Cache.get!(:x)
       assert get_with_match(:x) == :x
@@ -751,6 +759,13 @@ defmodule Nebulex.CachingTest do
       refute Cache.get!(:b)
       refute Cache.get!(:e)
     end
+
+    test "with opts" do
+      assert set_keys(x: 1, y: 2, z: 3) == :ok
+
+      assert evict_with_opts(:x) == :x
+      refute Cache.get!(:x)
+    end
   end
 
   describe "option :key with a custom key generator in annotation" do
@@ -1063,8 +1078,16 @@ defmodule Nebulex.CachingTest do
     {x, y * 2}
   end
 
-  @decorate cacheable(cache: &__MODULE__.target_cache/0, opts: [ttl: 1000])
+  @decorate cacheable(
+              cache: &__MODULE__.target_cache/0,
+              opts: [ttl: 1000, telemetry_metadata: %{foo: :bar}]
+            )
   def get_with_opts(x) do
+    x
+  end
+
+  @decorate cacheable(opts: [ttl: 1000, telemetry_metadata: :invalid])
+  def get_with_invalid_opts(x) do
     x
   end
 
@@ -1127,7 +1150,11 @@ defmodule Nebulex.CachingTest do
     end
   end
 
-  @decorate cache_put(cache: dynamic_cache(Cache, Cache), key: {:in, [x]}, opts: [ttl: 1000])
+  @decorate cache_put(
+              cache: dynamic_cache(Cache, Cache),
+              key: {:in, [x]},
+              opts: [ttl: 1000, telemetry_metadata: %{foo: :bar}]
+            )
   def update_with_opts(x) do
     x
   end
@@ -1161,6 +1188,11 @@ defmodule Nebulex.CachingTest do
 
   @decorate cache_evict(all_entries: true, before_invocation: true)
   def evict_all_fun(x) do
+    x
+  end
+
+  @decorate cache_evict(key: x, opts: [telemetry_metadata: %{foo: :bar}])
+  def evict_with_opts(x) do
     x
   end
 

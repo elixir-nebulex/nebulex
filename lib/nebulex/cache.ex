@@ -144,7 +144,7 @@ defmodule Nebulex.Cache do
       first one, since the adapter's metadata is available in the event's
       metadata.
     * `:extra_metadata` - Additional metadata through the runtime option
-      `:telemetry_metadata.`
+      `:telemetry_metadata`.
 
   Example event data:
 
@@ -176,7 +176,7 @@ defmodule Nebulex.Cache do
       first one, since the adapter's metadata is available in the event's
       metadata.
     * `:extra_metadata` - Additional metadata through the runtime option
-      `:telemetry_metadata.`
+      `:telemetry_metadata`.
     * `:result` - The command's result.
 
   Example event data:
@@ -211,7 +211,7 @@ defmodule Nebulex.Cache do
       first one, since the adapter's metadata is available in the event's
       metadata.
     * `:extra_metadata` - Additional metadata through the runtime option
-      `:telemetry_metadata.`
+      `:telemetry_metadata`.
     * `:kind` - The type of the error: `:error`, `:exit`, or `:throw`.
     * `:reason` - The reason of the error.
     * `:stacktrace` - Exception's stack trace.

@@ -1784,14 +1784,14 @@ if Code.ensure_loaded?(Decorator.Define) do
         opts = unquote(opts_var)
 
         # Push the decorator context onto the stack
-        Context.push(unquote(context))
+        _ignore = Context.push(unquote(context))
 
         try do
           # Execute the decorated function's code block
           unquote(action_block)
         after
           # Pop the decorator context from the stack
-          Context.pop()
+          _ignore = Context.pop()
         end
       end
     end
@@ -1917,6 +1917,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         Runtime.eval_cache_evict(
           cache,
           unquote(key),
+          opts,
           unquote(before_invocation?),
           unquote(all_entries?),
           unquote(on_error),
@@ -1969,8 +1970,6 @@ if Code.ensure_loaded?(Decorator.Define) do
         end
       end
     end
-
-    ## Private functions
 
     defp on_error_opt(attrs, default) do
       get_option(attrs, :on_error, ":raise or :nothing", &(&1 in [:raise, :nothing]), default)

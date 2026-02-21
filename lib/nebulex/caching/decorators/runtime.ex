@@ -21,18 +21,20 @@ defmodule Nebulex.Caching.Decorators.Runtime do
     context = Context.get()
     cache = eval_cache(cache, context)
     key = eval_key(key, context)
+    opts = add_telemetry_metadata(opts, context)
 
     do_eval_cacheable(cache, key, references, opts, match, on_error, block_fun)
   end
 
   @doc false
-  @spec eval_cache_evict(any(), any(), boolean(), boolean(), atom(), fun()) :: any()
-  def eval_cache_evict(cache, key, before?, all_entries?, on_error, block_fun) do
+  @spec eval_cache_evict(any(), any(), keyword(), boolean(), boolean(), atom(), fun()) :: any()
+  def eval_cache_evict(cache, key, opts, before?, all_entries?, on_error, block_fun) do
     context = Context.get()
     cache = eval_cache(cache, context)
     key = eval_key(key, context)
+    opts = add_telemetry_metadata(opts, context)
 
-    do_eval_cache_evict(cache, key, before?, all_entries?, on_error, block_fun)
+    do_eval_cache_evict(cache, key, opts, before?, all_entries?, on_error, block_fun)
   end
 
   @doc false
@@ -41,6 +43,7 @@ defmodule Nebulex.Caching.Decorators.Runtime do
     context = Context.get()
     cache = eval_cache(cache, context)
     key = eval_key(key, context)
+    opts = add_telemetry_metadata(opts, context)
 
     do_eval_cache_put(cache, key, value, opts, on_error, match)
   end
@@ -145,7 +148,7 @@ defmodule Nebulex.Caching.Decorators.Runtime do
       fn value ->
         with false <- do_eval_cache_put(ref_cache, ref_key, value, opts, on_error, match) do
           # The match returned `false`, remove the parent's key reference
-          _ignore = do_apply(cache, :delete, [key])
+          _ignore = do_apply(cache, :delete, [key, Keyword.take(opts, [:telemetry_metadata])])
 
           false
         end
@@ -154,7 +157,7 @@ defmodule Nebulex.Caching.Decorators.Runtime do
         case eval_function(match, value) do
           false ->
             # Remove the parent's key reference
-            _ignore = do_apply(cache, :delete, [key])
+            _ignore = do_apply(cache, :delete, [key, Keyword.take(opts, [:telemetry_metadata])])
 
             block_fun.()
 
@@ -227,48 +230,48 @@ defmodule Nebulex.Caching.Decorators.Runtime do
     raise reason
   end
 
-  defp do_eval_cache_evict(cache, key, true, all_entries?, on_error, block_fun) do
-    _ignore = do_evict(all_entries?, cache, key, on_error)
+  defp do_eval_cache_evict(cache, key, opts, true, all_entries?, on_error, block_fun) do
+    _ignore = do_evict(all_entries?, cache, key, opts, on_error)
 
     block_fun.()
   end
 
-  defp do_eval_cache_evict(cache, key, false, all_entries?, on_error, block_fun) do
+  defp do_eval_cache_evict(cache, key, opts, false, all_entries?, on_error, block_fun) do
     result = block_fun.()
 
-    _ignore = do_evict(all_entries?, cache, key, on_error)
+    _ignore = do_evict(all_entries?, cache, key, opts, on_error)
 
     result
   end
 
-  defp do_evict(false, cache, {:in, keys}, on_error) do
+  defp do_evict(false, cache, {:in, keys}, opts, on_error) do
     keys
     |> group_by_cache(cache)
     |> Enum.each(fn
       {cache, [key]} ->
-        run_cmd(cache, :delete, [key, []], on_error)
+        run_cmd(cache, :delete, [key, opts], on_error)
 
       {cache, keys} ->
-        run_cmd(cache, :delete_all, [[in: keys]], on_error)
+        run_cmd(cache, :delete_all, [[in: keys], opts], on_error)
     end)
   end
 
-  defp do_evict(false, cache, {:query, _} = q, on_error) do
-    run_cmd(cache, :delete_all, [[q]], on_error)
+  defp do_evict(false, cache, {:query, _} = q, opts, on_error) do
+    run_cmd(cache, :delete_all, [[q], opts], on_error)
   end
 
-  defp do_evict(false, cache, {:query, q, k}, on_error) do
-    _ignore = run_cmd(cache, :delete_all, [[{:query, q}]], on_error)
+  defp do_evict(false, cache, {:query, q, k}, opts, on_error) do
+    _ignore = run_cmd(cache, :delete_all, [[query: q], opts], on_error)
 
-    do_evict(false, cache, k, on_error)
+    do_evict(false, cache, k, opts, on_error)
   end
 
-  defp do_evict(false, cache, key, on_error) do
-    run_cmd(cache, :delete, [key, []], on_error)
+  defp do_evict(false, cache, key, opts, on_error) do
+    run_cmd(cache, :delete, [key, opts], on_error)
   end
 
-  defp do_evict(true, cache, _key, on_error) do
-    run_cmd(cache, :delete_all, [], on_error)
+  defp do_evict(true, cache, _key, opts, on_error) do
+    run_cmd(cache, :delete_all, [[query: nil], opts], on_error)
   end
 
   defp do_eval_cache_put(
@@ -352,6 +355,25 @@ defmodule Nebulex.Caching.Decorators.Runtime do
         key -> key
       end
     )
+  end
+
+  defp add_telemetry_metadata(opts, %Context{
+         decorator: decorator,
+         module: m,
+         function_name: f,
+         arity: a
+       }) do
+    ctx = %{
+      decorator: decorator,
+      module: m,
+      function_name: f,
+      arity: a
+    }
+
+    Keyword.update(opts, :telemetry_metadata, %{decorator_context: ctx}, fn
+      meta when is_map(meta) -> Map.put(meta, :decorator_context, ctx)
+      meta -> meta
+    end)
   end
 
   @compile inline: [raise_invalid_cache: 1]

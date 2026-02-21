@@ -146,6 +146,8 @@ defmodule Nebulex.TelemetryTest do
     setup_with_cache Cache
 
     test "ok: emits start and stop events" do
+      expected_opts = Keyword.drop(@custom_opts, [:telemetry_event, :telemetry_metadata])
+
       with_telemetry_handler @custom_events, fn ->
         :ok = Cache.put("foo", "bar", @custom_opts)
 
@@ -153,7 +155,7 @@ defmodule Nebulex.TelemetryTest do
         assert measurements[:system_time] |> DateTime.from_unix!(:native)
         assert metadata[:adapter_meta][:cache] == Cache
         assert metadata[:adapter_meta][:name] == Cache
-        assert metadata[:args] == ["foo", "bar", :put, :infinity, false, @custom_opts]
+        assert metadata[:args] == ["foo", "bar", :put, :infinity, false, expected_opts]
         assert metadata[:telemetry_span_context] |> is_reference()
         assert metadata[:extra_metadata] == %{foo: "bar"}
 
@@ -161,7 +163,7 @@ defmodule Nebulex.TelemetryTest do
         assert measurements[:duration] > 0
         assert metadata[:adapter_meta][:cache] == Cache
         assert metadata[:adapter_meta][:name] == Cache
-        assert metadata[:args] == ["foo", "bar", :put, :infinity, false, @custom_opts]
+        assert metadata[:args] == ["foo", "bar", :put, :infinity, false, expected_opts]
         assert metadata[:result] == {:ok, true}
         assert metadata[:telemetry_span_context] |> is_reference()
         assert metadata[:extra_metadata] == %{foo: "bar"}
@@ -169,6 +171,8 @@ defmodule Nebulex.TelemetryTest do
     end
 
     test "raise: emits start and exception events" do
+      expected_opts = Keyword.drop(@custom_opts, [:telemetry_event, :telemetry_metadata])
+
       with_telemetry_handler @custom_events, fn ->
         key = {:eval, fn -> raise ArgumentError, "error" end}
 
@@ -180,7 +184,7 @@ defmodule Nebulex.TelemetryTest do
         assert measurements[:duration] > 0
         assert metadata[:adapter_meta][:cache] == Cache
         assert metadata[:adapter_meta][:name] == Cache
-        assert metadata[:args] == [key, @custom_opts]
+        assert metadata[:args] == [key, expected_opts]
         assert metadata[:kind] == :error
         assert metadata[:reason] == %ArgumentError{message: "error"}
         assert metadata[:stacktrace]

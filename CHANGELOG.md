@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v3.0.0](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0) (2026-02-17)
+## [v3.0.0](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0) (2026-02-21)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0-rc.2...v3.0.0)
 
 ### Enhancements
@@ -21,6 +21,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   decorator level, with decorator-level settings overriding module-level
   defaults.
   [#248](https://github.com/elixir-nebulex/nebulex/issues/248).
+- [Nebulex.Caching.Decorators] Decorator-invoked cache operations
+  (`cacheable`, `cache_put`, `cache_evict`) now automatically inject the
+  `:decorator_context` into the `:telemetry_metadata` option. This enables
+  telemetry handlers to identify which decorated function triggered each
+  cache operation. The `:decorator_context` map includes `:decorator`,
+  `:module`, `:function_name`, and `:arity`.
+  [#251](https://github.com/elixir-nebulex/nebulex/issues/251).
+- [Nebulex.Caching.Decorators] The `cache_evict` decorator now properly
+  passes `opts` through all eviction paths (`delete`, `delete_all`),
+  ensuring telemetry metadata propagates consistently.
+- [Nebulex.Adapter] The `:telemetry_metadata` and `:telemetry_event`
+  options are now extracted from `opts` before passing them to the adapter
+  callback, keeping adapter args clean.
 - [Nebulex.Adapters.Coherent] Added new coherent cache adapter to
   `nebulex_distributed`. The coherent adapter provides a "local cache with
   distributed invalidation" pattern where each node maintains its own
@@ -129,8 +142,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `use Nebulex.Caching` (instead of adding them to every single decorated
   function): `:cache`, `:on_error`, `:match`, and `:opts`.
 
-[q_spec]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Cache.html#c:get_all/2-query-specification
-[match_ref]: http://hexdocs.pm/nebulex/3.0.0-rc.1/Nebulex.Caching.Decorators.html#cacheable/3-the-match-function-on-references
+[q_spec]: https://hexdocs.pm/nebulex/Nebulex.Cache.html#c:get_all/2-query-specification
+[match_ref]: https://hexdocs.pm/nebulex/Nebulex.Caching.Decorators.html#cacheable/3-the-match-function-on-references
 
 ### Backwards incompatible changes
 
