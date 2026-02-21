@@ -9,18 +9,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Enhancements
 
-- [Nebulex.Caching.Decorators] Added `:transaction` option to wrap decorated
-  function execution and cache operations in a cache transaction. When set to
-  `true`, the decorator locks the specified cache keys for the duration of the
-  transaction, preventing concurrent processes from accessing or modifying them
-  simultaneously. The transaction intelligently determines which keys to lock
-  based on the decorator options (e.g., `key: {:in, keys}`, `:query`, or
-  generated keys). This feature helps prevent race conditions, cache stampede,
-  and inconsistent updates in concurrent environments. The `:transaction` option
-  can be configured both at the module level (`use Nebulex.Caching`) and at the
-  decorator level, with decorator-level settings overriding module-level
-  defaults.
-  [#248](https://github.com/elixir-nebulex/nebulex/issues/248).
 - [Nebulex.Caching.Decorators] Decorator-invoked cache operations
   (`cacheable`, `cache_put`, `cache_evict`) now automatically inject the
   `:decorator_context` into the `:telemetry_metadata` option. This enables
@@ -34,6 +22,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [Nebulex.Adapter] The `:telemetry_metadata` and `:telemetry_event`
   options are now extracted from `opts` before passing them to the adapter
   callback, keeping adapter args clean.
+- [Nebulex.Caching.Decorators] Added `:transaction` option to wrap decorated
+  function execution and cache operations in a cache transaction. When set to
+  `true`, the decorator locks the specified cache keys for the duration of the
+  transaction, preventing concurrent processes from accessing or modifying them
+  simultaneously. The transaction intelligently determines which keys to lock
+  based on the decorator options (e.g., `key: {:in, keys}`, `:query`, or
+  generated keys). This feature helps prevent race conditions, cache stampede,
+  and inconsistent updates in concurrent environments. The `:transaction` option
+  can be configured both at the module level (`use Nebulex.Caching`) and at the
+  decorator level, with decorator-level settings overriding module-level
+  defaults.
+  [#248](https://github.com/elixir-nebulex/nebulex/issues/248).
 - [Nebulex.Adapters.Coherent] Added new coherent cache adapter to
   `nebulex_distributed`. The coherent adapter provides a "local cache with
   distributed invalidation" pattern where each node maintains its own
