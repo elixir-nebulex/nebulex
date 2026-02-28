@@ -104,7 +104,6 @@ defmodule Nebulex.Cache.Options do
     telemetry: [
       type: :boolean,
       required: false,
-      default: false,
       doc: """
       Override the global `:telemetry` setting for a specific cache command.
 
