@@ -35,7 +35,8 @@ defmodule Nebulex.Cache.ObservableTest do
             name: name,
             type: :inserted,
             target: {:key, "foo"},
-            command: :put
+            command: :put,
+            metadata: %{extra_metadata: %{}}
           )
 
         assert cache.put("foo", "bar") == :ok
@@ -141,7 +142,8 @@ defmodule Nebulex.Cache.ObservableTest do
             name: name,
             type: :inserted,
             target: {:key, "test"},
-            command: :put
+            command: :put,
+            metadata: %{extra_metadata: %{}}
           )
 
         assert cache.put("test", "test") == :ok
@@ -211,7 +213,7 @@ defmodule Nebulex.Cache.ObservableTest do
             type: :inserted,
             target: {:key, "test"},
             command: :put,
-            metadata: [foo: :bar]
+            metadata: %{foo: :bar, extra_metadata: %{}}
           )
 
         assert cache.put("test", "test") == :ok
@@ -238,10 +240,58 @@ defmodule Nebulex.Cache.ObservableTest do
             type: :inserted,
             target: {:key, "test"},
             command: :put,
-            metadata: metadata
+            metadata: Map.put(metadata, :extra_metadata, %{})
           )
 
         assert cache.put("test", "test") == :ok
+        assert_receive ^event
+      after
+        assert cache.unregister_event_listener!(listener) == :ok
+      end
+
+      test "ok: per-command telemetry_metadata flows through to event metadata", %{
+        cache: cache,
+        name: name,
+        listener: listener
+      } do
+        :ok = cache.register_event_listener!(listener)
+
+        event =
+          CacheEntryEvent.new(
+            pid: Adapter.lookup_meta(name).pid,
+            cache: cache,
+            name: name,
+            type: :inserted,
+            target: {:key, "tm_key"},
+            command: :put,
+            metadata: %{extra_metadata: %{source: :test}}
+          )
+
+        assert cache.put("tm_key", "val", telemetry_metadata: %{source: :test}) == :ok
+        assert_receive ^event
+      after
+        assert cache.unregister_event_listener!(listener) == :ok
+      end
+
+      test "ok: extra_metadata defaults to empty map when telemetry_metadata not provided", %{
+        cache: cache,
+        name: name,
+        listener: listener
+      } do
+        :ok = cache.register_event_listener!(listener)
+
+        event =
+          CacheEntryEvent.new(
+            pid: Adapter.lookup_meta(name).pid,
+            cache: cache,
+            name: name,
+            type: :inserted,
+            target: {:key, "no_tm_key"},
+            command: :put,
+            metadata: %{extra_metadata: %{}}
+          )
+
+        assert cache.put("no_tm_key", "val") == :ok
         assert_receive ^event
       after
         assert cache.unregister_event_listener!(listener) == :ok
@@ -267,7 +317,8 @@ defmodule Nebulex.Cache.ObservableTest do
               name: name,
               type: :inserted,
               target: {:key, "test"},
-              command: :put
+              command: :put,
+              metadata: %{extra_metadata: %{}}
             )
 
           event2 = %{event1 | name: temp, pid: Adapter.lookup_meta(temp).pid}

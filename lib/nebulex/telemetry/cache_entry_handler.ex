@@ -71,11 +71,19 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
           command: command,
           args: args,
           result: result,
+          extra_metadata: extra_metadata,
           adapter_meta: %{cache: cache, pid: pid}
         },
         %{pid: pid, name: name, meta: meta} = config
       ) do
-    do_handle(command, args, result, [cache: cache, name: name, pid: pid, metadata: meta], config)
+    metadata = [
+      cache: cache,
+      name: name,
+      pid: pid,
+      metadata: Map.put(meta, :extra_metadata, extra_metadata)
+    ]
+
+    do_handle(command, args, result, metadata, config)
   end
 
   def handle_event(_event, _measurements, _metadata, _config) do

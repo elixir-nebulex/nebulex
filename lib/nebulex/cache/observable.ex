@@ -14,7 +14,7 @@ defmodule Nebulex.Cache.Observable do
     {filter, opts} = Keyword.pop(opts, :filter, &__MODULE__.no_filter/1)
     {metadata, opts} = Keyword.pop!(opts, :metadata)
 
-    do_register_event_listener(name, listener, filter, metadata, opts)
+    do_register_event_listener(name, listener, filter, Enum.into(metadata, %{}), opts)
   end
 
   @doc """

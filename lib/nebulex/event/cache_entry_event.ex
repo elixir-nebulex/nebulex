@@ -51,7 +51,8 @@ defmodule Nebulex.Event.CacheEntryEvent do
       (in case of `delete_all`).
     * `:command` - The cache command triggering the event.
     * `:metadata` - The event metadata is provided when the listener is
-      registered.
+      registered. It may also include `:extra_metadata` with per-command
+      metadata provided through the `:telemetry_metadata` runtime option.
 
   """
   @type t() :: %__MODULE__{
@@ -66,7 +67,7 @@ defmodule Nebulex.Event.CacheEntryEvent do
 
   # Event structure
   @enforce_keys [:cache, :pid, :type, :target, :command]
-  defstruct [:cache, :name, :pid, :type, :target, :command, metadata: []]
+  defstruct [:cache, :name, :pid, :type, :target, :command, metadata: %{}]
 
   # Supported event types
   @event_types ~w(deleted expired inserted updated)a
@@ -106,7 +107,7 @@ defmodule Nebulex.Event.CacheEntryEvent do
         name: nil,
         pid: self(),
         type: :inserted,
-        metadata: [],
+        metadata: %{},
         target: {:key, "foo"}
       }
 

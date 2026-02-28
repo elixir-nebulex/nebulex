@@ -7,7 +7,7 @@ defmodule Nebulex.Event do
   @type t() :: Nebulex.Event.CacheEntryEvent.t()
 
   @typedoc "Type for the listener and filter metadata"
-  @type metadata() :: keyword() | map()
+  @type metadata() :: map()
 
   @typedoc "Type for an entry event listener"
   @type listener() :: (t() -> any())
