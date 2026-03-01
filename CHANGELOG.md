@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.1](https://github.com/elixir-nebulex/nebulex/tree/v3.0.1) (2026-03-01)
+> [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0...v3.0.1)
+
+### Enhancements
+
+- [Nebulex.Event.CacheEntryEvent] Forward per-command
+  `:telemetry_metadata` as `:extra_metadata` within the event's
+  `:metadata` map. This allows event listeners to inspect metadata
+  markers without disabling telemetry entirely. The `metadata` type
+  is now always a map (previously `keyword() | map()`).
+  [#253](https://github.com/elixir-nebulex/nebulex/issues/253).
+- [Nebulex] Add "Installation" section to the main module docs
+  clarifying that adapter dependencies (e.g., `:nebulex_local`) must
+  be added explicitly in `mix.exs`.
+- [Nebulex] Improve main module docs structure: rename "Caches" to
+  "Usage" and add "What's next" section linking all guides in a
+  logical learning progression.
+- [Nebulex.Cache.Options] Remove misleading `default: false` from
+  the runtime `:telemetry` option schema. The actual default comes
+  from the cache's global `:telemetry` setting in `adapter_meta`,
+  not the option schema.
+
 ## [v3.0.0](https://github.com/elixir-nebulex/nebulex/tree/v3.0.0) (2026-02-21)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0-rc.2...v3.0.0)
 
