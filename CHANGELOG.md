@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.2](https://github.com/elixir-nebulex/nebulex/tree/v3.0.2) (2026-03-07)
+> [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.1...v3.0.2)
+
+### Enhancements
+
+- Added `usage-rules/` folder to the Hex package for agent-assisted
+  development workflows.
+- Fixed CI workflow: split Hex/Rebar install from dependency fetching,
+  improved PLT cache key to include Elixir/OTP versions and `mix.lock`
+  hash, fixed dialyzer step to run regardless of PLT cache status,
+  and bumped GitHub Actions to v4.
+
 ## [v3.0.1](https://github.com/elixir-nebulex/nebulex/tree/v3.0.1) (2026-03-01)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.0...v3.0.1)
 
