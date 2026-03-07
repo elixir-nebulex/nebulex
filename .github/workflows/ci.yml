@@ -22,7 +22,6 @@ jobs:
             otp: 28.x
             os: 'ubuntu-latest'
             lint: true
-            style: true
             coverage: true
             sobelow: true
             dialyzer: true
@@ -43,7 +42,7 @@ jobs:
       MIX_ENV: test
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install OTP and Elixir
         uses: erlef/setup-beam@v1
@@ -52,31 +51,33 @@ jobs:
           elixir-version: '${{ matrix.elixir }}'
 
       - name: Cache deps
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: mix-cache
         with:
           path: deps
           key: >-
-            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{
+            ${{ matrix.elixir }}-${{ matrix.otp }}-${{ runner.os }}-mix-${{
             hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-
+            ${{ matrix.elixir }}-${{ matrix.otp }}-${{ runner.os }}-mix-
 
       - name: Cache _build
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: _build
           key: >-
-            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-build-${{
+            ${{ matrix.elixir }}-${{ matrix.otp }}-${{ runner.os }}-build-${{
             hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-build-
+            ${{ matrix.elixir }}-${{ matrix.otp }}-${{ runner.os }}-build-
 
-      - name: Install Dependencies
+      - name: Install Hex and Rebar
         run: |
           mix local.hex --force
           mix local.rebar --force
-          mix deps.get
+
+      - name: Install Dependencies
+        run: mix deps.get
         if: ${{ steps.mix-cache.outputs.cache-hit != 'true' }}
 
       - name: Compile deps
@@ -116,11 +117,15 @@ jobs:
         if: ${{ matrix.sobelow }}
 
       - name: Restore PLT Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: plt-cache
         with:
           path: priv/plts
-          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-plt-v3-1
+          key: >-
+            plt-${{ matrix.elixir }}-${{ matrix.otp }}-${{
+            hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          restore-keys: |
+            plt-${{ matrix.elixir }}-${{ matrix.otp }}-
         if: ${{ matrix.dialyzer }}
 
       - name: Create PLTs
@@ -131,7 +136,7 @@ jobs:
 
       - name: Run dialyzer
         run: mix dialyzer --format github
-        if: ${{ matrix.dialyzer && steps.plt-cache.outputs.cache-hit != 'true' }}
+        if: ${{ matrix.dialyzer }}
 
       - name: Run documentation health check
         run: mix doctor

@@ -106,7 +106,7 @@ defmodule Nebulex.MixProject do
         "Changelog" => "#{@source_url}/blob/master/CHANGELOG.md",
         "GitHub" => @source_url
       },
-      files: ~w(lib .formatter.exs mix.exs README* CHANGELOG* LICENSE* CONTRIBUTING*)
+      files: ~w(lib usage-rules .formatter.exs mix.exs README* CHANGELOG* LICENSE* CONTRIBUTING*)
     ]
   end
 
