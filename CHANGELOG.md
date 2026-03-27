@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.3](https://github.com/elixir-nebulex/nebulex/tree/v3.0.3) (2026-03-27)
+> [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.2...v3.0.3)
+
+### Adapter changes
+
+- [nebulex_distributed] Added new `Nebulex.Adapters.Replicated` push-based
+  replicated cache adapter with eager replication, "newer version wins"
+  conflict resolution, bootstrap on node join, and optional anti-entropy
+  reconciliation. See `nebulex_distributed` v3.2.0 for details.
+
+### Documentation
+
+- Updated the official adapters guide to include the Replicated adapter.
+
 ## [v3.0.2](https://github.com/elixir-nebulex/nebulex/tree/v3.0.2) (2026-03-07)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.1...v3.0.2)
 
