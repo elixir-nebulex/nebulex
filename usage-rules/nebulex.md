@@ -12,7 +12,11 @@ provides:
 - Event streaming via `Nebulex.Streams` for distributed invalidation.
 - Support for TTL, eviction policies, transactions, and more.
 
-## Key Files
+## Architecture & Key Files
+
+> Read `guides/learning/architecture.md` for full architecture context,
+> module hierarchy, layer boundaries, and non-negotiable contribution rules.
+> The section below is a quick-reference complement to that guide.
 
 | Path | Purpose |
 |------|---------|
@@ -28,9 +32,8 @@ provides:
 | `mix.exs` | Dependencies and project config |
 | `CHANGELOG.md` | Release history and breaking changes |
 | `test/` | Test suite (mirrors `lib/` structure) |
+| `guides/learning/architecture.md` | Architecture, non-negotiables, source of truth hierarchy |
 | `guides/` | User-facing guides, behavioral references, and examples |
-| `guides/introduction/` | Getting started, available adapters |
-| `guides/learning/` | Declarative caching, cache patterns, adapter creation, info API |
 | `guides/upgrading/v3.0.md` | v3 migration guide |
 
 ## Package Structure (v3)

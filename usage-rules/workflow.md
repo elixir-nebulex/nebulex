@@ -32,13 +32,15 @@ At the start of each session, quickly establish context:
 2. Run `git log --oneline -20` to see recent changes.
 3. Run `git branch -a` to see active branches and current branch.
 4. Read `README.md` and the latest section of `CHANGELOG.md`.
-5. Check `.tool-versions` or the `elixir` version in `mix.exs` for
+5. Read `guides/learning/architecture.md` for project architecture,
+   layer boundaries, and non-negotiable contribution rules.
+6. Check `.tool-versions` or the `elixir` version in `mix.exs` for
    supported Elixir/OTP versions.
 
 If on a feature branch, also run:
 
-6. `git log --oneline main..HEAD` to see the branch's commits.
-7. `git diff main...HEAD` to understand the branch's full scope.
+7. `git log --oneline main..HEAD` to see the branch's commits.
+8. `git diff main...HEAD` to understand the branch's full scope.
 
 When relevant to the task:
 

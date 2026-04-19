@@ -1,7 +1,7 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./guides/images/nbx-logo-white.png" />
-  <source media="(prefers-color-scheme: light)" srcset="./guides/images/nbx-logo.png" />
-  <img src="./guides/images/nbx-logo.png" alt="Nebulex logo" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/elixir-nebulex/nebulex/main/guides/images/nbx-logo-white.png" />
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/elixir-nebulex/nebulex/main/guides/images/nbx-logo.png" />
+  <img src="https://raw.githubusercontent.com/elixir-nebulex/nebulex/main/guides/images/nbx-logo.png" alt="Nebulex logo" />
 </picture>
 
 > **In-memory and distributed caching toolkit for Elixir**
@@ -9,9 +9,9 @@
 ---
 
 ![CI](https://github.com/elixir-nebulex/nebulex/workflows/CI/badge.svg)
-[![Codecov](http://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)](http://codecov.io/gh/elixir-nebulex/nebulex)
-[![Hex.pm](http://img.shields.io/hexpm/v/nebulex.svg)](http://hex.pm/packages/nebulex)
-[![Documentation](http://img.shields.io/badge/Documentation-ff69b4)](https://hexdocs.pm/nebulex)
+[![Codecov](https://codecov.io/gh/elixir-nebulex/nebulex/graph/badge.svg)](https://codecov.io/gh/elixir-nebulex/nebulex)
+[![Hex.pm](https://img.shields.io/hexpm/v/nebulex.svg)](https://hex.pm/packages/nebulex)
+[![Documentation](https://img.shields.io/badge/Documentation-ff69b4)](https://hexdocs.pm/nebulex)
 
 ## 🚀 About
 
