@@ -2,7 +2,8 @@
 
 This guide explains why Nebulex exists, who uses it, how it is structured
 internally, and the non-negotiable design principles that govern every
-contribution. Read this before making any significant change to the codebase.
+contribution. Read it at session start to establish project context, and
+refer back to it when making structural changes.
 
 ---
 
@@ -78,7 +79,7 @@ Nebulex is organized into three distinct layers:
 +------------------------------------------------------------+
 |                     Adapter Layer                          |
 |  (separate packages: nebulex_local, nebulex_distributed,   |
-|   nebulex_redis_adapter, nebulex_cachex_adapter, etc.)     |
+|   nebulex_redis_adapter, nebulex_adapters_cachex, etc.)    |
 +------------------------------------------------------------+
 ```
 
@@ -90,14 +91,14 @@ implementation; all storage logic lives in adapters.
 | Module | Responsibility |
 |---|---|
 | `Nebulex.Cache` | Public API macro — `use Nebulex.Cache` generates the full cache API for a module |
-| Nebulex.Cache.KV | Key-value operations: `fetch`, `get`, `put`, `delete`, `take`, etc. |
-| Nebulex.Cache.Queryable | Query-based operations: `get_all`, `count_all`, `delete_all` |
-| Nebulex.Cache.Transaction | Optimistic locking and transactional operations |
-| Nebulex.Cache.Observable | Event streaming for cache entry changes |
-| Nebulex.Cache.Info | Stats and monitoring (`info/2`) |
-| Nebulex.Cache.Options | NimbleOptions-based validation for all cache options |
-| Nebulex.Cache.Supervisor | OTP supervision tree for cache processes |
-| Nebulex.Cache.Registry | Registry for dynamic caches |
+| `Nebulex.Cache.KV` | Key-value operations: `fetch`, `get`, `put`, `delete`, `take`, etc. |
+| `Nebulex.Cache.Queryable` | Query-based operations: `get_all`, `count_all`, `delete_all` |
+| `Nebulex.Cache.Transaction` | Optimistic locking and transactional operations |
+| `Nebulex.Cache.Observable` | Event streaming for cache entry changes |
+| `Nebulex.Cache.Info` | Stats and monitoring (`info/2`) |
+| `Nebulex.Cache.Options` | NimbleOptions-based validation for all cache options |
+| `Nebulex.Cache.Supervisor` | OTP supervision tree for cache processes |
+| `Nebulex.Cache.Registry` | Registry for dynamic caches |
 | `Nebulex.Adapter` | Adapter behaviour definition and shared macros |
 | `Nebulex.Adapter.KV` | Callback spec for KV operations |
 | `Nebulex.Adapter.Queryable` | Callback spec for query operations |
@@ -106,9 +107,9 @@ implementation; all storage logic lives in adapters.
 | `Nebulex.Adapter.Info` | Callback spec for stats/info |
 | `Nebulex.Caching` | Entry point for declarative caching (`use Nebulex.Caching`) |
 | `Nebulex.Caching.Decorators` | `cacheable`, `cache_put`, `cache_evict` decorator implementations |
-| Nebulex.Caching.Decorators.Runtime | Runtime evaluation of cache operations, key generation, match logic |
-| Nebulex.Caching.Decorators.Context | Per-invocation decorator context (function name, args, decorator type) |
-| Nebulex.Telemetry | Telemetry span events emitted by cache operations |
+| `Nebulex.Caching.Decorators.Runtime` | Runtime evaluation of cache operations, key generation, match logic |
+| `Nebulex.Caching.Decorators.Context` | Per-invocation decorator context (function name, args, decorator type) |
+| `Nebulex.Telemetry` | Telemetry span events emitted by cache operations |
 | `Nebulex.Event` | Cache entry event types for the Observable API |
 
 ### Adapter Layer — separate packages
@@ -117,16 +118,9 @@ Each adapter is its own Hex package. The core package ships only with
 `Nebulex.Adapters.Nil` (a no-op adapter used for benchmarking the abstraction
 layer itself) and `Nebulex.Adapters.Common.Info.Stats` (shared stats helpers).
 
-Official adapters:
-
-| Package | Adapter | Description |
-|---|---|---|
-| `nebulex_local` | `Nebulex.Adapters.Local` | Generational ETS-based local cache |
-| `nebulex_distributed` | `Nebulex.Adapters.Partitioned` | Sharded distributed cache |
-| `nebulex_distributed` | `Nebulex.Adapters.Replicated` | Fully replicated distributed cache |
-| `nebulex_distributed` | `Nebulex.Adapters.Coherent` | Local cache with distributed invalidation |
-| `nebulex_redis_adapter` | `Nebulex.Adapters.Redis` | Redis-backed cache |
-| `nebulex_cachex_adapter` | `Nebulex.Adapters.Cachex` | Cachex-backed local cache |
+For the canonical list of official adapters (package names, modules,
+and Hex/GitHub links), see `guides/introduction/nbx-adapters.md`. That
+guide is the single source of truth — do not maintain a parallel list here.
 
 ### Declarative Caching — `Nebulex.Caching`
 
@@ -268,24 +262,12 @@ cause — do not suppress warnings.
 
 When in doubt about intent, consult these sources in order:
 
-1. This document — architectural decisions and non-negotiables
-2. `usage-rules/nebulex.md` — domain-specific patterns and pitfalls
-3. `usage-rules/workflow.md` — contribution workflow and validation steps
+1. `usage-rules/workflow.md` — contribution workflow and rule precedence
+2. This document — architectural decisions and non-negotiables
+3. `usage-rules/nebulex.md` — domain-specific patterns and pitfalls
 4. Module `@moduledoc` and function `@doc` — local intent for each API
 5. `CHANGELOG.md` — history of decisions and the reasoning behind them
 6. The blog post ["Nebulex v3: A New Chapter for Caching in Elixir"][v3-post]
    for the philosophy behind the v3 redesign
 
 [v3-post]: https://medium.com/erlang-battleground/nebulex-v3-a-new-chapter-for-caching-in-elixir-03cd366692c3
-
----
-
-## Further Reading
-
-- [Getting Started](../introduction/getting-started.md)
-- [Available Adapters](../introduction/nbx-adapters.md)
-- [Cache Usage Patterns](cache-usage-patterns.md)
-- [Declarative Caching](declarative-caching.md)
-- [Creating a New Adapter](creating-new-adapter.md)
-- [Info API](info-api.md)
-- [Upgrading to v3.0](../upgrading/v3.0.md)

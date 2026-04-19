@@ -1,27 +1,15 @@
 # Agent Workflow
 
-## Rule Index
+## Rules
 
-Start here, then read these at session start and refer back while coding:
+Read these at session start and refer back while coding. When rules
+conflict, prioritize them in the order listed.
 
-- `usage-rules/nebulex.md` - Nebulex-specific rules
-- `usage-rules/elixir-style.md` - Style guidelines
-- `usage-rules/elixir.md` - Core Elixir rules
-
-> If these files are not found, check `AGENTS.md` or the local
-> `usage-rules/` folder instead.
-
-## Rule Precedence
-
-When rules conflict, prioritize them in this order:
-
-1. `usage-rules/workflow.md`
-2. `usage-rules/nebulex.md`
-3. `usage-rules/elixir-style.md`
-4. `usage-rules/elixir.md`
-
-> If these files are not found, apply the same precedence to the
-> corresponding sections in `AGENTS.md`.
+1. `usage-rules/workflow.md` — entry point (this file)
+2. `usage-rules/architecture.md` — architecture & non-negotiables
+3. `usage-rules/nebulex.md` — Nebulex-specific rules
+4. `usage-rules/elixir-style.md` — style guidelines
+5. `usage-rules/elixir.md` — core Elixir rules
 
 ## Session Bootstrap
 
@@ -32,17 +20,18 @@ At the start of each session, quickly establish context:
 2. Run `git log --oneline -20` to see recent changes.
 3. Run `git branch -a` to see active branches and current branch.
 4. Read `README.md` and the latest section of `CHANGELOG.md`.
-5. Check `.tool-versions` or the `elixir` version in `mix.exs` for
+5. Read the rule files listed in the Rules section above.
+6. Check `.tool-versions` or the `elixir` version in `mix.exs` for
    supported Elixir/OTP versions.
 
 If on a feature branch, also run:
 
-6. `git log --oneline main..HEAD` to see the branch's commits.
-7. `git diff main...HEAD` to understand the branch's full scope.
+7. `git log --oneline main..HEAD` to see the branch's commits.
+8. `git diff main...HEAD` to understand the branch's full scope.
 
 When relevant to the task:
 
-8. Check open issues and PRs with `gh issue list` and `gh pr list`.
+9. Check open issues and PRs with `gh issue list` and `gh pr list`.
    If `gh` is unavailable or unauthenticated, skip this step.
 
 ## Current Project Status
@@ -50,8 +39,9 @@ When relevant to the task:
 - **Latest release**: check the latest section in `CHANGELOG.md`.
 - Read `CHANGELOG.md` for recent features, breaking changes, and
   the project's direction.
-- Changelog policy: user-visible behavior changes should be documented;
-  internal refactors may be omitted before a release.
+- When summarizing changes for the PR description, distinguish
+  user-visible behavior from internal refactors — only the former
+  typically warrants release-note context for maintainers.
 
 ## PR Workflow
 
@@ -62,9 +52,12 @@ When relevant to the task:
 2. Review the diff: `gh pr diff <number>`.
 3. Check `CHANGELOG.md` to understand if the change aligns with the
    project's direction.
-4. Verify code follows `usage-rules/` conventions (Elixir patterns,
-   Nebulex-specific rules, style guidelines).
-5. Run the validation commands (see below) before approving.
+4. Verify code follows `usage-rules/` conventions (architectural
+   non-negotiables first, then Nebulex-specific rules, Elixir
+   patterns, and style guidelines).
+5. Rely on green CI for the canonical gate; re-run `mix test.ci`
+   locally only if you doubt CI's result. Use the fast-iteration
+   commands (see below) for spot checks.
 6. Provide constructive feedback referencing specific lines and
    conventions.
 7. Structure review feedback as:
@@ -76,9 +69,9 @@ When relevant to the task:
 
 1. Branch from `main` with a descriptive branch name
    (e.g., `fix/some-bug`, `feat/cache-warming-support`).
-2. Update `CHANGELOG.md` under the appropriate section
-   (Enhancements, Bug fixes, Backward-incompatible changes).
-3. Run all validation commands before pushing.
+2. Do not update `CHANGELOG.md` directly. Include release-note context
+   in the PR description for maintainers to fold into the next release.
+3. Run `mix test.ci` before pushing (canonical gate; see below).
 4. Reference related GitHub issues in the PR description
    (e.g., "Closes #123").
 5. Use `gh pr create` with a clear title and description.
@@ -120,10 +113,10 @@ type(scope): short summary
 
 ## Validation Commands
 
-Before submitting or approving any code change, run:
+Use these for fast iteration during development:
 
 ```bash
-# Quick targeted validation (recommended first)
+# Targeted test
 mix test path/to/changed_test.exs
 
 # Format check
@@ -136,7 +129,10 @@ mix credo --strict
 mix docs
 ```
 
-Then run full-suite validation before merge/release:
+Before pushing for review, the canonical gate is `mix test.ci`. It runs
+tests, coverage, Credo (strict), Dialyzer, Sobelow, and `mix doctor`.
+Green CI is a requirement, not a courtesy check (see
+`usage-rules/architecture.md` Non-Negotiable #5).
 
 ```bash
 mix test.ci
