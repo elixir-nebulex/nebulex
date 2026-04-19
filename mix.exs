@@ -180,6 +180,7 @@ defmodule Nebulex.MixProject do
       "guides/introduction/nbx-adapters.md",
 
       # Learning
+      "guides/learning/architecture.md",
       "guides/learning/cache-usage-patterns.md",
       "guides/learning/declarative-caching.md",
       "guides/learning/info-api.md",
