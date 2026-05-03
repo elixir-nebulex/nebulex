@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.4](https://github.com/elixir-nebulex/nebulex/tree/v3.0.4) (2026-05-03)
+> [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.3...v3.0.4)
+
+### Documentation
+
+- Added `usage-rules/architecture.md` covering Nebulex's layer
+  boundaries, key design decisions, and non-negotiable contribution
+  rules. Used to bootstrap agent-assisted development sessions.
+- Tightened and reconciled the agent rule files: unified Rule Index
+  and Rule Precedence in `workflow.md`, aligned CHANGELOG policy with
+  `CONTRIBUTING.md`, clarified validation commands, and fixed a
+  number of consistency issues surfaced by cold-session simulations.
+
 ## [v3.0.3](https://github.com/elixir-nebulex/nebulex/tree/v3.0.3) (2026-03-27)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.2...v3.0.3)
 
