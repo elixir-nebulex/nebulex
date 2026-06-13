@@ -1947,15 +1947,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         context = Context.get()
         cache = Runtime.eval_cache(cache, context)
         key = Runtime.eval_key(unquote(key), context)
-
-        txn_keys =
-          case key do
-            {:in, keys} -> keys
-            {:query, q} -> [q]
-            {:query, q, {:in, keys}} -> [q | keys]
-            {:query, q, k} -> [q, k]
-            _else -> [key]
-          end
+        txn_keys = Runtime.txn_keys(key)
 
         result =
           Runtime.run_cmd(

@@ -108,6 +108,14 @@ defmodule Nebulex.Caching.Decorators.Runtime do
   end
 
   @doc false
+  @spec txn_keys(any()) :: [any()]
+  def txn_keys({:in, keys}), do: keys
+  def txn_keys({:query, q}), do: [q]
+  def txn_keys({:query, q, {:in, keys}}), do: [q | keys]
+  def txn_keys({:query, q, k}), do: [q, k]
+  def txn_keys(key), do: [key]
+
+  @doc false
   @spec run_cmd(module(), atom(), [any()], atom()) :: any()
   def run_cmd(cache, fun, args, on_error)
 
