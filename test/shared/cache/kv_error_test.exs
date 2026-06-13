@@ -146,7 +146,7 @@ defmodule Nebulex.Cache.KVErrorTest do
         end
       end
 
-      test "decr!/3 aises an exception", %{cache: cache} do
+      test "decr!/3 raises an exception", %{cache: cache} do
         assert_raise Nebulex.Error, fn ->
           cache.decr!(:raise)
         end

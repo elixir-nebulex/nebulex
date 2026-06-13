@@ -461,7 +461,7 @@ defmodule Nebulex.Cache do
         Supervisor.stop(name, :normal, Keyword.get(opts, :timeout, 5000))
       end
 
-      # Iniline common instructions
+      # Inline common instructions
       @compile inline: [get_dynamic_cache: 0]
 
       @impl true
@@ -2570,13 +2570,13 @@ defmodule Nebulex.Cache do
 
   """
   @doc group: "Query API"
-  @callback delete_all!(query_spec(), opts()) :: integer()
+  @callback delete_all!(query_spec(), opts()) :: non_neg_integer()
 
   @doc """
   Same as `c:delete_all!/3` but raises an exception if an error occurs.
   """
   @doc group: "Query API"
-  @callback delete_all!(dynamic_cache(), query_spec(), opts()) :: integer()
+  @callback delete_all!(dynamic_cache(), query_spec(), opts()) :: non_neg_integer()
 
   @doc """
   Counts all entries matching the query specified by the given `query_spec`.

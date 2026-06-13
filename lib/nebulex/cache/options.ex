@@ -414,7 +414,7 @@ defmodule Nebulex.Cache.Options do
   def validate_observable_opts!(opts) do
     observable_opts =
       opts
-      |> Keyword.take([:filter, :metadata])
+      |> Keyword.take([:id, :filter, :metadata])
       |> NimbleOptions.validate!(@observable_opts_schema)
 
     Keyword.merge(opts, observable_opts)

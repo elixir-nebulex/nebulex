@@ -180,7 +180,7 @@ defmodule Nebulex.Adapter.KV do
   See `c:Nebulex.Cache.ttl/2`.
   """
   @callback ttl(adapter_meta(), key(), opts()) ::
-              Nebulex.Cache.ok_error_tuple(value(), Nebulex.Cache.fetch_error_reason())
+              Nebulex.Cache.ok_error_tuple(timeout(), Nebulex.Cache.fetch_error_reason())
 
   @doc """
   Returns `{:ok, true}` if the given `key` exists and the new `ttl` is
