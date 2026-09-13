@@ -1803,13 +1803,15 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for more options.
 
-  > #### `get_and_update` atomicity {: .warning}
+  > #### Composite operation {: .warning}
   >
-  > This is a composite operation built from `get` and `put` (or `delete` for
-  > `:pop`). The given function runs in the calling process, on the local
-  > node, and the default implementation is not atomic: concurrent calls on
-  > the same key can overwrite each other's changes. See
-  > `Nebulex.Adapter.CompositeKV` for more information.
+  > By default, this operation reads the value with `fetch`, runs the given
+  > function in the calling process, and writes the result with `put` (or
+  > removes the entry with `delete` for `:pop`). Those steps are not atomic:
+  > concurrent calls on the same key can overwrite each other's changes.
+  >
+  > Adapters may override this implementation, including where the function
+  > runs and the atomicity it provides. See `Nebulex.Adapter.CompositeKV`.
 
   ## Examples
 
@@ -1920,13 +1922,15 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for more options.
 
-  > #### `update` atomicity {: .warning}
+  > #### Composite operation {: .warning}
   >
-  > This is a composite operation built from `fetch` and `put`. The given
-  > function runs in the calling process, on the local node, and the default
-  > implementation is not atomic: concurrent calls on the same key can
-  > overwrite each other's changes. See
-  > `Nebulex.Adapter.CompositeKV` for more information.
+  > By default, this operation reads the value with `fetch`, runs the given
+  > function in the calling process, and writes the result with `put`. Those
+  > steps are not atomic: concurrent calls on the same key can overwrite
+  > each other's changes.
+  >
+  > Adapters may override this implementation, including where the function
+  > runs and the atomicity it provides. See `Nebulex.Adapter.CompositeKV`.
 
   ## Examples
 
@@ -1982,7 +1986,7 @@ defmodule Nebulex.Cache do
 
   If the function returns `{:ok, value}`, the value is cached under the given
   `key` and returned as the result. If it returns `{:error, reason}`, the value
-  is **not** cached, and the error is returned as is.
+  is **not** cached, and `reason` is returned wrapped in a `Nebulex.Error`.
 
   If the function returns any other value, a `RuntimeError` is raised.
 
@@ -2000,14 +2004,15 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for a list of supported options.
 
-  > #### `fetch_or_store` atomicity {: .warning}
+  > #### Composite operation {: .warning}
   >
-  > This is a composite operation built from `fetch` and, on a cache miss,
-  > `put`. The given function runs in the calling process, on the local node,
-  > and the default implementation is not atomic: concurrent misses on the
-  > same key can evaluate the function more than once, and the last write
-  > wins. See
-  > `Nebulex.Adapter.CompositeKV` for more information.
+  > By default, this operation reads the value with `fetch` and, on a cache
+  > miss, runs the given function in the calling process and writes the
+  > result with `put`. Those steps are not atomic: concurrent misses on the
+  > same key can run the function more than once, and the last write wins.
+  >
+  > Adapters may override this implementation, including where the function
+  > runs and the atomicity it provides. See `Nebulex.Adapter.CompositeKV`.
 
   ## Examples
 
@@ -2157,14 +2162,15 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for a list of supported options.
 
-  > #### `get_or_store` atomicity {: .warning}
+  > #### Composite operation {: .warning}
   >
-  > This is a composite operation built from `fetch` and, on a cache miss,
-  > `put`. The given function runs in the calling process, on the local node,
-  > and the default implementation is not atomic: concurrent misses on the
-  > same key can evaluate the function more than once, and the last write
-  > wins. See
-  > `Nebulex.Adapter.CompositeKV` for more information.
+  > By default, this operation reads the value with `fetch` and, on a cache
+  > miss, runs the given function in the calling process and writes the
+  > result with `put`. Those steps are not atomic: concurrent misses on the
+  > same key can run the function more than once, and the last write wins.
+  >
+  > Adapters may override this implementation, including where the function
+  > runs and the atomicity it provides. See `Nebulex.Adapter.CompositeKV`.
 
   ## Examples
 

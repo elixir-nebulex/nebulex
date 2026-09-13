@@ -193,6 +193,15 @@ defmodule Nebulex.TelemetryTest do
       end
     end
 
+    test "ok: shared options reach a command whose adapter validates its own opts" do
+      with_telemetry_handler @custom_events, fn ->
+        assert Cache.transaction(fn -> :ok end, @custom_opts) == {:ok, :ok}
+
+        assert_receive {@custom_stop, _, %{command: :transaction} = metadata}
+        assert metadata[:extra_metadata] == %{foo: "bar"}
+      end
+    end
+
     test "error: invalid telemetry_event" do
       assert_raise NimbleOptions.ValidationError, ~r"invalid value for :telemetry_event", fn ->
         Cache.fetch(:invalid, telemetry_event: :invalid)

@@ -74,18 +74,16 @@ defmodule Nebulex.Adapter.CompositeKV do
   or `command: :get_or_store` is emitted. The shared `:telemetry`,
   `:telemetry_event`, and `:telemetry_metadata` options apply to that
   command span and are forwarded to the primitive commands executed by the
-  default implementation, so they behave as one unit.
+  default implementation.
 
   > #### Overrides and cache entry events {: .warning}
   >
-  > Cache entry events (`Nebulex.Event.CacheEntryEvent`) and the cache stats
-  > are derived from the primitive command events, not from the composite
-  > one. An implementation that performs its writes without going through
-  > `Nebulex.Adapter.run_command/4` (for example, by running the whole
-  > operation on a remote node) emits only the composite command event, so
-  > registered event listeners and the stats counters will not see those
-  > writes. Adapters overriding these callbacks should document that
-  > consequence, or emit the equivalent primitive command events themselves.
+  > The built-in cache entry (`Nebulex.Event.CacheEntryEvent`) and stats
+  > handlers are driven by the primitive command events, not by the composite
+  > one. If an override bypasses those commands, or runs them under another
+  > cache's metadata, those handlers will not account for the operation on
+  > the original cache. Preserve equivalent events for the affected cache
+  > when implementing an override.
   """
 
   import Nebulex.Utils, only: [wrap_error: 2]
@@ -230,8 +228,10 @@ defmodule Nebulex.Adapter.CompositeKV do
         ) ::
           Nebulex.Cache.ok_error_tuple({Nebulex.Cache.value(), Nebulex.Cache.value()})
   def get_and_update(adapter_meta, key, fun, ttl, keep_ttl?, opts) do
-    with {:ok, current} <- fetch_or_nil(adapter_meta, key, opts) do
-      eval_get_and_update_fun(fun.(current), current, adapter_meta, key, ttl, keep_ttl?, opts)
+    with {:ok, entry} <- fetch_entry(adapter_meta, key, opts) do
+      current = current_value(entry)
+
+      eval_get_and_update_fun(fun.(current), entry, adapter_meta, key, ttl, keep_ttl?, opts)
     end
   end
 
@@ -289,29 +289,37 @@ defmodule Nebulex.Adapter.CompositeKV do
 
   ## Private functions
 
-  defp fetch_or_nil(adapter_meta, key, opts) do
-    with {:error, %Nebulex.KeyError{key: ^key}} <- run(adapter_meta, :fetch, [key], opts) do
-      {:ok, nil}
+  # The cached entry, as `{:hit, value}` or `:miss`. The distinction matters
+  # because `nil` is a valid cache value, so a cached `nil` must be told
+  # apart from a missing key.
+  defp fetch_entry(adapter_meta, key, opts) do
+    case run(adapter_meta, :fetch, [key], opts) do
+      {:ok, value} -> {:ok, {:hit, value}}
+      {:error, %Nebulex.KeyError{key: ^key}} -> {:ok, :miss}
+      {:error, _} = error -> error
     end
   end
 
-  defp eval_get_and_update_fun({get, update}, _current, adapter_meta, key, ttl, keep_ttl?, opts) do
+  defp current_value({:hit, value}), do: value
+  defp current_value(:miss), do: nil
+
+  defp eval_get_and_update_fun({get, update}, _entry, adapter_meta, key, ttl, keep_ttl?, opts) do
     with {:ok, true} <- run(adapter_meta, :put, [key, update, :put, ttl, keep_ttl?], opts) do
       {:ok, {get, update}}
     end
   end
 
-  defp eval_get_and_update_fun(:pop, nil, _adapter_meta, _key, _ttl, _keep_ttl?, _opts) do
+  defp eval_get_and_update_fun(:pop, :miss, _adapter_meta, _key, _ttl, _keep_ttl?, _opts) do
     {:ok, {nil, nil}}
   end
 
-  defp eval_get_and_update_fun(:pop, current, adapter_meta, key, _ttl, _keep_ttl?, opts) do
+  defp eval_get_and_update_fun(:pop, {:hit, current}, adapter_meta, key, _ttl, _keep_ttl?, opts) do
     with :ok <- run(adapter_meta, :delete, [key], opts) do
       {:ok, {current, nil}}
     end
   end
 
-  defp eval_get_and_update_fun(other, _current, _adapter_meta, _key, _ttl, _keep_ttl?, _opts) do
+  defp eval_get_and_update_fun(other, _entry, _adapter_meta, _key, _ttl, _keep_ttl?, _opts) do
     raise ArgumentError,
           "the given function must return a two-element tuple or :pop," <>
             " got: #{inspect(other)}"

@@ -66,6 +66,18 @@ defmodule Nebulex.Cache.CompositeKVTelemetryTest do
         end
       end
 
+      test "get_and_update/3 emits a delete span when popping a cached nil", ctx do
+        %{cache: cache, start: start, stop: stop} = ctx
+
+        :ok = cache.put(:counter, nil)
+
+        with_telemetry_handler [start, stop], fn ->
+          assert cache.get_and_update(:counter, fn _ -> :pop end) == {:ok, {nil, nil}}
+
+          assert_receive {^stop, _, %{command: :delete, args: [:counter, []]}}
+        end
+      end
+
       test "update/4 emits the composite and primitive spans", ctx do
         %{cache: cache, start: start, stop: stop} = ctx
         fun = &Integer.to_string/1

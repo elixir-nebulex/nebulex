@@ -25,6 +25,13 @@ defmodule Nebulex.Cache.CompositeKVTest do
         assert cache.get_and_update(:counter, fn _ -> :pop end) == {:ok, {nil, nil}}
       end
 
+      test "pops a cached nil value", %{cache: cache} do
+        :ok = cache.put(:counter, nil)
+
+        assert cache.get_and_update(:counter, fn _ -> :pop end) == {:ok, {nil, nil}}
+        assert cache.has_key?(:counter) == {:ok, false}
+      end
+
       test "raises if the function returns an invalid value", %{cache: cache} do
         assert_raise ArgumentError, ~r"must return a two-element tuple or :pop", fn ->
           cache.get_and_update(:counter, &cache.get_and_update_bad_fun/1)
