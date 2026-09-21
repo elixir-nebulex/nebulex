@@ -32,7 +32,7 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
       ) do
     cache_name = name || pid
     id = Keyword.get(opts, :id, listener)
-    handler_id = {name, id}
+    handler_id = {cache_name, id}
 
     with {:error, :already_exists} <-
            Telemetry.attach_many(
