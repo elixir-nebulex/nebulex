@@ -38,9 +38,13 @@ defmodule Nebulex.TestAdapter do
   # Inherit default observable implementation
   use Nebulex.Adapter.Observable
 
+  # Inherit default composite KV implementation
+  use Nebulex.Adapter.CompositeKV
+
   import Nebulex.Utils
 
   alias Nebulex.Adapters.Common.Info.Stats
+  alias Nebulex.Cache.Options
   alias __MODULE__.{Entry, KV}
   alias Nebulex.Time
 
@@ -273,7 +277,10 @@ defmodule Nebulex.TestAdapter do
 
   @impl true
   def transaction(%{cache: cache, pid: pid} = adapter_meta, fun, opts) do
-    opts = Keyword.validate!(opts, keys: [], nodes: [node()], retries: :infinity)
+    opts =
+      opts
+      |> Keyword.drop(Options.__runtime_shared_opts__())
+      |> Keyword.validate!(keys: [], nodes: [node()], retries: :infinity)
 
     adapter_meta
     |> do_in_transaction?()

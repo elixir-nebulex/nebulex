@@ -146,7 +146,7 @@ defmodule Nebulex.TelemetryTest do
     setup_with_cache Cache
 
     test "ok: emits start and stop events" do
-      expected_opts = Keyword.drop(@custom_opts, [:telemetry_event, :telemetry_metadata])
+      expected_opts = @custom_opts
 
       with_telemetry_handler @custom_events, fn ->
         :ok = Cache.put("foo", "bar", @custom_opts)
@@ -171,7 +171,7 @@ defmodule Nebulex.TelemetryTest do
     end
 
     test "raise: emits start and exception events" do
-      expected_opts = Keyword.drop(@custom_opts, [:telemetry_event, :telemetry_metadata])
+      expected_opts = @custom_opts
 
       with_telemetry_handler @custom_events, fn ->
         key = {:eval, fn -> raise ArgumentError, "error" end}
@@ -189,6 +189,15 @@ defmodule Nebulex.TelemetryTest do
         assert metadata[:reason] == %ArgumentError{message: "error"}
         assert metadata[:stacktrace]
         assert metadata[:telemetry_span_context] |> is_reference()
+        assert metadata[:extra_metadata] == %{foo: "bar"}
+      end
+    end
+
+    test "ok: shared options reach a command whose adapter validates its own opts" do
+      with_telemetry_handler @custom_events, fn ->
+        assert Cache.transaction(fn -> :ok end, @custom_opts) == {:ok, :ok}
+
+        assert_receive {@custom_stop, _, %{command: :transaction} = metadata}
         assert metadata[:extra_metadata] == %{foo: "bar"}
       end
     end
