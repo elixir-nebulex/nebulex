@@ -27,6 +27,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Bug fixes
 
+- [Nebulex.Adapter] `__before_compile__/1` is no longer listed as an optional
+  callback. `Nebulex.Cache` has always invoked it, so an adapter without it
+  could not be used by any cache.
 - [Nebulex.Adapter] `run_command/4` now forwards the shared `:telemetry`,
   `:telemetry_event`, and `:telemetry_metadata` options to adapter
   callbacks. Nested commands receiving these options respect
