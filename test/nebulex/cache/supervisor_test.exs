@@ -58,6 +58,90 @@ defmodule Nebulex.Cache.SupervisorTest do
       end
     end
 
+    test "error: adapter doesn't implement Nebulex.Adapter.KV" do
+      msg =
+        "invalid value for :adapter option: Nebulex.Cache expects the option value " <>
+          "Nebulex.Cache.SupervisorTest.NoKVAdapter to list Nebulex.Adapter.KV as a behaviour"
+
+      assert_raise NimbleOptions.ValidationError, msg, fn ->
+        defmodule NoKVAdapter do
+          @behaviour Nebulex.Adapter
+
+          @impl true
+          defmacro __before_compile__(_env), do: :ok
+
+          @impl true
+          def init(_opts), do: {:ok, [], %{}}
+        end
+
+        defmodule NoKVCache do
+          use Nebulex.Cache,
+            otp_app: :nebulex,
+            adapter: NoKVAdapter
+        end
+      end
+    end
+
+    test "error: adapter doesn't implement Nebulex.Adapter.CompositeKV" do
+      msg =
+        "invalid value for :adapter option: Nebulex.Cache expects the option value " <>
+          "Nebulex.Cache.SupervisorTest.NoCompositeKVAdapter to list " <>
+          "Nebulex.Adapter.CompositeKV as a behaviour"
+
+      assert_raise NimbleOptions.ValidationError, msg, fn ->
+        defmodule NoCompositeKVAdapter do
+          @behaviour Nebulex.Adapter
+          @behaviour Nebulex.Adapter.KV
+
+          alias Nebulex.TestAdapter
+
+          @impl true
+          defmacro __before_compile__(_env), do: :ok
+
+          @impl true
+          defdelegate init(opts), to: TestAdapter
+
+          @impl true
+          defdelegate fetch(adapter_meta, key, opts), to: TestAdapter
+
+          @impl true
+          defdelegate put(adapter_meta, key, value, on_write, ttl, keep_ttl?, opts),
+            to: TestAdapter
+
+          @impl true
+          defdelegate put_all(adapter_meta, entries, on_write, ttl, opts), to: TestAdapter
+
+          @impl true
+          defdelegate delete(adapter_meta, key, opts), to: TestAdapter
+
+          @impl true
+          defdelegate take(adapter_meta, key, opts), to: TestAdapter
+
+          @impl true
+          defdelegate has_key?(adapter_meta, key, opts), to: TestAdapter
+
+          @impl true
+          defdelegate ttl(adapter_meta, key, opts), to: TestAdapter
+
+          @impl true
+          defdelegate expire(adapter_meta, key, ttl, opts), to: TestAdapter
+
+          @impl true
+          defdelegate touch(adapter_meta, key, opts), to: TestAdapter
+
+          @impl true
+          defdelegate update_counter(adapter_meta, key, amount, default, ttl, opts),
+            to: TestAdapter
+        end
+
+        defmodule NoCompositeKVCache do
+          use Nebulex.Cache,
+            otp_app: :nebulex,
+            adapter: NoCompositeKVAdapter
+        end
+      end
+    end
+
     test "error: invalid value for :adapter option" do
       msg = ~r"invalid value for :adapter option: expected a module"
 

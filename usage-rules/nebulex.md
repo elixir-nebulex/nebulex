@@ -148,8 +148,18 @@ config :my_app, MyApp.NearCache,
   `{:ok, child_spec, adapter_meta}`.
 - Adapter functions MUST return `{:ok, value}` or `{:error, reason}` tuples.
 - Use `wrap_error/2` from `Nebulex.Utils` to wrap errors consistently.
-- Implement optional behaviours as needed: `Nebulex.Adapter.KV`,
-  `Nebulex.Adapter.Queryable`, etc.
+- Adapters MUST implement `Nebulex.Adapter.KV` and
+  `Nebulex.Adapter.CompositeKV`; `use Nebulex.Cache` validates both at
+  compile time. `use Nebulex.Adapter.CompositeKV` provides the default
+  implementation of `get_and_update/3`, `update/4`, `fetch_or_store/3`, and
+  `get_or_store/3`; implement the callbacks instead to change where the given
+  function runs or the atomicity guarantees.
+- Implement optional behaviours as needed: `Nebulex.Adapter.Queryable`,
+  `Nebulex.Adapter.Transaction`, etc.
+- Adapter callbacks receive the shared `:telemetry`, `:telemetry_event`, and
+  `:telemetry_metadata` options in `opts`. A callback that validates its own
+  options strictly (e.g., with `Keyword.validate!/2`) MUST first drop them:
+  `Keyword.drop(opts, Nebulex.Cache.Options.__runtime_shared_opts__())`.
 
 ### Command Pattern
 
@@ -226,6 +236,11 @@ end)
   caching.
 - `get_or_store/3` - Simpler variant that stores the direct return value from
   the fallback function.
+
+> **Note**: `fetch_or_store/3` and `get_or_store/3` (like `get_and_update/3`
+> and `update/4`) are composite operations built on the primitive commands.
+> The adapter's `Nebulex.Adapter.CompositeKV` implementation determines where
+> the given function runs and the atomicity provided.
 
 ## Options and Validation
 
@@ -736,6 +751,10 @@ end
 - **Do NOT** skip telemetry support in adapter implementations.
 - **Do NOT** use pattern matching in test assertions when the full value is
   known.
+- **Do NOT** treat `{current, nil}` returned from a `get_and_update/3`
+  function as a no-write sentinel. Since v3, `nil` is a valid cache value, so
+  it stores `nil` under the key like any other value. Return `:pop` to remove
+  the entry.
 
 ## Backward Compatibility
 

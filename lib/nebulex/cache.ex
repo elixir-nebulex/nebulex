@@ -370,6 +370,19 @@ defmodule Nebulex.Cache do
   @typedoc "Ok/Error type"
   @type ok_error_tuple(ok, error) :: {:ok, ok} | {:error, error}
 
+  @typedoc "TTL for a cache entry"
+  @type ttl() :: timeout()
+
+  @typedoc "Keep TTL flag"
+  @type keep_ttl() :: boolean()
+
+  @typedoc "Get and update function"
+  @type get_and_update_fun() ::
+          (value() -> {current_value :: value(), new_value :: value()} | :pop)
+
+  @typedoc "Update function"
+  @type update_fun() :: (value() -> value())
+
   @typedoc "Fetch or store function"
   @type fetch_or_store_fun() :: (-> {:ok, value()} | {:error, any()})
 
@@ -386,6 +399,7 @@ defmodule Nebulex.Cache do
       unquote(prelude(opts))
       unquote(base_defs())
       unquote(kv_defs())
+      unquote(composite_kv_defs())
 
       if Nebulex.Adapter.Queryable in behaviours do
         unquote(queryable_defs())
@@ -550,22 +564,28 @@ defmodule Nebulex.Cache do
       defcacheapi decr(key, amount \\ 1, opts \\ []), to: KV
 
       defcacheapi decr!(key, amount \\ 1, opts \\ []), to: KV
+    end
+  end
 
-      defcacheapi get_and_update(key, fun, opts \\ []), to: KV
+  defp composite_kv_defs do
+    quote do
+      alias Nebulex.Cache.CompositeKV
 
-      defcacheapi get_and_update!(key, fun, opts \\ []), to: KV
+      defcacheapi get_and_update(key, fun, opts \\ []), to: CompositeKV
 
-      defcacheapi update(key, initial, fun, opts \\ []), to: KV
+      defcacheapi get_and_update!(key, fun, opts \\ []), to: CompositeKV
 
-      defcacheapi update!(key, initial, fun, opts \\ []), to: KV
+      defcacheapi update(key, initial, fun, opts \\ []), to: CompositeKV
 
-      defcacheapi fetch_or_store(key, fun, opts \\ []), to: KV
+      defcacheapi update!(key, initial, fun, opts \\ []), to: CompositeKV
 
-      defcacheapi fetch_or_store!(key, fun, opts \\ []), to: KV
+      defcacheapi fetch_or_store(key, fun, opts \\ []), to: CompositeKV
 
-      defcacheapi get_or_store(key, fun, opts \\ []), to: KV
+      defcacheapi fetch_or_store!(key, fun, opts \\ []), to: CompositeKV
 
-      defcacheapi get_or_store!(key, fun, opts \\ []), to: KV
+      defcacheapi get_or_store(key, fun, opts \\ []), to: CompositeKV
+
+      defcacheapi get_or_store!(key, fun, opts \\ []), to: CompositeKV
     end
   end
 
@@ -1508,7 +1528,7 @@ defmodule Nebulex.Cache do
 
   """
   @doc group: "KV API"
-  @callback expire(key(), ttl :: timeout(), opts()) :: ok_error_tuple(boolean())
+  @callback expire(key(), ttl(), opts()) :: ok_error_tuple(boolean())
 
   @doc """
   Same as `c:expire/3`, but the command is executed on the cache instance
@@ -1524,7 +1544,7 @@ defmodule Nebulex.Cache do
 
   """
   @doc group: "KV API"
-  @callback expire(dynamic_cache(), key(), ttl :: timeout(), opts()) :: ok_error_tuple(boolean())
+  @callback expire(dynamic_cache(), key(), ttl(), opts()) :: ok_error_tuple(boolean())
 
   @doc """
   Same as `c:expire/3` but raises an exception if an error occurs.
@@ -1538,13 +1558,13 @@ defmodule Nebulex.Cache do
 
   """
   @doc group: "KV API"
-  @callback expire!(key(), ttl :: timeout(), opts()) :: boolean()
+  @callback expire!(key(), ttl(), opts()) :: boolean()
 
   @doc """
   Same as `c:expire!/4` but raises an exception if an error occurs.
   """
   @doc group: "KV API"
-  @callback expire!(dynamic_cache(), key(), ttl :: timeout(), opts()) :: boolean()
+  @callback expire!(dynamic_cache(), key(), ttl(), opts()) :: boolean()
 
   @doc """
   Returns `{:ok, true}` if the given `key` exists and the last access time is
@@ -1751,14 +1771,19 @@ defmodule Nebulex.Cache do
   @doc group: "KV API"
   @callback decr!(dynamic_cache(), key(), amount :: integer(), opts()) :: integer()
 
+  ## Nebulex.Adapter.CompositeKV
+
   @doc """
-  Gets the value from `key` and updates it, all in one pass.
+  Gets the value for `key` and updates it using the given function.
 
   `fun` is called with the current cached value under `key` (or `nil` if `key`
-  hasn't been cached) and must return a two-element tuple: the current value
-  (the retrieved value, which can be operated on before being returned) and
-  the new value to be stored under `key`. `fun` may also return `:pop`, which
-  means the current value shall be removed from the cache and returned.
+  hasn't been cached) and must return a two-element tuple: the value to return
+  as the current value, which may differ from the cached one, and the new
+  value to store under `key`. `fun` may also return `:pop` to remove the entry
+  and return the current value.
+
+  Since `nil` is a valid cache value, returning `{current_value, nil}` stores
+  `nil` under `key` like any other value. Use `:pop` to remove the entry.
 
   This function returns:
 
@@ -1775,12 +1800,15 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for more options.
 
-  > #### `get_and_update` atomicity {: .warning}
+  > #### Composite operation {: .warning}
   >
-  > This operation is not atomic. It uses `get` and `put` (or `delete` for
-  > `:pop`) under the hood, but the function is executed outside of the cache
-  > transaction. If you need to ensure atomicity, consider wrapping the function
-  > in a `c:transaction/2` call.
+  > By default, this operation reads the value with `fetch`, runs the given
+  > function in the calling process, and writes the result with `put` (or
+  > removes the entry with `delete` for `:pop`). Those steps are not atomic:
+  > concurrent calls on the same key can overwrite each other's changes.
+  >
+  > Adapters may override this implementation, including where the function
+  > runs and the atomicity it provides. See `Nebulex.Adapter.CompositeKV`.
 
   ## Examples
 
@@ -1798,10 +1826,17 @@ defmodule Nebulex.Cache do
       ...> end)
       {:ok, {"value!", "new value!"}}
 
+  Cache a `nil` value:
+
+      iex> MyCache.get_and_update(:a, fn current_value ->
+      ...>   {current_value, nil}
+      ...> end)
+      {:ok, {"new value!", nil}}
+
   Pop/remove value if it exists:
 
       iex> MyCache.get_and_update(:a, fn _ -> :pop end)
-      {:ok, {"new value!", nil}}
+      {:ok, {nil, nil}}
 
   Pop/remove nonexistent key:
 
@@ -1809,8 +1844,8 @@ defmodule Nebulex.Cache do
       {:ok, {nil, nil}}
 
   """
-  @doc group: "KV API"
-  @callback get_and_update(key(), (value() -> {current_value, new_value} | :pop), opts()) ::
+  @doc group: "Composite KV API"
+  @callback get_and_update(key(), get_and_update_fun(), opts()) ::
               ok_error_tuple({current_value, new_value})
             when current_value: value(), new_value: value()
 
@@ -1827,11 +1862,11 @@ defmodule Nebulex.Cache do
       {:ok, {nil, "value!"}}
 
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback get_and_update(
               dynamic_cache(),
               key(),
-              (value() -> {current_value, new_value} | :pop),
+              get_and_update_fun(),
               opts()
             ) :: ok_error_tuple({current_value, new_value})
             when current_value: value(), new_value: value()
@@ -1845,19 +1880,19 @@ defmodule Nebulex.Cache do
       {nil, "value!"}
 
   """
-  @doc group: "KV API"
-  @callback get_and_update!(key(), (value() -> {current_value, new_value} | :pop), opts()) ::
+  @doc group: "Composite KV API"
+  @callback get_and_update!(key(), get_and_update_fun(), opts()) ::
               {current_value, new_value}
             when current_value: value(), new_value: value()
 
   @doc """
-  Same as `c:get_and_update!/4` but raises an exception if an error occurs.
+  Same as `c:get_and_update/4` but raises an exception if an error occurs.
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback get_and_update!(
               dynamic_cache(),
               key(),
-              (value() -> {current_value, new_value} | :pop),
+              get_and_update_fun(),
               opts()
             ) :: {current_value, new_value}
             when current_value: value(), new_value: value()
@@ -1867,8 +1902,8 @@ defmodule Nebulex.Cache do
 
   If `key` is present in the cache, the existing value is passed to `fun` and
   its result is used as the updated value of `key`. If `key` is not present in
-  the cache, `default` is inserted as the value of `key`. The default value
-  will not be passed through the update function.
+  the cache, `initial` is inserted as the value of `key`. The initial value
+  is not passed through the update function.
 
   This function returns:
 
@@ -1884,12 +1919,15 @@ defmodule Nebulex.Cache do
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for more options.
 
-  > #### `update` atomicity {: .warning}
+  > #### Composite operation {: .warning}
   >
-  > This operation is not atomic. It uses `fetch` and `put` under the hood,
-  > but the function is executed outside of the cache transaction. If you need
-  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
-  > call.
+  > By default, this operation reads the value with `fetch`, runs the given
+  > function in the calling process, and writes the result with `put`. Those
+  > steps are not atomic: concurrent calls on the same key can overwrite
+  > each other's changes.
+  >
+  > Adapters may override this implementation, including where the function
+  > runs and the atomicity it provides. See `Nebulex.Adapter.CompositeKV`.
 
   ## Examples
 
@@ -1899,8 +1937,8 @@ defmodule Nebulex.Cache do
       {:ok, 2}
 
   """
-  @doc group: "KV API"
-  @callback update(key(), initial :: value(), (value() -> value()), opts()) ::
+  @doc group: "Composite KV API"
+  @callback update(key(), initial :: value(), update_fun(), opts()) ::
               ok_error_tuple(value())
 
   @doc """
@@ -1916,8 +1954,8 @@ defmodule Nebulex.Cache do
       {:ok, 1}
 
   """
-  @doc group: "KV API"
-  @callback update(dynamic_cache(), key(), initial :: value(), (value() -> value()), opts()) ::
+  @doc group: "Composite KV API"
+  @callback update(dynamic_cache(), key(), initial :: value(), update_fun(), opts()) ::
               ok_error_tuple(value())
 
   @doc """
@@ -1929,14 +1967,14 @@ defmodule Nebulex.Cache do
       1
 
   """
-  @doc group: "KV API"
-  @callback update!(key(), initial :: value(), (value() -> value()), opts()) :: value()
+  @doc group: "Composite KV API"
+  @callback update!(key(), initial :: value(), update_fun(), opts()) :: value()
 
   @doc """
   Same as `c:update/5` but raises an exception if an error occurs.
   """
-  @doc group: "KV API"
-  @callback update!(dynamic_cache(), key(), initial :: value(), (value() -> value()), opts()) ::
+  @doc group: "Composite KV API"
+  @callback update!(dynamic_cache(), key(), initial :: value(), update_fun(), opts()) ::
               value()
 
   @doc """
@@ -1945,7 +1983,7 @@ defmodule Nebulex.Cache do
 
   If the function returns `{:ok, value}`, the value is cached under the given
   `key` and returned as the result. If it returns `{:error, reason}`, the value
-  is **not** cached, and the error is returned as is.
+  is **not** cached, and `reason` is returned wrapped in a `Nebulex.Error`.
 
   If the function returns any other value, a `RuntimeError` is raised.
 
@@ -1955,20 +1993,22 @@ defmodule Nebulex.Cache do
 
   ## Options
 
-  Since the `put` operation is used under the hood, the following options are
-  supported:
+  Supports the following write options:
 
   #{Nebulex.Cache.Options.put_options_docs()}
 
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for a list of supported options.
 
-  > #### `fetch_or_store` atomicity {: .warning}
+  > #### Composite operation {: .warning}
   >
-  > This operation is not atomic. It uses `fetch` and `put` under the hood,
-  > but the function is executed outside of the cache transaction. If you need
-  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
-  > call.
+  > By default, this operation reads the value with `fetch` and, on a cache
+  > miss, runs the given function in the calling process and writes the
+  > result with `put`. Those steps are not atomic: concurrent misses on the
+  > same key can run the function more than once, and the last write wins.
+  >
+  > Adapters may override this implementation, including where the function
+  > runs and the atomicity it provides. See `Nebulex.Adapter.CompositeKV`.
 
   ## Examples
 
@@ -2006,7 +2046,7 @@ defmodule Nebulex.Cache do
       ...> )
       {:ok, "data"}
 
-  ### Real-world example: API calls
+  ### API calls
 
       def get_user_from_api(user_id) do
         MyCache.fetch_or_store(
@@ -2022,7 +2062,7 @@ defmodule Nebulex.Cache do
         )
       end
 
-  ### Real-world example: Database queries
+  ### Database queries
 
       def fetch_product(id) do
         MyCache.fetch_or_store(
@@ -2037,20 +2077,14 @@ defmodule Nebulex.Cache do
         )
       end
 
-  ## When to use `fetch_or_store`
+  ## Choosing between `fetch_or_store` and `get_or_store`
 
-  Use `fetch_or_store/3` when:
-
-  - The computation may fail and you don't want to cache errors.
-  - Working with external APIs that may return error responses.
-  - Fetching from databases where records might not exist.
-  - Performing validations where only valid results should be cached.
-  - Any scenario where caching failures would be problematic.
-
-  For computations that always produce a valid result to cache (even if it's
-  an error tuple), consider using `get_or_store/3` instead.
+  The difference is whether the function's error results are cached.
+  `fetch_or_store/3` caches only `{:ok, value}` results, so a failed
+  computation runs again on the next call. `get_or_store/3` caches whatever
+  the function returns. See `c:get_or_store/3` for the comparison.
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback fetch_or_store(key(), fetch_or_store_fun(), opts()) :: ok_error_tuple(value())
 
   @doc """
@@ -2066,7 +2100,7 @@ defmodule Nebulex.Cache do
       {:ok, "value"}
 
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback fetch_or_store(dynamic_cache(), key(), fetch_or_store_fun(), opts()) ::
               ok_error_tuple(value())
 
@@ -2088,14 +2122,14 @@ defmodule Nebulex.Cache do
       ** (RuntimeError) the supplied lambda function must return ...
 
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback fetch_or_store!(key(), fetch_or_store_fun(), opts()) :: value()
 
   @doc """
   Same as `c:fetch_or_store!/3` but the command is executed on the cache
   instance given at the first argument `dynamic_cache`.
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback fetch_or_store!(dynamic_cache(), key(), fetch_or_store_fun(), opts()) :: value()
 
   @doc """
@@ -2103,27 +2137,29 @@ defmodule Nebulex.Cache do
   present, the provided anonymous function is executed and its result
   is always cached under the given `key`.
 
-  Unlike `fetch_or_store/3`, this function always caches the result
-  regardless of whether it's a success or error tuple. This makes it
-  ideal for caching expensive computations, implementing negative caching
-  patterns, or caching error states temporarily.
+  Unlike `fetch_or_store/3`, this function caches the result whether it is a
+  success or an error tuple. Use it for negative caching, for backing off from
+  a failing service, and for expensive computations whose result should be
+  kept regardless of outcome.
 
   ## Options
 
-  Since the `put` operation is used under the hood, the following options are
-  supported:
+  Supports the following write options:
 
   #{Nebulex.Cache.Options.put_options_docs()}
 
   See the ["Shared options"](#module-shared-options) section in the module
   documentation for a list of supported options.
 
-  > #### `get_or_store` atomicity {: .warning}
+  > #### Composite operation {: .warning}
   >
-  > This operation is not atomic. It uses `fetch` and `put` under the hood,
-  > but the function is executed outside of the cache transaction. If you need
-  > to ensure atomicity, consider wrapping the function in a `c:transaction/2`
-  > call.
+  > By default, this operation reads the value with `fetch` and, on a cache
+  > miss, runs the given function in the calling process and writes the
+  > result with `put`. Those steps are not atomic: concurrent misses on the
+  > same key can run the function more than once, and the last write wins.
+  >
+  > Adapters may override this implementation, including where the function
+  > runs and the atomicity it provides. See `Nebulex.Adapter.CompositeKV`.
 
   ## Examples
 
@@ -2156,7 +2192,7 @@ defmodule Nebulex.Cache do
       ...> )
       {:ok, "value"}
 
-  ### Real-world example: Negative caching
+  ### Negative caching
 
   Cache "not found" results to avoid repeated database queries:
 
@@ -2183,7 +2219,7 @@ defmodule Nebulex.Cache do
       # Second call - returns cached error, no database query
       get_user(999)  #=> {:error, :not_found}
 
-  ### Real-world example: Rate limit protection
+  ### Rate limit protection
 
   Cache error responses temporarily to prevent hammering external services:
 
@@ -2207,7 +2243,7 @@ defmodule Nebulex.Cache do
         )
       end
 
-  ### Real-world example: Expensive computations
+  ### Expensive computations
 
   Cache results of expensive operations regardless of outcome:
 
@@ -2225,35 +2261,24 @@ defmodule Nebulex.Cache do
         )
       end
 
-  ## When to use `get_or_store` vs `fetch_or_store`
+  ## Choosing between `get_or_store` and `fetch_or_store`
 
-  **Use `get_or_store/3` when:**
+  The difference is whether the function's error results are cached.
+  `get_or_store/3` caches whatever the function returns, so use it for
+  negative caching, for backing off from a rate-limited service, and for
+  expensive computations whose result should be kept regardless of outcome.
+  `fetch_or_store/3` caches only `{:ok, value}` results, so use it when
+  failures are transient and the next call should retry, such as external
+  API calls or database lookups where the record may not exist.
 
-  - You want to cache all results, including errors.
-  - Implementing negative caching (caching "not found" states).
-  - The computation is expensive and you want to avoid repeating it.
-  - Caching error states temporarily for rate limiting or backoff strategies.
-  - Working with pure functions that always produce valid output.
-
-  **Use `fetch_or_store/3` when:**
-
-  - The function may fail and you want to retry on subsequent calls.
-  - Errors are transient and should not be cached.
-  - Working with external APIs where temporary failures should trigger retries.
-  - You only want to cache successful results.
-
-  ## Comparison
-
-  | Feature | `get_or_store` | `fetch_or_store` |
-  |---------|----------------|------------------|
-  | Caches all values | ✅ Yes | ❌ No |
-  | Caches errors | ✅ Yes | ❌ No |
-  | Function return type | Any value | `{:ok, value}` or `{:error, reason}` |
-  | Type validation | None | Validates return type |
-  | Best for | Negative caching, pure computations | Fallible operations |
+  | | `get_or_store` | `fetch_or_store` |
+  |---|---|---|
+  | Function return | Any value | `{:ok, value}` or `{:error, reason}` |
+  | Caches error results | Yes | No |
+  | Validates the return | No | Raises on other shapes |
 
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback get_or_store(key(), get_or_store_fun(), opts()) :: ok_error_tuple(value())
 
   @doc """
@@ -2269,7 +2294,7 @@ defmodule Nebulex.Cache do
       {:ok, "value"}
 
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback get_or_store(dynamic_cache(), key(), get_or_store_fun(), opts()) ::
               ok_error_tuple(value())
 
@@ -2277,8 +2302,9 @@ defmodule Nebulex.Cache do
   Same as `c:get_or_store/3` but raises an exception if a cache error occurs
   (e.g., the adapter failed executing the command and returns an error).
 
-  Note that this function returns the unwrapped cached value, which may itself
-  be an error tuple if that's what the function returned.
+  The unwrapped cached value is returned, even when it is an error tuple the
+  function returned. Unlike `fetch_or_store!/3`, an error tuple from the
+  function is a cached value, not a failure.
 
   ## Examples
 
@@ -2291,12 +2317,6 @@ defmodule Nebulex.Cache do
       iex> MyCache.get_or_store!("key", fn -> {:error, "error"} end)
       {:error, "error"}
 
-  ## Difference from fetch_or_store!
-
-  Unlike `fetch_or_store!/3` which raises when the function returns an error,
-  `get_or_store!/3` only raises when there's a cache operation error. The
-  function's return value (even if it's an error tuple) is cached and returned.
-
       # get_or_store! caches and returns error tuples
       iex> MyCache.get_or_store!("key", fn -> {:error, :not_found} end)
       {:error, :not_found}
@@ -2306,14 +2326,14 @@ defmodule Nebulex.Cache do
       ** (Nebulex.Error) fetch_or_store command failed with reason: :not_found
 
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback get_or_store!(key(), get_or_store_fun(), opts()) :: value()
 
   @doc """
   Same as `c:get_or_store!/3` but the command is executed on the cache
   instance given at the first argument `dynamic_cache`.
   """
-  @doc group: "KV API"
+  @doc group: "Composite KV API"
   @callback get_or_store!(dynamic_cache(), key(), get_or_store_fun(), opts()) :: value()
 
   ## Nebulex.Adapter.Queryable

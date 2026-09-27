@@ -402,10 +402,12 @@ iex> Blog.Cache.get_or_store("api:invalid", fn ->
   - You want to avoid repeated expensive operations even when they fail
   - You're caching database query results
 
-> **Note**: Both functions are not atomic operations. They use `fetch` and `put`
-> under the hood, but the function execution happens outside the cache
-> transaction. If you need atomicity, consider wrapping the operation
-> in a `transaction/2` call.
+> **Note**: These are composite operations. By default they read with `fetch`,
+> run the given function in the calling process, and write with `put`. Those
+> steps are not atomic. If the adapter supports transactions, wrap the call in
+> `transaction/2` locking the key; the lock coordinates only writers that use
+> transactions on the same key. Adapters may override this behavior; see
+> `Nebulex.Adapter.CompositeKV`.
 
 ## Counters
 

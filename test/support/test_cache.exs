@@ -10,6 +10,12 @@ defmodule Nebulex.TestCache do
         def get_and_update_fun(current) when is_integer(current), do: {current, current * 2}
 
         def get_and_update_bad_fun(_), do: :other
+
+        def fetch_or_store_fun, do: {:ok, "value"}
+
+        def fetch_or_store_error_fun, do: {:error, :error}
+
+        def get_or_store_fun, do: "value"
       end
     end
   end
@@ -101,6 +107,8 @@ defmodule Nebulex.TestCache do
     @behaviour Nebulex.Adapter
     @behaviour Nebulex.Adapter.KV
     @behaviour Nebulex.Adapter.Queryable
+
+    use Nebulex.Adapter.CompositeKV
 
     @impl true
     defmacro __before_compile__(_), do: :ok
