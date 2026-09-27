@@ -99,6 +99,11 @@ First, it's important to understand which adapter behaviors we need to implement
   `put`, `delete`, etc. All adapters must implement this.
 - **`Nebulex.Adapter.Queryable`** - Optional. Provides query-based operations like
   `delete_all`, `get_all` with filters, etc. Recommended for most adapters.
+- **`Nebulex.Adapter.CompositeKV`** - Required. Provides `get_and_update/3`,
+  `update/4`, `fetch_or_store/3`, and `get_or_store/3`. Add
+  `use Nebulex.Adapter.CompositeKV` for the default implementation, or
+  implement the callbacks to control where the given function runs or the
+  atomicity provided.
 - **`Nebulex.Adapter.Transaction`**, **`Nebulex.Adapter.Info`**,
   **`Nebulex.Adapter.Observable`** - Other optional behaviors for advanced features
   (documented separately in the Adapter API).
@@ -253,8 +258,9 @@ Finished in 0.2 seconds (0.2s async, 0.00s sync)
 
 Now that we have our failing tests, we can implement the adapter. We'll build
 this step-by-step, starting with the base `Nebulex.Adapter` behavior, then
-implementing the required `Nebulex.Adapter.KV` behavior, and finally adding
-the optional `Nebulex.Adapter.Queryable` behavior.
+implementing the required `Nebulex.Adapter.KV` and
+`Nebulex.Adapter.CompositeKV` behaviors, and finally adding the optional
+`Nebulex.Adapter.Queryable` behavior.
 
 > **Note**: For a complete reference implementation with all the correct callback
 > signatures and production patterns, consult the
@@ -290,23 +296,26 @@ Now test to see if the adapter loads:
 ```console
 mix test
 == Compilation error in file test/support/test_cache.ex ==
-** (ArgumentError) expected :adapter option given to Nebulex.Cache to list Nebulex.Adapter.KV as a behaviour
-    (nebulex 3.0.0) lib/nebulex/cache/supervisor.ex:50: Nebulex.Cache.Supervisor.compile_config/1
+** (NimbleOptions.ValidationError) invalid value for :adapter option: Nebulex.Cache expects the option value NebulexMemoryAdapter to list Nebulex.Adapter.KV as a behaviour
     test/support/test_cache.ex:2: (module)
 ```
 
 The error tells us we need to implement `Nebulex.Adapter.KV`.
 
-### Step 2: Implement Nebulex.Adapter.KV (Required)
+### Step 2: Implement the required KV behaviors
 
 The `Nebulex.Adapter.KV` behavior is the core requirement. It provides all
-key-value operations like `fetch`, `put`, `delete`, and more. Here's a complete
-implementation:
+key-value operations like `fetch`, `put`, `delete`, and more.
+`Nebulex.Adapter.CompositeKV` is required as well; `use
+Nebulex.Adapter.CompositeKV` provides its default implementation on top of
+the KV callbacks. Here's a complete implementation:
 
 ```elixir
 defmodule NebulexMemoryAdapter do
   @behaviour Nebulex.Adapter
   @behaviour Nebulex.Adapter.KV
+
+  use Nebulex.Adapter.CompositeKV
 
   import Nebulex.Utils
 
@@ -416,6 +425,8 @@ defmodule NebulexMemoryAdapter do
   @behaviour Nebulex.Adapter
   @behaviour Nebulex.Adapter.KV
   @behaviour Nebulex.Adapter.Queryable
+
+  use Nebulex.Adapter.CompositeKV
 
   import Nebulex.Utils
 

@@ -4,6 +4,9 @@ defmodule Nebulex.Cache.Options do
   import Nebulex.Utils, only: [is_timeout: 1, module_behaviours: 1]
 
   # Compilation time option definitions
+  # Behaviours every cache adapter must implement
+  @adapter_behaviours [Nebulex.Adapter, Nebulex.Adapter.KV, Nebulex.Adapter.CompositeKV]
+
   compile_opts = [
     otp_app: [
       type: :atom,
@@ -13,11 +16,12 @@ defmodule Nebulex.Cache.Options do
       """
     ],
     adapter: [
-      type: {:custom, __MODULE__, :__validate_behaviour__, [Nebulex.Adapter, Nebulex.Cache]},
+      type: {:custom, __MODULE__, :__validate_behaviour__, [@adapter_behaviours, Nebulex.Cache]},
       type_doc: "`t:module/0`",
       required: true,
       doc: """
-      The cache adapter module.
+      The cache adapter module. It must implement `Nebulex.Adapter`,
+      `Nebulex.Adapter.KV`, and `Nebulex.Adapter.CompositeKV`.
       """
     ],
     default_dynamic_cache: [
@@ -433,19 +437,19 @@ defmodule Nebulex.Cache.Options do
     {:ok, nil}
   end
 
-  @spec __validate_behaviour__(any(), module(), atom() | binary()) ::
+  @spec __validate_behaviour__(any(), [module()], atom() | binary()) ::
           {:ok, module()} | {:error, binary()}
-  def __validate_behaviour__(value, behaviour, target)
+  def __validate_behaviour__(value, behaviours, target)
 
-  def __validate_behaviour__(value, behaviour, target) when is_atom(target) do
-    __validate_behaviour__(value, behaviour, inspect(target))
+  def __validate_behaviour__(value, behaviours, target) when is_atom(target) do
+    __validate_behaviour__(value, behaviours, inspect(target))
   end
 
-  def __validate_behaviour__(value, behaviour, target)
-      when is_atom(value) and is_atom(behaviour) and is_binary(target) do
+  def __validate_behaviour__(value, behaviours, target)
+      when is_atom(value) and is_list(behaviours) and is_binary(target) do
     with {:module, module} <- Code.ensure_compiled(value),
-         behaviours = module_behaviours(module),
-         true <- behaviour in behaviours do
+         implemented = module_behaviours(module),
+         nil <- Enum.find(behaviours, &(&1 not in implemented)) do
       {:ok, module}
     else
       {:error, _} ->
@@ -455,7 +459,7 @@ defmodule Nebulex.Cache.Options do
 
         {:error, msg}
 
-      false ->
+      behaviour ->
         msg =
           "#{target} expects the option value #{inspect(value)} " <>
             "to list #{inspect(behaviour)} as a behaviour"
@@ -464,8 +468,8 @@ defmodule Nebulex.Cache.Options do
     end
   end
 
-  def __validate_behaviour__(value, behaviour, target)
-      when is_atom(behaviour) and is_binary(target) do
+  def __validate_behaviour__(value, behaviours, target)
+      when is_list(behaviours) and is_binary(target) do
     {:error, "expected a module, got: #{inspect(value)}"}
   end
 

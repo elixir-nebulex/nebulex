@@ -66,10 +66,10 @@ defmodule Nebulex.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:sobelow, "~> 0.14", only: [:dev, :test], runtime: false},
-      {:stream_data, "~> 1.3", only: [:dev, :test]},
-      {:mimic, "~> 2.3", only: :test},
-      {:doctor, "~> 0.22", only: [:dev, :test]},
+      {:sobelow, "~> 0.15", only: [:dev, :test], runtime: false},
+      {:stream_data, "~> 1.4", only: [:dev, :test]},
+      {:mimic, "~> 2.4", only: :test},
+      {:doctor, "~> 0.23", only: [:dev, :test]},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
       # Benchmark Test
@@ -131,6 +131,7 @@ defmodule Nebulex.MixProject do
         group_for_function("User callbacks"),
         group_for_function("Runtime API"),
         group_for_function("KV API"),
+        group_for_function("Composite KV API"),
         group_for_function("Query API"),
         group_for_function("Transaction API"),
         group_for_function("Info API"),
@@ -150,6 +151,7 @@ defmodule Nebulex.MixProject do
         "Adapter specification": [
           Nebulex.Adapter,
           Nebulex.Adapter.KV,
+          Nebulex.Adapter.CompositeKV,
           Nebulex.Adapter.Queryable,
           Nebulex.Adapter.Transaction,
           Nebulex.Adapter.Info,

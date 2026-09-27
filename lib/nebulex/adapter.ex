@@ -147,12 +147,11 @@ defmodule Nebulex.Adapter do
       ) do
     opts = Options.validate_runtime_shared_opts!(opts)
     telemetry? = Keyword.get(opts, :telemetry, telemetry?)
+    args = args ++ [opts]
 
     if telemetry? do
       telemetry_metadata = Keyword.get(opts, :telemetry_metadata, %{})
       telemetry_event = Keyword.get(opts, :telemetry_event, telemetry_prefix ++ [:command])
-
-      args = args ++ [opts]
 
       metadata = %{
         adapter_meta: adapter_meta,
@@ -171,7 +170,7 @@ defmodule Nebulex.Adapter do
         end
       )
     else
-      apply(adapter, command, [adapter_meta | args ++ [opts]])
+      apply(adapter, command, [adapter_meta | args])
     end
   end
 

@@ -4,6 +4,74 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased](https://github.com/elixir-nebulex/nebulex/tree/main)
+> [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.4...main)
+
+### Enhancements
+
+- [Nebulex.Adapter.CompositeKV] Added an adapter behaviour for
+  `get_and_update`, `update`, `fetch_or_store`, and `get_or_store`.
+  Adapters can implement the callbacks to change where the given function
+  runs or provide different atomicity guarantees.
+  `use Nebulex.Adapter.CompositeKV` provides the default, non-atomic
+  implementation with all callbacks overridable.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+- [Nebulex.Cache] Composite operations now emit their own Telemetry
+  command span, in addition to any primitive command spans they trigger.
+  The new `:command` values are `:get_and_update`, `:update`,
+  `:fetch_or_store`, and `:get_or_store`.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+- [Nebulex.Cache] Added the public types `get_and_update_fun/0`,
+  `update_fun/0`, `ttl/0`, and `keep_ttl/0`.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+
+### Bug fixes
+
+- [Nebulex.Adapter] `run_command/4` now forwards the shared `:telemetry`,
+  `:telemetry_event`, and `:telemetry_metadata` options to adapter
+  callbacks. Nested commands receiving these options respect
+  `telemetry: false`, use the custom event name, and include the supplied
+  metadata. Disabling their spans also disables the cache entry events
+  and statistics updates derived from them.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+- [Nebulex.Cache] `get_and_update/3` with `:pop` now removes entries
+  containing `nil`. Previously, the default implementation treated a
+  cached `nil` as a missing key and skipped the delete.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+- [Nebulex.Telemetry.CacheEntryHandler] `unregister_event_listener/2` now
+  detaches event listeners from caches started without a name or with a
+  `{:via, mod, name}` name.
+  [#256](https://github.com/elixir-nebulex/nebulex/issues/256)
+  ([dajiaohuang](https://github.com/dajiaohuang)).
+- [Nebulex.Cache.Options] `register_event_listener/2` now validates the
+  `:id` option.
+
+### Backwards incompatible changes
+
+- [Nebulex.Cache] Adapters must implement `Nebulex.Adapter.CompositeKV`.
+  `use Nebulex.Cache` now validates at compile time that the adapter lists
+  `Nebulex.Adapter`, `Nebulex.Adapter.KV`, and `Nebulex.Adapter.CompositeKV`
+  as behaviours. Add `use Nebulex.Adapter.CompositeKV` to an adapter for the
+  default implementation.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+- [Nebulex.Cache] `get_and_update/3` no longer treats a `nil` new value as
+  "do not write". A function returning `{current, nil}` now stores `nil`
+  under the key and returns `{current, nil}`, instead of skipping the
+  write and returning `{current, current}`. The previous behavior came
+  from v2, where `nil` represented a cache miss. In v3, `nil` is a valid
+  cache value.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+- [Nebulex.Adapter] Since the shared Telemetry options are now forwarded
+  to adapter callbacks, adapters that strictly validate their own options
+  must first remove the shared runtime options. These options also appear
+  in the `:args` Telemetry metadata.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+- [Nebulex.Cache] Telemetry handlers that match `:command` exhaustively
+  must handle the four new composite command values or provide a
+  fallback clause. Otherwise, they will raise and be detached when they
+  receive an event for a composite command.
+  [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
+
 ## [v3.0.4](https://github.com/elixir-nebulex/nebulex/tree/v3.0.4) (2026-05-03)
 > [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.3...v3.0.4)
 
