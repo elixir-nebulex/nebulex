@@ -44,9 +44,6 @@ defmodule Nebulex.Adapter do
   """
   @callback init(config :: keyword()) :: {:ok, :supervisor.child_spec(), adapter_meta()}
 
-  # Define optional callbacks
-  @optional_callbacks __before_compile__: 1
-
   ## API
 
   # Inline common instructions
