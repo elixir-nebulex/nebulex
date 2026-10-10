@@ -109,10 +109,10 @@ defmodule Nebulex.Cache.KVExpirationTest do
         str = rand_str()
 
         assert cache.put!(str, str, ttl: :timer.seconds(1)) == :ok
-        assert cache.ttl!(str) |> is_integer()
+        assert cache.ttl!(str) in 1..:timer.seconds(1)
 
         assert cache.put!(str, str, ttl: :timer.minutes(1), keep_ttl: false) == :ok
-        assert cache.ttl!(str) > :timer.seconds(1)
+        assert cache.ttl!(str) in (:timer.seconds(1) + 1)..:timer.minutes(1)
 
         assert cache.put!(str, str) == :ok
         assert cache.ttl!(str) == :infinity
@@ -139,7 +139,7 @@ defmodule Nebulex.Cache.KVExpirationTest do
         str = rand_str()
 
         assert cache.put!(str, str, ttl: :timer.seconds(1)) == :ok
-        assert cache.ttl!(str) |> is_integer()
+        assert cache.ttl!(str) in 1..:timer.seconds(1)
 
         assert cache.replace!(str, str, keep_ttl: false) == true
         assert cache.ttl!(str) == :infinity
@@ -169,12 +169,12 @@ defmodule Nebulex.Cache.KVExpirationTest do
         ttl = :timer.seconds(1)
 
         assert cache.put!(:ttl!, 1, ttl: ttl) == :ok
-        assert cache.ttl!(:ttl!) > 0
+        assert cache.ttl!(:ttl!) in 1..ttl
         assert cache.put!(:infinity_ttl, 2) == :ok
 
         t = t_sleep(10)
 
-        assert cache.ttl!(:ttl!) > 0
+        assert cache.ttl!(:ttl!) in 1..(ttl - t)
         assert cache.ttl!(:infinity_ttl) == :infinity
 
         _ = t_sleep(ttl + t + 10)
@@ -198,10 +198,10 @@ defmodule Nebulex.Cache.KVExpirationTest do
     describe "expire!/2" do
       test "alters the expiration time for the given key", %{cache: cache} do
         assert cache.put!(:expire!, 1, ttl: :timer.seconds(1)) == :ok
-        assert cache.ttl!(:expire!) > 0
+        assert cache.ttl!(:expire!) in 1..:timer.seconds(1)
 
         assert cache.expire!(:expire!, :timer.seconds(10)) == true
-        assert cache.ttl!(:expire!) > :timer.seconds(1)
+        assert cache.ttl!(:expire!) in (:timer.seconds(1) + 1)..:timer.seconds(10)
 
         assert cache.expire!(:expire!, :infinity) == true
         assert cache.ttl!(:expire!) == :infinity
