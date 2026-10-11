@@ -11,6 +11,10 @@ defmodule Nebulex.TestCache do
 
         def get_and_update_bad_fun(_), do: :other
 
+        def get_and_update_nil_fun(current), do: {current, nil}
+
+        def pop_fun(_), do: :pop
+
         def fetch_or_store_fun, do: {:ok, "value"}
 
         def fetch_or_store_error_fun, do: {:error, :error}
