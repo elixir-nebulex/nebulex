@@ -12,7 +12,7 @@ defmodule Nebulex.Cache.CompositeKVTest do
       test "stores a nil value when the function returns {get, nil}", %{cache: cache} do
         :ok = cache.put(:counter, 1)
 
-        assert cache.get_and_update(:counter, &{&1, nil}) == {:ok, {1, nil}}
+        assert cache.get_and_update(:counter, &cache.get_and_update_nil_fun/1) == {:ok, {1, nil}}
         assert cache.fetch!(:counter) == nil
         assert cache.has_key?(:counter) == {:ok, true}
       end
@@ -20,15 +20,15 @@ defmodule Nebulex.Cache.CompositeKVTest do
       test "pops the key when the function returns :pop", %{cache: cache} do
         :ok = cache.put(:counter, 1)
 
-        assert cache.get_and_update(:counter, fn _ -> :pop end) == {:ok, {1, nil}}
+        assert cache.get_and_update(:counter, &cache.pop_fun/1) == {:ok, {1, nil}}
         assert cache.has_key?(:counter) == {:ok, false}
-        assert cache.get_and_update(:counter, fn _ -> :pop end) == {:ok, {nil, nil}}
+        assert cache.get_and_update(:counter, &cache.pop_fun/1) == {:ok, {nil, nil}}
       end
 
       test "pops a cached nil value", %{cache: cache} do
         :ok = cache.put(:counter, nil)
 
-        assert cache.get_and_update(:counter, fn _ -> :pop end) == {:ok, {nil, nil}}
+        assert cache.get_and_update(:counter, &cache.pop_fun/1) == {:ok, {nil, nil}}
         assert cache.has_key?(:counter) == {:ok, false}
       end
 
@@ -52,8 +52,8 @@ defmodule Nebulex.Cache.CompositeKVTest do
       test "gets and updates the value", %{cache: cache} do
         assert cache.get_and_update!(:counter, &cache.get_and_update_fun/1) == {nil, 1}
         assert cache.get_and_update!(:counter, &cache.get_and_update_fun/1) == {1, 2}
-        assert cache.get_and_update!(:counter, fn _ -> :pop end) == {2, nil}
-        assert cache.get_and_update!(:counter, fn _ -> :pop end) == {nil, nil}
+        assert cache.get_and_update!(:counter, &cache.pop_fun/1) == {2, nil}
+        assert cache.get_and_update!(:counter, &cache.pop_fun/1) == {nil, nil}
       end
     end
 
