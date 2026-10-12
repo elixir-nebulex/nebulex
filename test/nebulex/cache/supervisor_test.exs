@@ -86,7 +86,9 @@ defmodule Nebulex.Cache.SupervisorTest do
       msg =
         "invalid value for :adapter option: Nebulex.Cache expects the option value " <>
           "Nebulex.Cache.SupervisorTest.NoCompositeKVAdapter to list " <>
-          "Nebulex.Adapter.CompositeKV as a behaviour"
+          "Nebulex.Adapter.CompositeKV as a behaviour. Add " <>
+          "`use Nebulex.Adapter.CompositeKV` to the adapter, or upgrade it to " <>
+          "a version built for Nebulex v3.1 or later"
 
       assert_raise NimbleOptions.ValidationError, msg, fn ->
         defmodule NoCompositeKVAdapter do

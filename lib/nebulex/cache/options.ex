@@ -461,7 +461,7 @@ defmodule Nebulex.Cache.Options do
       behaviour ->
         msg =
           "#{target} expects the option value #{inspect(value)} " <>
-            "to list #{inspect(behaviour)} as a behaviour"
+            "to list #{inspect(behaviour)} as a behaviour" <> behaviour_hint(behaviour)
 
         {:error, msg}
     end
@@ -470,6 +470,17 @@ defmodule Nebulex.Cache.Options do
   def __validate_behaviour__(value, behaviours, target)
       when is_list(behaviours) and is_binary(target) do
     {:error, "expected a module, got: #{inspect(value)}"}
+  end
+
+  # Nebulex v3.1 made Nebulex.Adapter.CompositeKV mandatory, so an adapter
+  # built for v3.0 fails here; tell the user how to fix it
+  defp behaviour_hint(Nebulex.Adapter.CompositeKV) do
+    ". Add `use Nebulex.Adapter.CompositeKV` to the adapter, " <>
+      "or upgrade it to a version built for Nebulex v3.1 or later"
+  end
+
+  defp behaviour_hint(_behaviour) do
+    ""
   end
 
   ## Extras
