@@ -15,19 +15,15 @@
 
 ## 🚀 About
 
-Nebulex provides support for transparently adding caching to existing
-Elixir applications. Like [Ecto][ecto], the caching abstraction allows
-consistent use of various caching solutions with minimal impact on your
-code.
+Nebulex adds caching to Elixir applications. Like [Ecto][ecto], it is an
+abstraction: you use different caching backends through the same API, with
+little impact on your code.
 
-Nebulex's cache abstraction shields developers from directly interacting with
-underlying caching implementations, such as [Redis][redis],
-[Memcached][memcached], or other Elixir cache implementations like
-[Cachex][cachex]. It also provides out-of-the-box features including
-[declarative decorator-based caching][nbx_caching],
+You write against the Nebulex API instead of talking to [Redis][redis],
+[Memcached][memcached], or an Elixir cache like [Cachex][cachex] directly.
+Nebulex also comes with [declarative decorator-based caching][nbx_caching],
 [cache usage patterns][cache_patterns], and
-[distributed cache topologies][cache_topologies],
-among others.
+[distributed cache topologies][cache_topologies].
 
 [ecto]: https://github.com/elixir-ecto/ecto
 [cachex]: https://github.com/whitfin/cachex
@@ -75,19 +71,17 @@ def deps do
 end
 ```
 
-To provide more flexibility and load only the needed dependencies, Nebulex makes
-all dependencies optional, including the adapters. For example:
+All dependencies are optional, including the adapters, so you only load what
+you need:
 
-  * **For enabling [declarative decorator-based caching][nbx_caching]**:
-    Add `:decorator` to the dependency list (recommended).
+  * For [declarative decorator-based caching][nbx_caching], add `:decorator`
+    (recommended).
 
-  * **For enabling Telemetry events**: Add `:telemetry` to the dependency list
-    (recommended). See the [Info API guide][info_api] for monitoring cache stats
-    and metrics.
+  * For Telemetry events, add `:telemetry` (recommended). See the
+    [Info API guide][info_api] for cache stats and metrics.
 
-Then run `mix deps.get` in your shell to fetch the dependencies. If you want to
-use another cache adapter, just choose the appropriate dependency from the table
-above.
+Then run `mix deps.get`. To use another cache adapter, pick its dependency
+from the [adapters guide][nbx_adapters].
 
 Finally, in your cache definition, you'll need to specify the `adapter:`
 corresponding to the chosen dependency. For the local cache, it would be:
@@ -120,18 +114,14 @@ iex> MyApp.Cache.fetch("foo")
 {:ok, "bar"}
 ```
 
-For more detailed information, see the
-[getting started guide][getting_started-rc1] and
-[online documentation][hex-docs].
-
-[getting_started-rc1]: https://hexdocs.pm/nebulex/getting-started.html
-[hex-docs]: https://hexdocs.pm/nebulex/Nebulex.html
+For more details, see the [getting started guide][getting_started] and the
+[online documentation][docs].
 
 ---
 
 ## ⚡ Quick Start Example with Caching Decorators
 
-This example demonstrates how to use Nebulex with Ecto and declarative caching:
+This example uses Nebulex with Ecto and declarative caching:
 
 ```elixir
 # In config/config.exs
@@ -244,14 +234,14 @@ To run only the tests:
 $ mix test
 ```
 
-Additionally, to run all Nebulex checks:
+To run all the checks CI runs:
 
 ```bash
 $ mix precommit
 ```
 
-The `mix precommit` command will run the tests, coverage, credo, dialyzer,
-and more. This is the recommended way to test Nebulex.
+The `mix precommit` alias runs the tests, coverage, Credo, Dialyzer, and the
+other checks. Run it before opening a pull request.
 
 ---
 
@@ -267,15 +257,14 @@ To run a benchmark test:
 $ mix bench
 ```
 
-> The benchmark uses the `Nebulex.Adapters.Nil` adapter; it is more focused on
-> measuring the Nebulex abstraction layer performance rather than a specific
-> adapter.
+> The benchmark uses the `Nebulex.Adapters.Nil` adapter, so it measures the
+> Nebulex abstraction layer, not a specific adapter.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions to Nebulex are very welcome and appreciated!
+Contributions are welcome.
 
 Use the [issue tracker](https://github.com/elixir-nebulex/nebulex/issues)
 for bug reports or feature requests. Open a

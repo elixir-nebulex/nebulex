@@ -12,8 +12,7 @@ defmodule Nebulex.Utils do
   ## Guards
 
   @doc """
-  Convenience guard to determine whether the given argument `e` is a Nebulex
-  exception or not.
+  Guard that checks whether `e` is a Nebulex exception.
 
   ## Example
 
@@ -28,8 +27,8 @@ defmodule Nebulex.Utils do
            when is_exception(e) and :erlang.map_get(:__struct__, e) in @nbx_exception
 
   @doc """
-  Convenience guard to determine whether the given argument `e` is a Nebulex
-  wrappable exception.
+  Guard that checks whether `e` is a Nebulex exception that can be wrapped
+  in an `{:error, _}` tuple (`Nebulex.Error` or `Nebulex.KeyError`).
 
   ## Example
 
@@ -50,7 +49,8 @@ defmodule Nebulex.Utils do
            when is_exception(e) and :erlang.map_get(:__struct__, e) in @nbx_wrappable_exception
 
   @doc """
-  Custom guard to validate whether the given `value` is a timeout.
+  Guard that checks whether `value` is a timeout: a non-negative integer or
+  `:infinity`.
 
   ## Examples
 
@@ -74,8 +74,9 @@ defmodule Nebulex.Utils do
   ## Macros
 
   @doc """
-  Convenience macro for unwrapping a function call result and deciding whether
-  to raise an exception or return the unwrapped value.
+  Unwraps the result of `call`: returns the value from `{:ok, value}`,
+  raises the exception from `{:error, exception}`, and returns anything else
+  as is.
 
   ## Example
 
@@ -99,8 +100,7 @@ defmodule Nebulex.Utils do
   end
 
   @doc """
-  Convenience macro for wrapping the given `call` result into a tuple in the
-  shape of `{:ok, result}`.
+  Wraps the result of `call` as `{:ok, result}`.
 
   ## Example
 
@@ -116,8 +116,7 @@ defmodule Nebulex.Utils do
   end
 
   @doc """
-  Convenience macro for wrapping the given `exception` into a tuple in the
-  shape of `{:error, exception}`.
+  Builds `exception` with `opts` and wraps it as `{:error, exception}`.
 
   ## Example
 
@@ -135,10 +134,10 @@ defmodule Nebulex.Utils do
   ## Utility functions
 
   @doc """
-  A wrapper for `Keyword.get/3` but validates the returned value invoking
-  the function `valid?`.
+  Like `Keyword.get/3`, but validates the value with `valid?`.
 
-  Raises an `ArgumentError` in case the validation fails.
+  Raises `ArgumentError` when the validation fails. When the key is missing,
+  returns `default`, calling it first if it is a zero-arity function.
 
   ## Examples
 
@@ -208,7 +207,7 @@ defmodule Nebulex.Utils do
   end
 
   @doc """
-  Concatenates a list of "camelized" aliases and returns a new alias.
+  Camelizes each element of `list` and concatenates them into an alias.
 
   It handles binaries, atoms, and numbers.
 

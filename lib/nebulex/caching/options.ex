@@ -125,16 +125,13 @@ defmodule Nebulex.Caching.Options do
 
       The match function can return:
 
-        * `true` - The value returned by the decorated function is cached
-          (this is the default behavior).
+        * `true` - The value returned by the decorated function is cached.
 
-        * `{true, value}` - The specified `value` is cached instead of the
-          original return value. This is useful when you need to customize
-          what gets cached.
+        * `{true, value}` - The given `value` is cached instead of the
+          original return value.
 
-        * `{true, value, opts}` - The specified `value` is cached with the
-          provided options `opts`. This allows you to customize both what
-          gets cached and the caching options at runtime
+        * `{true, value, opts}` - The given `value` is cached with the
+          options `opts` merged into the decorator's `:opts`
           (e.g., `{true, value, [ttl: @ttl]}`).
 
         * `false` - Nothing is cached.
@@ -181,12 +178,12 @@ defmodule Nebulex.Caching.Options do
       default: false,
       doc: """
       When set to `true`, wraps the decorated function execution and all cache
-      operations in a transaction. This locks the specified cache keys for the
-      duration of the transaction, preventing concurrent processes from
-      accessing or modifying them simultaneously.
+      operations in a transaction. The cache keys involved are locked for the
+      duration of the transaction, so other processes cannot access or modify
+      them at the same time.
 
-      **Key locking:** The transaction determines which keys to lock based on
-      the decorator options:
+      Key locking: the transaction determines which keys to lock based on the
+      decorator options:
 
         * When `key: {:in, keys}` is provided, all `keys` are locked.
         * When `:query` is provided without `:key`, the query value is used
@@ -196,14 +193,13 @@ defmodule Nebulex.Caching.Options do
         * Otherwise, the value provided in the `:key` option is used as the
           locking key (or the generated key if `:key` is not specified).
 
-      **Performance consideration:** Transactions introduce overhead due to
-      locking and coordination. Use when atomicity is critical. For
-      high-throughput, read-heavy workloads where eventual consistency is
-      acceptable, the default `false` is recommended.
+      Performance: locking and coordination add overhead. Use transactions
+      when the operations must be atomic. For read-heavy workloads where
+      eventual consistency is acceptable, keep the default `false`.
 
-      **Adapter support:** Transaction behavior and implementation vary by
-      adapter. See `c:Nebulex.Cache.transaction/2` for details on transaction
-      semantics and nested transaction handling.
+      Adapter support: transaction behavior varies by adapter. See
+      `c:Nebulex.Cache.transaction/2` for the semantics and for nested
+      transactions.
 
       When configured, this option overrides the global value (if any) defined
       via `use Nebulex.Caching, transaction: true`.
@@ -270,8 +266,7 @@ defmodule Nebulex.Caching.Options do
       type_doc: "`t:query/0`",
       required: false,
       doc: """
-      The query to use for evicting cache entries based on specific criteria.
-      This option allows you to evict multiple entries that match the query.
+      The query to use for evicting all cache entries that match it.
 
       When both `:query` and `:key` are provided, the decorator will:
       1. First execute the query-based eviction to remove matching entries.
@@ -286,12 +281,10 @@ defmodule Nebulex.Caching.Options do
         * **An anonymous function** - A function that generates the query at
           runtime. The function can optionally receive the decorator context
           as an argument and must return a query supported by the cache
-          adapter. This is useful when the query depends on function arguments
-          or needs to be built dynamically.
+          adapter. Use it when the query depends on the function arguments.
 
         * **A direct query value** - Any term that is a valid query supported
-          by the cache adapter. This is suitable for static queries that don't
-          depend on runtime values.
+          by the cache adapter. Use it for static queries.
 
       See the ["Eviction with a query"](#cache_evict/3-eviction-with-a-query)
       section for more details and examples.

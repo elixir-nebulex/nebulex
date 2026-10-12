@@ -5,9 +5,7 @@ defmodule Mix.Nebulex do
   alias Mix.Project
 
   @doc """
-  Gets a path relative to the application path.
-
-  Raises on umbrella application.
+  Raises if `task` is run from the root of an umbrella project.
   """
   def no_umbrella!(task) do
     if Project.umbrella?() do

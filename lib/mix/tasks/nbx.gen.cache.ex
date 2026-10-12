@@ -4,7 +4,10 @@ defmodule Mix.Tasks.Nbx.Gen.Cache do
   @moduledoc """
   Generates a new cache.
 
-  The cache will be placed in the `lib` directory.
+  The cache module is placed in the `lib` directory and uses
+  `Nebulex.Adapters.Local`. The task also adds a config entry for it to
+  `config/config.exs` (or the project's `:config_path`), creating the file
+  if needed.
 
   ## Examples
 

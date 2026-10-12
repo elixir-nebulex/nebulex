@@ -1,9 +1,9 @@
 # Declarative Caching: Patterns and Best Practices
 
-This guide provides comprehensive examples and best practices for using
-Nebulex's caching decorators. While the `Nebulex.Caching.Decorators`
-documentation covers all options and basic usage, this guide focuses on
-real-world scenarios, adapter-specific optimizations, and advanced patterns.
+This guide shows how to use Nebulex's caching decorators in a real
+application. The `Nebulex.Caching.Decorators` documentation covers every
+option and the basic usage; this guide covers common scenarios,
+adapter-specific features, and the patterns that go beyond the basics.
 
 ---
 
@@ -16,9 +16,8 @@ Nebulex provides three main decorators for implementing declarative caching:
   and cache result)
 - **`@decorate cache_evict`** - Cache invalidation (remove entries)
 
-These decorators abstract away the complexity of cache management,
-allowing you to focus on your business logic while maintaining clean,
-maintainable code.
+The decorators make the cache calls for you, so the function body holds
+only your own logic.
 
 ### Setup
 
@@ -45,7 +44,10 @@ The `use` macro accepts several options that become defaults for all decorated
 functions in the module:
 
 - `:cache` - The default cache to use
+- `:default_key_generator` - Default key generation function
 - `:on_error` - How to handle cache errors (`:nothing` or `:raise`)
+- `:transaction` - Whether to run the function and cache operations in a
+  transaction
 - `:match` - Default match function for conditional caching
 - `:opts` - Default options passed to cache operations (e.g., TTL)
 
@@ -99,9 +101,9 @@ defp match_ok({:error, _}), do: false
 ### Evicting with `@cache_evict`
 
 ```elixir
-@decorate cache_evict(key: id)
-def delete_product(id) do
-  Repo.delete(Product, id)
+@decorate cache_evict(key: product.id)
+def delete_product(product) do
+  Repo.delete(product)
 end
 ```
 
@@ -113,8 +115,8 @@ end
 
 ## Advanced Eviction Patterns
 
-The `cache_evict` decorator supports several powerful patterns for
-cache invalidation. For detailed API documentation and option reference, see
+The `cache_evict` decorator supports several ways to invalidate entries.
+For the option reference, see
 [`cache_evict/3`](`Nebulex.Caching.Decorators.cache_evict/3`).
 
 ### Evicting Multiple Keys
@@ -159,7 +161,7 @@ end
 
 ### Combining `:key` and `:query`
 
-You can now use both `:key` and `:query` together for hierarchical eviction:
+You can use both `:key` and `:query` together for hierarchical eviction:
 
 ```elixir
 # Using QueryHelper for cleaner syntax
@@ -203,9 +205,8 @@ end
 
 ## Working with Nebulex.Adapters.Local
 
-The `Nebulex.Adapters.Local` adapter provides several powerful features for
-working with cached data. This section covers features introduced in recent
-versions that make cache management more intuitive and maintainable.
+The `Nebulex.Adapters.Local` adapter has features that make queries, entry
+grouping, and reference cleanup easier. This section covers them.
 
 For complete API documentation, see the
 ["Local Adapter: Advanced Reference Eviction"](`m:Nebulex.Caching.Decorators#cache_evict/3-local-adapter-advanced-reference-eviction`)
@@ -213,14 +214,13 @@ section in `cache_evict/3`.
 
 ### Building Queries with QueryHelper
 
-The `Nebulex.Adapters.Local.QueryHelper` module provides a user-friendly DSL
-for building ETS match specifications without writing verbose tuples.
+The `Nebulex.Adapters.Local.QueryHelper` module lets you build ETS match
+specifications without writing the raw tuples.
 
 > #### New in `Nebulex.Adapters.Local` v3.0.0 {: .tip}
 >
-> The QueryHelper makes writing queries much more readable and
-> maintainable. See the [QueryHelper documentation][query_helper_docs]
-> for more details.
+> See the [QueryHelper documentation][query_helper_docs] for the full
+> syntax.
 
 [query_helper_docs]: https://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.QueryHelper.html
 
@@ -238,7 +238,7 @@ defp query_for_category(%{args: [category_id]}) do
 end
 ```
 
-**With QueryHelper (user-friendly DSL):**
+**With QueryHelper:**
 
 ```elixir
 use Nebulex.Adapters.Local.QueryHelper
@@ -247,7 +247,6 @@ defp query_for_category(%{args: [category_id]}) do
   match_spec value: %{category_id: cat_id},
              where: cat_id == ^category_id,
              select: true
-
 end
 ```
 
@@ -279,14 +278,11 @@ end
 
 ### Entry Tagging for Organization
 
-Entry tagging allows you to logically group cache entries for easier
-management and bulk operations.
+Tags let you group cache entries so you can evict them together.
 
 > #### New in `Nebulex.Adapters.Local` v3.0.0 {: .tip}
 >
-> Tags provide a way to organize and invalidate groups of related
-> entries. See the [Local adapter documentation][local_adapter_docs]
-> for more details.
+> See the [Local adapter documentation][local_adapter_docs] for details.
 
 [local_adapter_docs]: https://hexdocs.pm/nebulex_local
 
@@ -360,14 +356,13 @@ end
 
 ### Managing Cache References
 
-Cache references allow you to store a value once and reference it from
-multiple keys, avoiding data duplication and ensuring consistency.
+Cache references let you store a value once and point to it from other
+keys, so the same value is not stored twice.
 
 > #### New in `Nebulex.Adapters.Local` v3.0.0 {: .tip}
 >
-> Reference management is integrated with the Local adapter.
 > See ["Building Match Specs with QueryHelper"][query_helper_section]
-> for more details.
+> for details.
 
 [query_helper_section]: https://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.html#module-building-match-specs-with-queryhelper
 
@@ -445,7 +440,8 @@ end
 
 **How `keyref_match_spec` works:**
 - Finds all reference entries that point to a specific key
-- Works across the entire cache (or specific cache if provided)
+- Matches references in any cache, or only those pointing at a key in the
+  cache given with `cache:`
 - Automatically handles the internal reference structure
 - Returns a match spec you can use with `cache_evict`
 
@@ -457,15 +453,20 @@ For advanced reference management, see
 ```elixir
 @decorate cacheable(
             key: email,
-            references: &keyref(&1.id, ttl: :timer.hours(24))
+            references: &(&1 && keyref(&1.id, ttl: :timer.hours(24))),
+            opts: [ttl: :timer.hours(1)]
           )
 def get_user_by_email(email) do
   Repo.get_by(User, email: email)
 end
 ```
 
-The reference entry expires after 24 hours, preventing stale references even
-if the referenced value is updated separately.
+The decorator's `:opts` TTL applies to the reference stored under `email`, so
+it expires after one hour. The `ttl:` given to `keyref/2` applies to the
+referenced entry under `user.id` instead, so the user record lives for 24
+hours. Expiring references keeps them from pointing at stale or missing
+values forever. The `&1 &&` guard matters: the references function runs on
+the raw result before `:match`, so it must handle `nil`.
 
 **External references across caches:**
 
@@ -483,7 +484,7 @@ end
 @decorate cacheable(
             cache: EmailLookupCache,
             key: email,
-            references: &keyref(&1.id, cache: UserCache)
+            references: &(&1 && keyref(&1.id, cache: UserCache))
           )
 def get_user_by_email(email) do
   Repo.get_by(User, email: email)
@@ -504,14 +505,13 @@ end
 - `user.id` evicts the data from `UserCache`
 - `keyref(user.email, cache: EmailLookupCache)` evicts the reference from
   `EmailLookupCache`
-- This is when you actually need `keyref()` - for cross-cache eviction!
+- This is the case where you need `keyref()`: cross-cache eviction
 
 ### Advanced Reference Cleanup with Tags and Queries
 
-Managing references can be challenging when you have multiple access patterns
-pointing to the same value. The `Nebulex.Adapters.Local` adapter provides two
-powerful strategies to automatically clean up all references without manually
-specifying each one.
+When several keys point to the same value, listing every reference in
+`cache_evict` gets tedious. The `Nebulex.Adapters.Local` adapter gives you
+two ways to clean up all references without naming each one.
 
 #### Strategy 1: Tag-based reference grouping
 
@@ -559,9 +559,8 @@ end
 
 **Why this works:**
 - All entries (main key and references) share the same tag
-- Single query evicts everything in one operation
-- Clean and declarative
-- Perfect when you control reference creation upfront
+- One query evicts everything
+- Works well when you control how references are created
 
 **Trade-offs:**
 - Requires planning tags during caching setup
@@ -609,11 +608,11 @@ end
 2. `:query` finds all references pointing to `user.id`
 3. Both are evicted in a single operation
 
-**Why this approach:**
-- More flexible - discovers references automatically
+**Why this works:**
+- Discovers references automatically
 - Works even if references are created conditionally
-- Handles multiple references across different decorators
-- Doesn't require upfront tag coordination
+- Handles references created by different decorators
+- Needs no tag planning
 
 **Trade-offs:**
 - Slightly more complex than tag-based approach
@@ -625,43 +624,53 @@ end
 |----------|----------|----------|
 | **Tags** | Coordinated cleanup, related entries | Requires upfront planning |
 | **keyref_match_spec** | Multiple access patterns, flexibility | Slight performance cost for query |
-| **Combined** | Maximum robustness | Most complex, but most flexible |
+| **Combined** | Covers both cases | Most setup |
 
 **Recommended approach for production:**
 
-Combine both strategies for the best of both worlds:
+Use a tag for group cleanup and `keyref_match_spec` for single-user cleanup.
+A tag is set when the entry is written, so it can only come from the
+function arguments or a constant; a lookup by email cannot tag its entry
+with the user ID. A static group tag still lets you clear the whole group at
+once:
 
 ```elixir
 use Nebulex.Adapters.Local.QueryHelper
 
-@decorate cacheable(key: id, opts: [tag: "user"])
+@decorate cacheable(key: id, opts: [tag: :users])
 def get_user(id) do
   Repo.get(User, id)
 end
 
-@decorate cacheable(key: email, references: &(&1 && &1.id), opts: [tag: "user"])
+@decorate cacheable(
+            key: email,
+            references: &(&1 && &1.id),
+            opts: [tag: :users]
+          )
 def get_user_by_email(email) do
   Repo.get_by(User, email: email)
 end
 
-@decorate cacheable(key: username, references: &(&1 && &1.id), opts: [tag: "user"])
+@decorate cacheable(
+            key: username,
+            references: &(&1 && &1.id),
+            opts: [tag: :users]
+          )
 def get_user_by_username(username) do
   Repo.get_by(User, username: username)
 end
 
-# Use both tag and query for maximum robustness:
-# - Tag evicts everything if references are properly tagged
-# - Query catches any orphaned references as a fallback
-@decorate cache_evict(query: &evict_users_by_tag/0)
-def delete_all_user_data(user) do
-  Repo.delete(user)
+# Group cleanup: evict every user entry and every reference in one query
+@decorate cache_evict(query: &evict_all_users/1)
+def reload_users do
+  Users.reload_from_source()
 end
 
-defp evict_users_by_tag do
-  match_spec tag: t, where: t == "user", select: true
+defp evict_all_users(_context) do
+  match_spec tag: t, where: t == :users, select: true
 end
 
-# For individual user deletion, use keyref_match_spec for flexibility
+# Single user: evict the user entry by key and its references by query
 @decorate cache_evict(key: user.id, query: &evict_user_refs/1)
 def delete_user(user) do
   Repo.delete(user)
@@ -672,18 +681,15 @@ defp evict_user_refs(%{args: [user]}) do
 end
 ```
 
-This layered approach provides:
-- ✅ Automatic cleanup through tags (primary method)
-- ✅ Fallback cleanup through queries (safety net)
-- ✅ No dangling references
-- ✅ Clear intent in your code
+The tag handles the bulk case and `keyref_match_spec` handles the per-user
+case, so no reference is left dangling on either path.
 
 ---
 
-## Real-World Scenario: E-commerce Product Catalog
+## Example: An E-commerce Product Catalog
 
-Let's build a comprehensive example that evolves from simple caching to advanced
-patterns, showcasing how different features work together in a real application.
+This example starts with simple caching and adds patterns step by step, so
+you can see how the features fit together.
 
 ### The Scenario
 
@@ -694,11 +700,16 @@ We're building an e-commerce platform with:
 - Shopping carts
 - Administrative operations
 
-We'll progressively add caching patterns to optimize performance.
+We'll add caching step by step.
 
 ### Step 1: Basic Product Caching
 
-Start with simple read-through caching for products:
+Start with simple read-through caching for products. Every function returns
+an ok/error tuple, so callers can chain them with `with`, and the cache
+stores the `{:ok, product}` tuple as is. The default `:match` skips `nil`,
+`:error`, and `{:error, _}`, so a missing product is never cached. Entries
+are tagged `:products` (a `Nebulex.Adapters.Local` put option) so Step 8 can
+evict them all at once:
 
 ```elixir
 defmodule MyApp.Catalog do
@@ -711,41 +722,63 @@ defmodule MyApp.Catalog do
 
   @ttl :timer.hours(2)
 
-  @decorate cacheable(key: id, opts: [ttl: @ttl])
-  def get_product(id) do
-    Repo.get(Product, id)
+  @decorate cacheable(key: id, opts: [ttl: @ttl, tag: :products])
+  def fetch_product(id) do
+    case Repo.get(Product, id) do
+      nil -> {:error, :not_found}
+      product -> {:ok, product}
+    end
   end
 
-  @decorate cache_put(key: product.id, match: &match_ok/1, opts: [ttl: @ttl])
+  @decorate cache_put(
+              key: product.id,
+              match: &match_ok/1,
+              opts: [ttl: @ttl, tag: :products]
+            )
   def update_product(product, attrs) do
     product
     |> Product.changeset(attrs)
     |> Repo.update()
   end
 
-  @decorate cache_evict(key: id)
-  def delete_product(id) do
-    Repo.delete(Product, id)
+  @decorate cache_evict(key: product.id)
+  def delete_product(product) do
+    Repo.delete(product)
   end
 
-  defp match_ok({:ok, product}), do: {true, product}
+  # Cache the whole `{:ok, product}` tuple so a cache hit returns the same
+  # shape as a cache miss
+  defp match_ok({:ok, _product}), do: true
   defp match_ok(_), do: false
 end
 ```
 
 ### Step 2: Multiple Access Patterns with References
 
-Products can be accessed by ID or slug. Use references to avoid duplication:
+Products can be accessed by ID or slug. Use references to avoid duplication.
+The `:references` function receives the function result, so it has to unwrap
+the tuple; returning `nil` skips the cache, which is what we want for
+`{:error, :not_found}`:
 
 ```elixir
-@decorate cacheable(key: id, opts: [ttl: @ttl])
-def get_product(id) do
-  Repo.get(Product, id)
+@decorate cacheable(key: id, opts: [ttl: @ttl, tag: :products])
+def fetch_product(id) do
+  case Repo.get(Product, id) do
+    nil -> {:error, :not_found}
+    product -> {:ok, product}
+  end
 end
 
-@decorate cacheable(key: slug, references: &(&1 && &1.id), opts: [ttl: @ttl])
-def get_product_by_slug(slug) do
-  Repo.get_by(Product, slug: slug)
+@decorate cacheable(
+            key: slug,
+            references: &product_ref/1,
+            opts: [ttl: @ttl, tag: :products]
+          )
+def fetch_product_by_slug(slug) do
+  case Repo.get_by(Product, slug: slug) do
+    nil -> {:error, :not_found}
+    product -> {:ok, product}
+  end
 end
 
 # When evicting, remove both keys
@@ -753,12 +786,16 @@ end
 def delete_product(product) do
   Repo.delete(product)
 end
+
+defp product_ref({:ok, product}), do: product.id
+defp product_ref(_), do: nil
 ```
 
 **What happens:**
-- `get_product_by_slug("cool-gadget")` stores the product under ID
-  and a reference under slug
-- Memory efficient: product stored once, slug key just points to it
+- `fetch_product_by_slug("cool-gadget")` stores `{:ok, product}` under the
+  ID and a reference under the slug
+- Memory efficient: the product is stored once, the slug key just points to
+  it
 - Eviction removes both the reference and the actual data
 
 ### Step 3: Category Management with Tagging
@@ -805,7 +842,7 @@ def delete_category(category_id) do
   Repo.delete_all(from p in Product, where: p.category_id == ^category_id)
 
   # Then delete the category
-  Repo.delete(Category, category_id)
+  Category |> Repo.get!(category_id) |> Repo.delete()
 end
 
 defp query_category_products(%{args: [category_id]}) do
@@ -815,13 +852,13 @@ end
 ```
 
 **Execution flow:**
-1. Query eviction removes all product entries with tag `"category:123"`
-2. Key eviction removes the category entry with ID `123`
-3. Function executes to update the database
+1. The function runs and updates the database
+2. Query eviction removes all product entries with tag `"category:123"`
+3. Key eviction removes the category entry with ID `123`
 
-### Step 5: User Sessions with Security
+### Step 5: User Sessions
 
-Use sessions with automatic expiration and proper cleanup:
+Sessions expire on their own and are cleaned up on logout:
 
 ```elixir
 defmodule MyApp.Auth do
@@ -834,7 +871,7 @@ defmodule MyApp.Auth do
   @session_ttl :timer.hours(24)
 
   @decorate cacheable(
-              key: session_id,
+              key: user_id,
               opts: [ttl: @session_ttl, tag: "user:#{user_id}"]
             )
   def create_session(user_id) do
@@ -849,15 +886,15 @@ defmodule MyApp.Auth do
     {:ok, session}
   end
 
-  # Logout: evict specific session and user's cache entry
+  # Logout: evict the user's session entry
   @decorate cache_evict(
-              key: {:in, [session_id, user_id]},
+              key: user_id,
               query: &query_user_session/1
             )
   def logout(session_id, user_id) do
     # Evicts:
     # 1. All entries tagged with this user (via query)
-    # 2. The session_id and user_id keys
+    # 2. The user_id key, where create_session/1 stored the session
     Sessions.delete(session_id)
   end
 
@@ -934,19 +971,25 @@ defmodule MyApp.Cart do
 
   # Primary access by cart ID
   @decorate cacheable(key: cart_id, opts: [ttl: @cart_ttl])
-  def get_cart(cart_id) do
-    Repo.get(Cart, cart_id)
+  def fetch_cart(cart_id) do
+    case Repo.get(Cart, cart_id) do
+      nil -> {:error, :not_found}
+      cart -> {:ok, cart}
+    end
   end
 
   # Alternative access by user ID - stores reference to cart.id
   @decorate cacheable(
               key: user_id,
-              references: &(&1 && &1.id),
+              references: &cart_ref/1,
               opts: [ttl: @cart_ttl]
             )
-  def get_cart_by_user_id(user_id) do
+  def fetch_cart_by_user_id(user_id) do
     # Assuming user has only one active cart
-    Repo.get_by(Cart, user_id: user_id)
+    case Repo.get_by(Cart, user_id: user_id) do
+      nil -> {:error, :not_found}
+      cart -> {:ok, cart}
+    end
   end
 
   @decorate cache_put(
@@ -972,14 +1015,17 @@ defmodule MyApp.Cart do
     result
   end
 
-  defp match_ok({:ok, cart}), do: {true, cart}
+  defp cart_ref({:ok, cart}), do: cart.id
+  defp cart_ref(_), do: nil
+
+  defp match_ok({:ok, _cart}), do: true
   defp match_ok(_), do: false
 end
 ```
 
 **How it works:**
-- `get_cart(cart_id)` stores the cart under `cart.id`
-- `get_cart_by_user_id(user_id)` stores a reference under `user_id`
+- `fetch_cart(cart_id)` stores `{:ok, cart}` under `cart.id`
+- `fetch_cart_by_user_id(user_id)` stores a reference under `user_id`
   pointing to `cart.id`
 - Both lookups return the same cached data (memory efficient)
 - Eviction with `{:in, [cart.id, cart.user_id]}` removes both keys
@@ -996,6 +1042,8 @@ defmodule MyApp.Admin do
     on_error: :raise  # Raise errors for admin operations
 
   use Nebulex.Adapters.Local.QueryHelper
+
+  require Logger
 
   # Refresh entire catalog (clear all product caches)
   @decorate cache_evict(
@@ -1024,7 +1072,7 @@ defmodule MyApp.Admin do
     end)
   end
 
-  # Nuclear option: clear everything
+  # Clear everything
   @decorate cache_evict(all_entries: true, before_invocation: true)
   def clear_all_caches do
     # Cache cleared before function runs
@@ -1034,38 +1082,34 @@ defmodule MyApp.Admin do
 end
 ```
 
-### Complete Example: Putting It All Together
+### Putting It All Together
 
-Here's how these patterns work together in a typical request flow:
+Here's how these patterns work together in a typical request flow. Because
+every `Catalog` fetch function returns an ok/error tuple, the controller can
+chain them with `with` and let a `{:error, :not_found}` fall through to the
+error handling:
 
 ```elixir
 defmodule MyApp.ProductController do
   use MyAppWeb, :controller
 
-  def show(conn, %{"slug" => slug}) do
-    # 1. Check cache by slug (might follow reference to ID)
-    with {:ok, product} <- Catalog.get_product_by_slug(slug),
-         # 2. Check if user has this in cart (cache hit if recent)
-         {:ok, in_cart?} <-
-           Cart.product_in_cart?(current_user_id(conn), product.id),
-         # 3. Get related products (cached by category tag)
-         {:ok, related} <-
-           Catalog.get_products_by_category(product.category_id) do
+  alias MyApp.Catalog
 
-      render(conn, "show.html",
-        product: product,
-        in_cart: in_cart?,
-        related_products: related
-      )
+  def show(conn, %{"slug" => slug}) do
+    # Cached by slug (follows the reference to the product ID)
+    with {:ok, product} <- Catalog.fetch_product_by_slug(slug) do
+      # Cached by category tag
+      related = Catalog.get_products_by_category(product.category_id)
+
+      render(conn, "show.html", product: product, related_products: related)
     end
   end
 
   def update(conn, %{"id" => id, "product" => params}) do
-    # Update triggers cache_put, automatically refreshing cache
-    with {:ok, product} <- Catalog.get_product(id),
+    # cache_put refreshes the cached product on success
+    with {:ok, product} <- Catalog.fetch_product(id),
          {:ok, updated} <- Catalog.update_product(product, params) do
-
-      # If category changed, might need to invalidate category caches
+      # If the category changed, the category entries may need eviction too
       maybe_invalidate_category_cache(product, updated)
 
       json(conn, updated)
@@ -1073,10 +1117,9 @@ defmodule MyApp.ProductController do
   end
 
   def delete(conn, %{"id" => id}) do
-    # Evicts both ID and slug keys, plus category tag cleanup
-    with {:ok, product} <- Catalog.get_product(id),
-         :ok <- Catalog.delete_product(product) do
-
+    # Evicts both the ID and slug keys
+    with {:ok, product} <- Catalog.fetch_product(id),
+         {:ok, _deleted} <- Catalog.delete_product(product) do
       send_resp(conn, 204, "")
     end
   end
@@ -1093,16 +1136,22 @@ Choose TTL based on data volatility and consistency requirements:
 
 ```elixir
 # High-churn data: short TTL
-@decorate cacheable(key: id, opts: [ttl: :timer.minutes(5)])
-def get_stock_price(symbol_id), do: # ...
+@decorate cacheable(key: symbol_id, opts: [ttl: :timer.minutes(5)])
+def get_stock_price(symbol_id) do
+  # ...
+end
 
 # Stable data: long TTL
 @decorate cacheable(key: id, opts: [ttl: :timer.hours(24)])
-def get_product_category(id), do: # ...
+def get_product_category(id) do
+  # ...
+end
 
 # Static data: no expiration
-@decorate cacheable(key: id)
-def get_country_by_code(code), do: # ...
+@decorate cacheable(key: code)
+def get_country_by_code(code) do
+  # ...
+end
 ```
 
 ### Query Performance
@@ -1112,12 +1161,13 @@ Be mindful of query complexity, especially with large caches:
 ```elixir
 use Nebulex.Adapters.Local.QueryHelper
 
-# GOOD: Specific tag lookup (O(n) where n = entries with tag)
+# Both queries scan the whole table. Comparing the tag is cheap per entry;
+# matching inside the value is more work per entry.
 defp query_by_tag(%{args: [tag]}) do
   match_spec tag: t, where: t == ^tag, select: true
 end
 
-# CAREFUL: Value pattern matching (O(n) for all entries)
+# Value pattern matching: more work per entry
 defp query_by_price_range(%{args: [min, max]}) do
   match_spec value: %{price: price},
              where: price >= ^min and price <= ^max,
@@ -1130,7 +1180,7 @@ complex queries.
 
 ### Memory Management
 
-Monitor cache size and implement eviction strategies:
+Set limits on the cache size:
 
 ```elixir
 # Set max size at cache configuration
@@ -1141,7 +1191,7 @@ config :my_app, MyApp.Cache,
   allocated_memory: 2_000_000_000  # 2GB
 ```
 
-Use tags to group and evict related entries efficiently:
+Use tags to group and evict related entries:
 
 ```elixir
 use Nebulex.Adapters.Local.QueryHelper
@@ -1166,7 +1216,7 @@ end
 @decorate cache_evict(key: id)
 def delete_user(id) do
   # Evicts user.id but not references (email, username, etc.)
-  Repo.delete(User, id)
+  User |> Repo.get!(id) |> Repo.delete()
 end
 ```
 
@@ -1178,32 +1228,43 @@ def delete_user(user) do
 end
 ```
 
-### Pitfall 2: Caching Errors
+### Pitfall 2: Caching Failed Results
+
+The default match function skips `nil`, `:error`, and `{:error, _}` results
+and caches anything else. A result that encodes failure in any other shape
+is cached like a success.
 
 **Problem:**
 ```elixir
 @decorate cacheable(key: id)
-def get_user(id) do
-  # If this returns {:error, :not_found}, it gets cached!
-  Repo.get(User, id) || {:error, :not_found}
+def fetch_user(id) do
+  # `:not_found` is cached, so the lookup never reaches the database again
+  # until the entry expires
+  Repo.get(User, id) || :not_found
 end
 ```
 
-**Solution:**
+**Solution:** return ok/error tuples and let the default match do the rest:
 ```elixir
-@decorate cacheable(
-            key: id,
-            match: &match_ok/1
-          )
-def get_user(id) do
+@decorate cacheable(key: id)
+def fetch_user(id) do
   case Repo.get(User, id) do
     nil -> {:error, :not_found}
     user -> {:ok, user}
   end
 end
+```
 
-defp match_ok({:ok, _}), do: true
-defp match_ok(_), do: false
+If you cannot change the result shape, use `:match` to say what counts as a
+success:
+```elixir
+@decorate cacheable(key: id, match: &match_found/1)
+def fetch_user(id) do
+  Repo.get(User, id) || :not_found
+end
+
+defp match_found(:not_found), do: false
+defp match_found(_user), do: true
 ```
 
 ### Pitfall 3: Inconsistent Cache Keys
@@ -1223,7 +1284,9 @@ Use consistent key generation:
 def get_user(id), do: Repo.get(User, id)
 
 @decorate cache_put(key: {:user, id})
-def update_user(id, attrs), do: # ...
+def update_user(id, attrs) do
+  # ...
+end
 ```
 
 ### Debugging Cache Issues
@@ -1252,7 +1315,7 @@ Enable telemetry logging to debug cache behavior:
    - `@cache_put` for writes (always execute + cache)
    - `@cache_evict` for invalidation
 
-2. **Leverage adapter-specific features:**
+2. **Use adapter-specific features:**
    - QueryHelper for readable queries
    - Tags for logical grouping
    - References to avoid duplication
@@ -1263,7 +1326,7 @@ Enable telemetry logging to debug cache behavior:
    - Set appropriate TTLs
 
 4. **Monitor and optimize:**
-   - Use telemetry for observability
+   - Use telemetry to see what the cache is doing
    - Watch memory usage
    - Profile query performance
 
@@ -1273,7 +1336,3 @@ Enable telemetry logging to debug cache behavior:
 - [Nebulex.Caching.Decorators API](`Nebulex.Caching.Decorators`) – Complete API reference.
 - [Info API Guide](info-api.md) – Monitoring and observability.
 - [Nebulex.Adapters.Local Documentation](https://hexdocs.pm/nebulex_local) – Local adapter features.
-
----
-
-Happy caching! 🚀

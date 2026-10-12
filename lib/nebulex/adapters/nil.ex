@@ -1,8 +1,8 @@
 defmodule Nebulex.Adapters.Nil do
   @moduledoc """
-  The Nil adapter is a special cache adapter that turns off the cache. It loses
-  all the items saved on it and returns nil for all read operations and true for
-  all save operations. This adapter is mostly useful for tests.
+  The Nil adapter is a special cache adapter that turns off the cache. It
+  drops everything written to it, behaves as if every key were missing on
+  reads, and reports success on all writes. It is mostly useful for tests.
 
   ## Shared options
 
@@ -13,19 +13,15 @@ defmodule Nebulex.Adapters.Nil do
 
   ## Example
 
-  Suppose you have an application using Ecto for database access and Nebulex
-  for caching. Then, you have defined a cache and a repo within it. Since you
-  are using a database, there might be some cases where you may want to turn
-  off the cache to avoid issues when running the test. For example, in some
-  test cases, when accessing the database, you expect no data, but you can
-  still get unexpected data since the cache is not flushed. Therefore, you
-  must delete all entries from the cache before running each test to ensure
-  the cache is always empty. Here is where the Nil adapter comes in, instead
-  of adding code to flush the cache before each test, you could define a test
-  cache using the Nil adapter for the tests.
+  Suppose you have an application that uses Ecto for database access and
+  Nebulex for caching, so it defines a repo and a cache. In some tests you may
+  want to turn the cache off. For example, a test that expects no data from
+  the database can still get data from the cache if the cache was not
+  flushed, so you would have to delete all entries before each test. Instead
+  of adding code to flush the cache before each test, you can define a test
+  cache that uses the Nil adapter.
 
-  On one hand, you have defined the cache in your application within
-  `lib/my_app/cache.ex`:
+  The application cache is defined in `lib/my_app/cache.ex`:
 
       defmodule MyApp.Cache do
         use Nebulex.Cache,
@@ -33,8 +29,7 @@ defmodule Nebulex.Adapters.Nil do
           adapter: Nebulex.Adapters.Local
       end
 
-  On the other hand, in the tests, you have defined the test cache within
-  `test/support/test_cache.ex`:
+  The test cache is defined in `test/support/test_cache.ex`:
 
       defmodule MyApp.TestCache do
         use Nebulex.Cache,
@@ -42,17 +37,16 @@ defmodule Nebulex.Adapters.Nil do
           adapter: Nebulex.Adapters.Nil
       end
 
-  You must tell the app what cache to use depending on the environment. For
-  tests, you configure `MyApp.TestCache`; otherwise, it is always `MyApp.Cache`.
-  You can do this by introducing a new config parameter to decide which cache
-  module to use. For tests, you can define the config `config/test.exs`:
+  Then tell the app which cache to use per environment: `MyApp.TestCache` in
+  tests and `MyApp.Cache` otherwise. One way is a config parameter that picks
+  the cache module. In `config/test.exs`:
 
       config :my_app,
         nebulex_cache: MyApp.TestCache,
         ...
 
-  The final piece is to read the config parameter and start the cache properly.
-  Within `lib/my_app/application.ex`, you could have:
+  The last piece is to read the config parameter and start that cache. In
+  `lib/my_app/application.ex`:
 
       def start(_type, _args) do
         children = [
@@ -61,9 +55,8 @@ defmodule Nebulex.Adapters.Nil do
 
         ...
 
-  As you may notice, `MyApp.Cache` is used by default unless the
-  `:nebulex_cache` option points to a different module, which will
-  be when tests are executed (`test` env).
+  `MyApp.Cache` is used by default unless the `:nebulex_cache` option points
+  to a different module, which is the case in the `test` environment.
   """
 
   # Provide Cache Implementation

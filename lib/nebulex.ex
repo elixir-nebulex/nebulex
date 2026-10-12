@@ -3,30 +3,23 @@ defmodule Nebulex do
   Nebulex is split into two main components:
 
     * `Nebulex.Cache` - Defines a standard Cache API for caching data.
-      This API implementation is intended to create a way for different
-      technologies to provide a common caching interface. It defines the
-      mechanism for creating, accessing, updating, and removing information
-      from a cache. This common interface makes it easier for software
-      developers to leverage various technologies as caches since the
-      software they write using the Nebulex Cache API does not need
-      to be rewritten to work with different underlying technologies.
+      The API gives different technologies a common caching interface. It
+      defines how to create, read, update, and remove entries from a cache.
+      Code written against the Nebulex Cache API does not need to be
+      rewritten to work with a different backend.
 
-    * `Nebulex.Caching` - Defines a Cache Abstraction for transparently adding
-      caching into an existing Elixir application. The caching abstraction
-      allows consistent use of various caching solutions with minimal impact
-      on the code. This Cache Abstraction enables declarative decorator-based
-      caching via **`Nebulex.Caching.Decorators`**. Decorators provide an
-      elegant way of annotating functions to be cached or evicted. Caching
-      decorators also enable the adoption or implementation of cache usage
-      patterns such as **Read-through**, **Write-through**, **Cache-as-SoR**,
-      etc. See the [Cache Usage Patterns](cache-usage-patterns.md) guide.
+    * `Nebulex.Caching` - Defines a Cache Abstraction for adding caching to
+      an existing Elixir application with little change to the code. It
+      provides declarative, decorator-based caching via
+      `Nebulex.Caching.Decorators`. Decorators annotate functions so their
+      results are cached or evicted. They also cover cache usage patterns
+      such as Read-through, Write-through, and Cache-as-SoR. See the
+      [Cache Usage Patterns](cache-usage-patterns.md) guide.
 
-  The following sections will provide an overview of those components and their
-  usage. Feel free to access their respective module documentation for more
-  specific examples, options, and configurations.
+  The sections below give an overview of both. See each module's
+  documentation for more examples, options, and configuration.
 
-  If you want to check a sample application using Nebulex quickly, please check
-  the [getting started guide](getting-started.md).
+  For a sample application, see the [getting started guide](getting-started.md).
 
   ## Installation
 
@@ -46,8 +39,8 @@ defmodule Nebulex do
         ]
       end
 
-  To provide more flexibility and load only the needed dependencies,
-  Nebulex makes all dependencies optional, including the adapters.
+  Apart from `:nimble_options`, every Nebulex dependency is optional,
+  including the adapters, so you only load what you need.
 
     * `:decorator` - Required for
       [declarative decorator-based caching](`Nebulex.Caching`).
@@ -67,33 +60,31 @@ defmodule Nebulex do
 
   ## Usage
 
-  `Nebulex.Cache` is the wrapper around the Cache. We can define a
-  cache as follows:
+  A cache is a module that uses `Nebulex.Cache`:
 
-      defmodule MyApp.MyCache do
+      defmodule MyApp.Cache do
         use Nebulex.Cache,
           otp_app: :my_app,
           adapter: Nebulex.Adapters.Local
       end
 
-  Where the configuration for the Cache must be in your application
-  environment, usually defined in your `config/config.exs`:
+  The cache configuration goes in your application environment, usually in
+  `config/config.exs`:
 
-      config :my_app, MyApp.MyCache,
+      config :my_app, MyApp.Cache,
         gc_interval: :timer.hours(12),
         max_size: 1_000_000,
         allocated_memory: 2_000_000_000,
         gc_memory_check_interval: :timer.seconds(10)
 
-  Each cache in Nebulex defines a `start_link/1` function that needs to be
-  invoked before using the cache. In general, this function is not called
-  directly, but used as part of your application supervision tree.
+  Each cache defines a `start_link/1` function that must run before the
+  cache is used. You rarely call it directly; the cache is usually started
+  from your application supervision tree.
 
   If your application was generated with a supervisor (by passing `--sup`
-  to `mix new`) you will have a `lib/my_app/application.ex` file containing
-  the application start callback that defines and starts your supervisor.
-  You just need to edit the `start/2` function to start the cache as a
-  supervisor on your application's supervisor:
+  to `mix new`), `lib/my_app/application.ex` has the application start
+  callback that defines and starts your supervisor. Add the cache to the
+  children in `start/2`:
 
       def start(_type, _args) do
         children = [
@@ -104,25 +95,24 @@ defmodule Nebulex do
         Supervisor.start_link(children, opts)
       end
 
-  Otherwise, you can start and stop the cache directly at any time by calling
+  You can also start and stop the cache yourself at any time with
   `MyApp.Cache.start_link/1` and `MyApp.Cache.stop/1`.
 
   ## What's next
 
-    * 🚀 [Getting Started](getting-started.md) - Set up Nebulex and
-      learn the basics of caching.
-    * 🔌 [Nebulex Adapters](nbx-adapters.md) - Explore available
-      adapters and choose the right one.
-    * ✨ [Declarative Caching](declarative-caching.md) - Learn
-      decorator-based caching with `Nebulex.Caching`.
-    * 📐 [Cache Usage Patterns](cache-usage-patterns.md) - Implement
-      Read-through, Write-through, and other patterns.
-    * 📊 [Info API](info-api.md) - Monitor cache stats, memory,
-      and telemetry.
-    * 🔧 [Creating a New Adapter](creating-new-adapter.md) - Build
-      custom adapters for your caching needs.
-    * ⬆️ [Upgrading to v3.0](v3-0.html) - Migration guide from
-      previous versions.
+    * [Getting Started](getting-started.md) - Set up Nebulex and learn the
+      basics of caching.
+    * [Nebulex Adapters](nbx-adapters.md) - The available adapters and
+      how to pick one.
+    * [Declarative Caching](declarative-caching.md) - Decorator-based
+      caching with `Nebulex.Caching`.
+    * [Cache Usage Patterns](cache-usage-patterns.md) - Read-through,
+      Write-through, and other patterns.
+    * [Info API](info-api.md) - Cache stats, memory, and telemetry.
+    * [Creating a New Adapter](creating-new-adapter.md) - How to write
+      your own adapter.
+    * [Upgrading to v3.0](v3-0.html) - Migration guide from previous
+      versions.
 
   """
 

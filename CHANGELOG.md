@@ -55,7 +55,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `use Nebulex.Cache` now validates at compile time that the adapter lists
   `Nebulex.Adapter`, `Nebulex.Adapter.KV`, and `Nebulex.Adapter.CompositeKV`
   as behaviours. Add `use Nebulex.Adapter.CompositeKV` to an adapter for the
-  default implementation.
+  default implementation. The compile-time error says how to fix it: add
+  the `use` to the adapter, or upgrade it to a version built for v3.1.
   [#254](https://github.com/elixir-nebulex/nebulex/issues/254).
 - [Nebulex.Cache] `get_and_update/3` no longer treats a `nil` new value as
   "do not write". A function returning `{current, nil}` now stores `nil`

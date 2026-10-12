@@ -1,7 +1,8 @@
 defmodule Nebulex.Telemetry.CacheEntryHandler do
   @moduledoc """
-  A Telemetry handler listens to cache command completion events, builds the
-  corresponding cache entry event, and applies the provided filter and listener.
+  Telemetry handler that listens to the `:stop` event of cache commands,
+  builds the matching cache entry event, and runs the registered filter and
+  listener on it.
   """
 
   import Nebulex.Utils, only: [wrap_error: 2]
@@ -13,8 +14,8 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
   ## API
 
   @doc """
-  Registers a new Telemetry handler for listening and handling cache entry
-  events.
+  Attaches a Telemetry handler that turns command events into cache entry
+  events and passes them to `listener` when `filter` returns `true`.
   """
   @spec register(
           Adapter.adapter_meta(),
@@ -22,7 +23,7 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
           Nebulex.Event.filter(),
           Nebulex.Event.metadata(),
           keyword()
-        ) :: :ok | Nebulex.Error.t()
+        ) :: :ok | {:error, Nebulex.Error.t()}
   def register(
         %{name: name, pid: pid, telemetry_prefix: telemetry_prefix},
         listener,
@@ -51,8 +52,9 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
   end
 
   @doc """
-  Un-registers a Telemetry handler that listens and handles cache entry events.
+  Detaches the Telemetry handler registered under `id`.
   """
+  @spec unregister(Adapter.adapter_meta(), any(), keyword()) :: :ok
   def unregister(%{name: name, pid: pid}, id, _opts) do
     _ignore = Telemetry.detach({name || pid, id})
 

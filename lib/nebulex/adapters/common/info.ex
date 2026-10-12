@@ -21,9 +21,9 @@ defmodule Nebulex.Adapters.Common.Info do
       %{
         server: %{
           nbx_version: "3.0.0",
-          cache_module: "MyCache",
-          cache_adapter: "Nebulex.Adapters.Local",
-          cache_name: "MyCache",
+          cache_module: MyCache,
+          cache_adapter: Nebulex.Adapters.Local,
+          cache_name: MyCache,
           cache_pid: #PID<0.111.0>
         },
         stats: %{

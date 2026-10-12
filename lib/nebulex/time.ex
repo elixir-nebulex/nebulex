@@ -8,7 +8,7 @@ defmodule Nebulex.Time do
   @doc """
   Returns the current system time in the given time unit.
 
-  The `unit` is set to `:millisecond` by default.
+  `unit` defaults to `:millisecond`.
 
   ## Examples
 

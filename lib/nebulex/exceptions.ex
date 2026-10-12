@@ -1,8 +1,8 @@
 defmodule Nebulex.Error do
   @moduledoc """
-  This exception represents command execution errors. For example, the cache
-  cannot perform a command because it has not started, it does not exist, or
-  the adapter failed to perform it for any reason.
+  Raised, or returned in an `{:error, _}` tuple, when a command fails. For
+  example, the adapter could not run it, it timed out, or a transaction was
+  aborted.
 
   ## Exception fields
 
@@ -10,26 +10,31 @@ defmodule Nebulex.Error do
 
   ## Error reasons
 
-  The `:reason` field can assume the following values:
+  The `:reason` field can be one of:
 
-    * `:timeout` - if there is a timeout when executing the cache command.
+    * `:timeout` - the command timed out.
 
-    * `:transaction_aborted` - if a transaction execution fails and aborts.
+    * `:transaction_aborted` - a transaction failed and was aborted.
 
-    * `:event_listener_already_exists` - if another cache entry listener with
-      the same ID already exists.
+    * `:event_listener_already_exists` - another cache entry listener with
+      the same ID is already registered.
 
-    * `:event_listener_error` - if a cache entry event listener fails when
+    * `:event_listener_error` - a cache entry event listener failed while
       processing an event.
 
-    * `t:Exception.t/0` - if the underlying adapter fails due to an exception.
+    * `t:Exception.t/0` - the adapter raised an exception.
 
-    * `t:any/0` - the command fails with an adapter-specific error.
+    * `t:any/0` - the command failed with an adapter-specific error.
 
   """
 
-  @typedoc "Error reason type"
-  @type reason() :: atom() | {atom(), any()} | Exception.t()
+  @typedoc """
+  Error reason type.
+
+  Usually an atom, a `{atom, term}` tuple, or an exception, but adapters may
+  use any term.
+  """
+  @type reason() :: any()
 
   @typedoc """
   The type for this exception struct.
@@ -40,16 +45,14 @@ defmodule Nebulex.Error do
       reasons described in the ["Error reasons"](#module-error-reasons)
       section in the module documentation.
 
-    * `:module` - a custom error formatter module. When it is present, it
-      invokes `module.format_error(reason, metadata)` to format the error
-      reason. The argument `metadata` is a keyword with the metadata given
-      to the exception. See `format_error/2` for more information.
+    * `:module` - a custom error formatter module. When present, the
+      message is built with `module.format_error(reason, metadata)`, where
+      `metadata` is the keyword list given to the exception. See
+      `format_error/2`.
 
-    * `:metadata` - the metadata contains the options given to the
-      exception excluding the `:reason` and `:module` that are part
-      of the exception fields. For example, when raising an exception
-      `raise Nebulex.Error, reason: :test, foo: :bar`, the metadata
-      will be `[foo: :bar]`.
+    * `:metadata` - the options given to the exception, minus `:reason` and
+      `:module`. For example, `raise Nebulex.Error, reason: :test, foo: :bar`
+      gives the metadata `[foo: :bar]`.
 
   """
   @type t() :: %__MODULE__{reason: reason(), module: module(), metadata: keyword()}
@@ -75,7 +78,8 @@ defmodule Nebulex.Error do
   ## Helpers
 
   @doc """
-  A callback invoked when a custom formatter module is provided.
+  Formats the error message. A custom formatter module (see the `:module`
+  field) must define a function with the same name and arguments.
 
   ## Arguments
 
@@ -164,10 +168,10 @@ end
 
 defmodule Nebulex.KeyError do
   @moduledoc """
-  Raised at runtime when a key does not exist in the cache.
+  Raised, or returned in an `{:error, _}` tuple, when a key does not exist
+  in the cache.
 
-  This exception denotes the cache executed a command, but there was an issue
-  with the requested key; for example, it doesn't exist.
+  The cache ran the command, but the requested key was missing or expired.
 
   ## Exception fields
 
@@ -175,11 +179,11 @@ defmodule Nebulex.KeyError do
 
   ## Error reasons
 
-  The `:reason` field can assume a few Nebulex-specific values:
+  The `:reason` field can be one of:
 
     * `:not_found` - the key doesn't exist in the cache.
 
-    * `:expired` - The key doesn't exist in the cache because it is expired.
+    * `:expired` - the key doesn't exist in the cache because it expired.
 
   """
 
@@ -193,11 +197,9 @@ defmodule Nebulex.KeyError do
 
     * `:key` - the requested key.
 
-    * `:metadata` - the metadata contains the options given to the
-      exception excluding the `:reason` and `:key` that are part of
-      the exception fields. For example, when raising an exception
-      `raise Nebulex.KeyError, key: :test, foo: :bar`, the metadata
-      will be `[foo: :bar]`.
+    * `:metadata` - the options given to the exception, minus `:reason` and
+      `:key`. For example, `raise Nebulex.KeyError, key: :test, foo: :bar`
+      gives the metadata `[foo: :bar]`.
 
   """
   @type t() :: %__MODULE__{reason: atom(), key: any(), metadata: keyword()}
@@ -237,8 +239,8 @@ end
 
 defmodule Nebulex.CacheNotFoundError do
   @moduledoc """
-  It is raised when the cache cannot be retrieved from the registry
-  because it was not started or does not exist.
+  Raised when the cache cannot be found in the registry because it is not
+  running or does not exist.
   """
 
   @typedoc """

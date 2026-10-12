@@ -1,6 +1,6 @@
 # Official adapters
 
-Currently we officially support the following adapters:
+These are the official adapters:
 
 | Cache | Nebulex Adapter | Dependency |
 |:------|:----------------|:-----------|
@@ -28,17 +28,19 @@ Currently we officially support the following adapters:
 [nebulex_adapters_cachex]: https://github.com/elixir-nebulex/nebulex_adapters_cachex
 [nebulex_disk_lfu]: https://github.com/elixir-nebulex/nebulex_disk_lfu
 
-The adapter documentation links above will help you get started with your
-adapter of choice. For API reference, you can check out the
-[Nebulex Cache API](`Nebulex.Cache`).
+Each adapter's documentation explains how to set it up. For the API
+reference, see the [Nebulex Cache API](`Nebulex.Cache`).
 
 > #### Nebulex v3 compatibility {: .info}
 >
-> **All the official adapters listed above support Nebulex v3.**
+> All the official adapters listed above support Nebulex v3. Nebulex v3.1
+> requires adapters built for v3.1, since they must implement
+> `Nebulex.Adapter.CompositeKV`; use the adapter releases that depend on
+> `{:nebulex, "~> 3.1"}`.
 
 ## Non-official adapters
 
-The following non-official adapters are available:
+Adapters maintained outside the Nebulex organization:
 
 | Cache | Nebulex Adapter | Dependency |
 | :-----| :---------------| :--------- |

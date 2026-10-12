@@ -81,7 +81,7 @@ defmodule Nebulex.Cache.Options do
       By default, the telemetry prefix is based on the module name, so if your
       module is called `MyApp.Cache`, the prefix will be `[:my_app, :cache]`.
       See the ["Telemetry events"](#module-telemetry-events) section to see
-      which events are emitted by Nebulex out-of-box.
+      which events Nebulex emits out of the box.
 
       If you have multiple caches, keep the `:telemetry_prefix` consistent for
       each cache and use the `:cache` property within the `:adapter_meta` coming
@@ -109,20 +109,19 @@ defmodule Nebulex.Cache.Options do
       type: :boolean,
       required: false,
       doc: """
-      Override the global `:telemetry` setting for a specific cache command.
-
-      This allows you to selectively enable or disable telemetry on a per-command
-      basis without needing to start separate cache instances. For example, you
-      might want to disable telemetry for frequently called read operations
-      while keeping it enabled for write operations, or vice versa.
+      Overrides the cache-level `:telemetry` setting for this command, so you
+      can enable or disable Telemetry per command without starting separate
+      cache instances. For example, you might disable it for hot read paths
+      and keep it on for writes.
       """
     ],
     telemetry_event: [
       type: {:list, :atom},
       required: false,
       doc: """
-      The telemetry event name to dispatch the event under. Defaults to what
-      is configured in the `:telemetry_prefix` option. See the
+      The telemetry event name to dispatch the event under. Defaults to the
+      `:telemetry_prefix` followed by `:command` (for example,
+      `[:my_app, :cache, :command]`). See the
       ["Telemetry events"](#module-telemetry-events) section
       for more information.
       """

@@ -66,14 +66,14 @@ defmodule Nebulex.Adapter.KV do
   The `on_write` argument supports the following values:
 
     * `:put` - If the `key` already exists, it is overwritten. Any previous
-      time-to-live associated with the key is discarded on a successful `write`
-      operation.
+      time-to-live associated with the key is discarded on a successful write,
+      unless `keep_ttl` is `true`.
 
-    * `:put_new` - It only stores the entry if the `key` does not exist.
+    * `:put_new` - Stores the entry only if the `key` does not exist.
       Otherwise, `{:ok, false}` is returned.
 
     * `:replace` - Alters the value stored under the given `key`, but only
-      if the key already exists in the cache. Otherwise, `{ok, false}` is
+      if the key already exists in the cache. Otherwise, `{:ok, false}` is
       returned.
 
   See `c:Nebulex.Cache.put/3`, `c:Nebulex.Cache.put_new/3`,
@@ -83,8 +83,8 @@ defmodule Nebulex.Adapter.KV do
               Nebulex.Cache.ok_error_tuple(boolean())
 
   @doc """
-  Puts the given `entries` (key/value pairs) into the `cache` atomically
-  or fail otherwise.
+  Puts the given `entries` (key/value pairs) into the `cache`. The operation
+  should be atomic when the backend supports it.
 
   If there's an error with executing the command, `{:error, reason}`
   is returned, where `reason` is the cause of the error.
@@ -95,12 +95,12 @@ defmodule Nebulex.Adapter.KV do
 
   The `on_write` argument supports the following values:
 
-    * `:put` - If the `key` already exists, it is overwritten. Any previous
-      time-to-live associated with the key is discarded on a successful `write`
-      operation.
+    * `:put` - Stores all entries and returns `{:ok, true}`. If a `key`
+      already exists, it is overwritten, and any previous time-to-live
+      associated with it is discarded on a successful write.
 
-    * `:put_new` - Insert all entries only if none exist in the cache, and it
-      returns `{:ok, true}` . Otherwise, `{:ok, false}` is returned.
+    * `:put_new` - Inserts all entries only if none of them exist in the
+      cache, and returns `{:ok, true}`. Otherwise, `{:ok, false}` is returned.
 
   See `c:Nebulex.Cache.put_all/2` and `c:Nebulex.Cache.put_new_all/2`.
   """
@@ -109,6 +109,11 @@ defmodule Nebulex.Adapter.KV do
 
   @doc """
   Deletes a single entry from cache.
+
+  Returns the bare `:ok` on success (not `{:ok, _}`), whether or not the
+  `key` existed. Nebulex relies on this exact value, for example to count
+  deletions in the stats and in the default `Nebulex.Adapter.CompositeKV`
+  implementation.
 
   If there's an error with executing the command, `{:error, reason}`
   is returned, where `reason` is the cause of the error.
@@ -143,8 +148,9 @@ defmodule Nebulex.Adapter.KV do
   If there's an error with executing the command, `{:error, reason}`
   is returned, where `reason` is the cause of the error.
 
-  The `ttl` is set when the key doesn't exist. Otherwise, only the counter is
-  updated keeping the TTL when the counter was updated for the first time.
+  The `ttl` is set only when the key doesn't exist. Otherwise, only the
+  counter is updated and the TTL set when the counter was first created is
+  kept.
 
   See `c:Nebulex.Cache.incr/3`.
   See `c:Nebulex.Cache.decr/3`.

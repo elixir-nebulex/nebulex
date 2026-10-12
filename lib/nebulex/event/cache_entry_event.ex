@@ -6,18 +6,20 @@ defmodule Nebulex.Event.CacheEntryEvent do
   @typedoc """
   Event type.
 
-    * `:deleted` - Invoked if a cache entry is deleted, or if a batch call
-      is made, after the entries are deleted. The commands `delete` and
-      `delete_all` triggers this event.
-    * `:expired` - Invoked if a cache entry or entries are evicted due to
-      expiration.
-    * `:inserted` - Invoked after a cache entry is inserted, or if a batch call
-      is made after the entries are inserted. The commands triggering this event
-      are: `put`, `put_new`, `put_all`, and `put_new_all`. Beware, for  `put`
-      and `put_all` commands, there is no way to know if the entry existed
-      before the operation.
-    * `:updated` - Invoked if an existing cache entry is updated via `replace`
-      command.
+    * `:deleted` - Emitted after an entry is deleted, or after a batch
+      delete. The commands `delete`, `take`, and `delete_all` emit it. Note
+      that `delete` emits it even when the key did not exist, since there is
+      no way to know.
+    * `:expired` - Emitted when a read finds the entry expired. The commands
+      `fetch`, `take`, `ttl`, and `has_key?` emit it.
+    * `:inserted` - Emitted after an entry is inserted, or after a batch
+      insert. The commands `put`, `put_new`, `put_all`, and `put_new_all`
+      emit it, as do `incr` and `decr` when they create the counter. Note
+      that for `put` and `put_all` there is no way to know whether the entry
+      existed before.
+    * `:updated` - Emitted when an existing entry changes. The commands
+      `replace`, `expire`, and `touch` emit it, as do `incr` and `decr` when
+      the counter already exists.
 
   """
   @type type() :: :deleted | :expired | :inserted | :updated
@@ -44,20 +46,21 @@ defmodule Nebulex.Event.CacheEntryEvent do
   The event will have the following keys:
 
     * `:cache` - The defined cache module.
-    * `:name` - The cache name (for dynamic caches).
+    * `:name` - The cache name, or the cache PID when the cache was started
+      without a name.
     * `:pid` - The cache PID.
     * `:type` - The event type.
-    * `:target` - The event target. It could be a key or a query
-      (in case of `delete_all`).
-    * `:command` - The cache command triggering the event.
-    * `:metadata` - The event metadata is provided when the listener is
-      registered. It may also include `:extra_metadata` with per-command
-      metadata provided through the `:telemetry_metadata` runtime option.
+    * `:target` - The event target: a key, a list of keys, or a query.
+      See `t:target/0`.
+    * `:command` - The cache command that emitted the event.
+    * `:metadata` - The metadata given when the listener was registered.
+      It also includes `:extra_metadata` with the per-command metadata
+      passed through the `:telemetry_metadata` runtime option.
 
   """
   @type t() :: %__MODULE__{
           cache: Nebulex.Cache.t(),
-          name: atom() | nil,
+          name: atom() | pid(),
           pid: pid() | nil,
           type: type(),
           target: target(),
@@ -117,7 +120,7 @@ defmodule Nebulex.Event.CacheEntryEvent do
 
   for type <- @event_types do
     @doc """
-    Creates a new "**#{type}**" event.
+    Creates a new `#{type}` event.
     """
     @spec unquote(type)(Enumerable.t()) :: t()
     def unquote(type)(enum) do

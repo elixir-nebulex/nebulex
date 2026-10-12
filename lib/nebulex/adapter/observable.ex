@@ -11,8 +11,8 @@ defmodule Nebulex.Adapter.Observable do
   completion events, builds the corresponding cache entry event, and applies
   the provided filter and listener.
 
-  Listeners should be implemented with care. In particular, it is important
-  to consider their impact on performance and latency.
+  Implement listeners with care, since they affect the latency of every
+  cache command they listen to.
 
   Listeners:
 
@@ -45,7 +45,7 @@ defmodule Nebulex.Adapter.Observable do
   @type metadata() :: Nebulex.Event.metadata()
 
   @doc """
-  Register a cache event listener.
+  Registers a cache event listener.
 
   Returns `:ok` if successful; `{:error, reason}` otherwise.
 
@@ -55,7 +55,7 @@ defmodule Nebulex.Adapter.Observable do
               :ok | Nebulex.Cache.error_tuple()
 
   @doc """
-  Un-register a cache event listener.
+  Unregisters a cache event listener.
 
   Returns `:ok` if successful; `{:error, reason}` otherwise.
 

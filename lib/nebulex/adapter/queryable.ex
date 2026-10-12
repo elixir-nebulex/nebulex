@@ -46,11 +46,10 @@ defmodule Nebulex.Adapter.Queryable do
     * `{:q, query_value}` - Queries the entries in the cache matching with the
       given `query_value`.
 
-  The `query_value` depends entirely on the adapter implementation, it could
-  any term. Therefore, it is highly recommended to see adapters' documentation
-  for more information about building queries. For example, the
+  The `query_value` depends entirely on the adapter and can be any term, so
+  see the adapter's documentation for how to build queries. For example, the
   `Nebulex.Adapters.Local` adapter supports
-  [**"ETS Match Spec"**](https://www.erlang.org/doc/man/ets#match_spec).
+  [ETS match specs](https://www.erlang.org/doc/man/ets#match_spec).
 
   ## Select fields to return
 
@@ -60,7 +59,7 @@ defmodule Nebulex.Adapter.Queryable do
   for the possible values.
   """
   @type query_meta() :: %{
-          op: :get_all | :count_all | :delete_all,
+          op: :get_all | :count_all | :delete_all | :stream,
           query: {:in, [keys :: any()]} | {:q, query_value :: any()},
           select: {:key, :value} | :key | :value | :entry
         }
@@ -72,14 +71,14 @@ defmodule Nebulex.Adapter.Queryable do
   options after they have been normalized. For example, the query value and
   the selected entry fields to return can be found in the `query_meta`.
 
-   Finally, `opts` is a keyword list of options given to the `Nebulex.Cache`
-   operation that triggered the adapter call. Any option is allowed, as this
-   is a mechanism to customize the adapter behavior per operation.
+  Finally, `opts` is a keyword list of options given to the `Nebulex.Cache`
+  operation that triggered the adapter call. Any option is allowed, as this
+  is a mechanism to customize the adapter behavior per operation.
 
   This callback returns:
 
-    * `{:ok, result}` - The query was successfully executed. The `result`
-      could be a list with the matched entries or its count.
+    * `{:ok, result}` - The query was executed. The `result` is a list with
+      the matched entries or their count, depending on the operation.
 
     * `{:error, reason}` - An error occurred executing the command.
       `reason` is the cause of the error.
@@ -97,7 +96,7 @@ defmodule Nebulex.Adapter.Queryable do
 
   This callback returns:
 
-    * `{:ok, stream}` - The query is valid, then the stream is returned.
+    * `{:ok, stream}` - The query is valid and the stream is returned.
 
     * `{:error, reason}` - An error occurred executing the command.
       `reason` is the cause of the error.

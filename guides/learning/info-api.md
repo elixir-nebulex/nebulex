@@ -1,21 +1,19 @@
 # Info API
 
-Since Nebulex v3, the adapter's Info API is introduced. This is a more generic
-API to get information about the cache, including the stats. Adapters are
-responsible for implementing the Info API and are also free to add the
-information specification keys they want. Therefore, it is highly recommended
-to review the adapter's documentation you're using.
+Nebulex v3 introduces the adapter Info API, a generic API to get information
+about the cache, including the stats. Adapters implement the Info API and are
+free to add the information keys they want, so check the documentation of the
+adapter you use.
 
 > See `c:Nebulex.Cache.info/2` for more information.
 
-Nebulex also provides a simple implementation `Nebulex.Adapters.Common.Info`,
-which is used by the `Nebulex.Adapters.Local` adapter. This implementation uses
-a Telemetry handler to aggregate the stats and keep them updated, therefore,
-it requires `:telemetry` to be available.
+Nebulex also provides a simple implementation, `Nebulex.Adapters.Common.Info`,
+which the `Nebulex.Adapters.Local` adapter uses. It keeps the stats updated
+through a Telemetry handler, so it needs `:telemetry` to be available.
 
-> **Note**: The `:telemetry` dependency is optional but highly recommended
-> for production environments. Add `{:telemetry, "~> 1.0"}` to your `mix.exs`
-> to enable cache metrics and observability.
+> **Note**: The `:telemetry` dependency is optional but recommended for
+> production. Add `{:telemetry, "~> 1.0"}` to your `mix.exs` to get cache
+> metrics.
 
 ## Usage
 
@@ -47,9 +45,9 @@ iex> MyApp.Cache.info!()
 %{
   server: %{
     nbx_version: "3.0.0",
-    cache_module: "MyApp.Cache",
-    cache_adapter: "Nebulex.Adapters.Local",
-    cache_name: "MyApp.Cache",
+    cache_module: MyApp.Cache,
+    cache_adapter: Nebulex.Adapters.Local,
+    cache_name: MyApp.Cache,
     cache_pid: #PID<0.111.0>
   },
   memory: %{
@@ -102,17 +100,20 @@ iex> MyApp.Cache.info!([:stats, :memory])
 
 ## Understanding Cache Stats
 
-The stats map includes the following metrics:
+The stats map has the following counters (see
+`Nebulex.Adapters.Common.Info.Stats`):
 
-- **`hits`** - Number of successful `get` operations that found a value in the cache
-- **`misses`** - Number of `get` operations that did not find a value (returned `nil`)
-- **`writes`** - Number of `put` operations that added new entries to the cache
-- **`updates`** - Number of `put` operations that updated existing cache entries
-- **`deletions`** - Number of entries removed via `delete` operations
-- **`evictions`** - Number of entries automatically removed due to exceeding `max_size`
-- **`expirations`** - Number of entries automatically removed due to TTL expiration
+- `hits`: reads that found the requested data in the cache.
+- `misses`: reads that did not find the requested data, either because it
+  was never cached or because it was removed.
+- `writes`: entries inserted or overwritten.
+- `updates`: existing entries updated in place.
+- `deletions`: entries removed on request, by the application or the cache.
+- `evictions`: entries removed by the cache itself, either to free space or
+  because their TTL expired.
+- `expirations`: entries removed because their TTL expired.
 
-These metrics are useful for understanding cache behavior and health. For example:
+These counters tell you how the cache is doing. For example:
 
 ```elixir
 iex> stats = MyApp.Cache.info!(:stats)
@@ -122,10 +123,10 @@ iex> IO.inspect(hit_rate, label: "Cache hit rate")
 
 ## Telemetry Metrics
 
-Now, let's see how we can provide metrics out of the info data.
+Now let's see how to report metrics out of the info data.
 
-First of all, make sure you have added `:telemetry`, `:telemetry_metrics`, and
-`:telemetry_poller` packages as dependencies to your `mix.exs` file.
+First, add the `:telemetry`, `:telemetry_metrics`, and `:telemetry_poller`
+packages as dependencies in your `mix.exs`.
 
 Create your Telemetry supervisor at `lib/my_app/telemetry.ex`:
 
@@ -210,7 +211,7 @@ children = [
 ]
 ```
 
-Now start an IEx session and you should see something like the following output:
+Now start an IEx session and you should see output like this:
 
 ```
 [Telemetry.Metrics.ConsoleReporter] Got new event!
@@ -306,7 +307,7 @@ defp metrics do
 end
 ```
 
-If you start an IEx session like previously, you should see the new metric too:
+If you start an IEx session as before, you should see the new metric too:
 
 ```
 [Telemetry.Metrics.ConsoleReporter] Got new event!
@@ -321,50 +322,47 @@ Tag values: %{cache: MyApp.Cache, node: :nonode@nohost}
 
 ## Interpreting the Metrics
 
-Once you have metrics flowing, you can use them to understand cache health:
+Once you have metrics flowing, here is how to read them. The thresholds are
+rough guides, not rules.
 
-**Cache Hit Rate**
-
-Calculate hit rate as a percentage of successful lookups:
+Cache hit rate, as a percentage of successful lookups:
 
 ```elixir
 hit_rate = hits / (hits + misses) * 100
 ```
 
-- Hit rates above 80% generally indicate a well-sized cache
-- Low hit rates (<30%) may indicate the cache is too small or TTL too short
-- A hit rate of 0% suggests the cache isn't being used effectively
+- Above 80% usually means the cache is well sized.
+- Below 30% may mean the cache is too small or the TTL too short.
+- 0% means the cache is not being used.
 
-**Memory Usage**
-
-Monitor memory trends:
+Memory usage:
 
 ```elixir
 utilization = used / total * 100
 ```
 
-- Consistently high utilization (>90%) may trigger frequent evictions
-- Growing memory usage over time can indicate memory leaks
-- Spikes in memory can correlate with batch operations
+- Utilization that stays above 90% leads to frequent evictions.
+- Memory that keeps growing over time can point to a leak.
+- Spikes often line up with batch operations.
 
-**Eviction Rate**
+Evictions over time:
 
-Track evictions over time:
+- Evictions going up usually mean the cache is too small.
+- Sudden spikes may mean an unusual access pattern.
+- High evictions together with a low hit rate point to a configuration
+  problem.
 
-- Increasing evictions usually mean cache capacity is insufficient
-- Sudden eviction spikes may indicate unusual access patterns
-- High evictions combined with low hit rate suggests cache configuration issues
+Activity:
 
-**Activity Indicators**
-
-- `writes + updates` shows cache update frequency
-- `deletions + evictions + expirations` shows cache turnover
-- Imbalanced ratios can reveal inefficient access patterns
+- `writes + updates` is how often the cache is written to.
+- `deletions` is the cache turnover. With the default stats handler an
+  expired entry counts as a deletion, an eviction, and an expiration at the
+  same time, so do not add the three counters together.
 
 ## Poller Interval and Configuration
 
-The `:telemetry_poller` with `period: 10_000` reports cache stats every 10 seconds.
-Consider your needs:
+With `period: 10_000`, `:telemetry_poller` reports the cache stats every 10
+seconds. Pick what fits your needs:
 
 ```elixir
 # Every 5 seconds - for closely monitoring cache behavior (more overhead)
@@ -379,9 +377,10 @@ Consider your needs:
 
 Trade-offs:
 
-- **Shorter periods**: More frequent updates, higher overhead, better precision for detecting rapid changes
-- **Longer periods**: Lower overhead, less precise but sufficient for long-term trending
-- **Adaptive**: You can use different periods in different environments (dev, staging, production)
+- Shorter periods: more frequent updates and more overhead, better at catching
+  quick changes.
+- Longer periods: less overhead, less precise, enough for long-term trends.
+- You can use different periods per environment (dev, staging, production).
 
 ## Monitoring Multiple Cache Instances
 
@@ -419,15 +418,16 @@ last_value("my_app.cache.info.stats.hits",
 
 ## Adapter-Specific Information
 
-The Info API is adapter-specific. While `Nebulex.Adapters.Local` provides the stats
-and memory metrics shown in this guide, other adapters may provide different information keys.
+The Info API is adapter-specific. `Nebulex.Adapters.Local` provides the
+stats and memory keys shown in this guide; other adapters may provide
+different keys.
 
-Always consult your adapter's documentation for:
+Check your adapter's documentation for:
 
-- Available info keys (`:stats`, `:memory`, `:server`, etc.)
-- What each stat means in the adapter's context
-- Any adapter-specific configuration options
-- Performance characteristics of the Info API itself
+- The available info keys (`:stats`, `:memory`, `:server`, and so on).
+- What each stat means for that adapter.
+- Adapter-specific configuration options.
+- The cost of calling the Info API itself.
 
-For example, some adapters may not support all stat types or may have different
-memory measurement approaches for distributed caches.
+For example, some adapters may not support all the stats, or may measure
+memory differently for distributed caches.

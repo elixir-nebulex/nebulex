@@ -9,10 +9,9 @@ if Code.ensure_loaded?(Decorator.Define) do
     [spring-cache]: https://docs.spring.io/spring/docs/3.2.x/spring-framework-reference/html/cache.html
     [decorator-lib]: https://github.com/arjan/decorator
 
-    For caching declaration, the abstraction provides three Elixir function
-    decorators: `cacheable `, `cache_evict`, and `cache_put`, which allow
-    functions to trigger cache population or cache eviction.
-    Let us take a closer look at each decorator.
+    There are three function decorators: `cacheable`, `cache_evict`, and
+    `cache_put`. They let a function populate or evict the cache as a side
+    effect of being called. Let us take a closer look at each decorator.
 
     ## `cacheable` decorator
 
@@ -62,36 +61,29 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## `cache_evict` decorator
 
-    The cache abstraction allows not just the population of a cache store but
-    also eviction. This process is useful for removing stale or unused data from
-    the cache. Opposed to `cacheable`, the decorator `cache_evict` demarcates
-    functions that perform cache eviction, which are functions that act as
-    triggers for removing data from the cache. Just like its sibling,
-    `cache_evict` requires specifying the cache that will be affected by the
-    action, allows you to provide a key or a list of keys to be evicted, but in
-    addition, features an extra option `:all_entries` which indicates whether
-    a cache-wide eviction needs to be performed rather than just one or a few
-    entries (based on `:key` or `:keys` option):
+    Besides populating the cache, functions can also evict from it, which is
+    how stale or unused data is removed. The `cache_evict` decorator marks
+    functions that trigger an eviction. Like `cacheable`, it needs the cache
+    to act on and accepts a key or a list of keys to evict. It also has the
+    `:all_entries` option, which clears the whole cache instead of one or a
+    few entries:
 
         @decorate cache_evict(cache: Cache, all_entries: true)
         def load_books(file_stream) do
           # the logic for loading books ...
         end
 
-    The option `:all_entries` comes in handy when an entire cache region needs
-    to be cleared out - rather than evicting each entry (which would take a
-    long time since it is inefficient), all the entries are removed in one
-    operation as shown above.
+    Use `:all_entries` when a whole cache needs to be cleared; removing the
+    entries one by one would be slow, so they are removed in one operation as
+    shown above.
 
-    One can also indicate whether the eviction should occur after (the default)
-    or before the function executes through the `:before_invocation` attribute.
-    The former provides the same semantics as the rest of the decorators; once
-    the method completes successfully, an action (in this case, eviction) on the
-    cache is executed. If the function does not execute (as it might be cached)
-    or an exception is raised, the eviction does not occur. The latter
-    (`before_invocation: true`) causes the eviction to occur always before the
-    method is invoked. This is useful in cases where the eviction does not need
-    to be tied to the function execution outcome.
+    The `:before_invocation` option controls whether the eviction happens after
+    the function runs (the default) or before. After-invocation eviction works
+    like the other decorators: the cache action runs once the function returns
+    successfully, so if the function raises, nothing is evicted. With
+    `before_invocation: true` the eviction always happens before the function
+    is called, which is useful when the eviction should not depend on the
+    outcome of the function.
 
     See `cache_evict/3` for more information.
 
@@ -104,10 +96,9 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Cache configuration
 
-    As documented in the options above, the `:cache` option configures the cache
-    for the decorated function (in the decorator declaration). However, there
-    are three possible values, such as documented in the `t:cache/0` type.
-    Let's go over these cache value alternatives in detail.
+    The `:cache` option sets the cache for the decorated function. It accepts
+    three kinds of value, as documented in the `t:cache/0` type. Let's go over
+    them.
 
     ### Cache module
 
@@ -155,13 +146,9 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Default cache
 
-    While option `:cache` is handy for specifying the decorated function's
-    cache, it may be cumbersome when there is a module with several decorated
-    functions, and all use the same cache. In that case, we must set the
-    `:cache` option with the same value in all the decorated functions.
-    Fortunately, the `:cache` option can be configured globally for all
-    decorated functions in a module when defining the caching usage via
-    `use Nebulex.Caching`. For example:
+    Setting `:cache` on every decorator gets repetitive when all the decorated
+    functions in a module use the same cache. Instead, set it once for the
+    whole module in `use Nebulex.Caching`. For example:
 
         defmodule MyApp.Books do
           use Nebulex.Caching, cache: MyApp.Cache
@@ -179,26 +166,21 @@ if Code.ensure_loaded?(Decorator.Define) do
           ...
         end
 
-    In the snippet above, the function `get_book/1` is associated with the
-    cache `MyApp.Cache` by default since option `:cache` is not provided in
-    the decorator. In other words, when the `:cache` option is configured
-    globally (when defining the caching usage via `use Nebulex.Caching`),
-    it is not required in the decorator declaration. However, one can always
-    override the global or default cache in the decorator declaration by
-    providing the option `:cache`, as is shown in the `best_sellers/0`
-    function, which is associated with a different cache.
+    In the snippet above, `get_book/1` uses `MyApp.Cache` because its decorator
+    has no `:cache` option and the module default applies. A decorator can
+    still override the default, as `best_sellers/0` does with a different
+    cache.
 
-    To conclude, it is crucial to know the decorator must be associated with
-    a cache, either a global or default cache defined at the caching usage
-    definition (e.g., `use Nebulex.Caching, cache: MyCache`) or a specific
-    one configured in the decorator declaration.
+    Every decorator must end up with a cache: either the module default from
+    `use Nebulex.Caching, cache: MyCache` or a `:cache` option in the
+    decorator declaration.
 
     ## Key Generation
 
     Since caches are essentially key-value stores, each invocation of a cached
     function needs to be translated into a suitable key for cache access. The
     key can be generated using a default key generator (which is configurable)
-    or through decorator options `:key` or `:keys`. Let us take a closer look
+    or through the decorator option `:key`. Let us take a closer look
     at each approach:
 
     ### Default Key Generation
@@ -228,7 +210,7 @@ if Code.ensure_loaded?(Decorator.Define) do
 
         defmodule MyApp.Books do
           use Nebulex.Caching,
-            cache: MyApp.Cache
+            cache: MyApp.Cache,
             default_key_generator: &MyApp.Keygen.generate/1
 
           ...
@@ -239,29 +221,25 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ### Custom Key Generation Declaration
 
-    Since caching is generic, it is quite likely the target functions have
-    various signatures that cannot be simply mapped on top of the cache
-    structure. This tends to become obvious when the target function has
-    multiple arguments out of which only some are suitable for caching
-    (while the rest are used only by the function logic). For example:
+    Decorated functions often have arguments that should not be part of the
+    cache key. This shows up when a function takes several arguments and only
+    some of them identify the cached value, while the rest only affect how the
+    function runs. For example:
 
         @decorate cacheable(cache: Cache)
         def find_book(isbn, check_warehouse?, include_used?) do
           # the logic for retrieving the book ...
         end
 
-    At first glance, while the two `boolean` arguments influence the way the
-    book is found, they are not used for the cache. Furthermore, what if only
-    one of the two is important while the other is not?
+    The two boolean arguments change how the book is found, but they should
+    not be part of the key. And what if only one of them matters?
 
-    For such cases, the `cacheable` decorator allows the user to specify how
-    the key is generated through the `:key` option (the same applies to all
-    decorators). The developer can pick the arguments of interest (or their
-    nested properties), perform operations or even invoke arbitrary functions
-    without having to write any code or implement any interface. This is the
-    recommended approach over the default generator since functions tend to be
-    quite different in signatures as the code base grows; while the default
-    strategy might work for some functions, it rarely does for all functions.
+    For such cases, the `:key` option (available in all decorators) lets you
+    say how the key is built. You can pick the arguments you need (or fields
+    inside them), compute something from them, or call any function. This is
+    the recommended approach over the default generator: as a code base grows,
+    function signatures vary a lot, and the default strategy rarely fits all
+    of them.
 
     The following are some examples of generating keys:
 
@@ -458,31 +436,31 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Anonymous functions vs. module captures
 
-    Some options (`:cache`, `:key`, `:references`, `:match`) may be configured
-    with anonymous functions. These functions are **inlined by the decorator
-    macro** at compile time and **evaluated at runtime** each time the decorated
-    function is invoked. In other words, on every decorated call a new function
-    term is created and executed once (or a few times) by the decorator.
+    Some options (`:cache`, `:key`, `:references`, `:match`) accept anonymous
+    functions. The decorator macro inlines these functions at compile time and
+    evaluates them at runtime on every call of the decorated function. In other
+    words, each decorated call creates a new function term and runs it once (or
+    a few times).
 
-    This behavior is normal and efficient for most cases, but understanding how
-    it works helps you write clearer and faster code.
+    This is normal and cheap in most cases, but knowing how it works helps you
+    write clearer and faster code.
 
     ### Key points
 
       * Both anonymous functions (`fn ... end`) and module captures
         (`&Mod.fun/2`) allocate a new function term per invocation.
 
-      * A **module capture** (`&Mod.fun/arity`) has **no environment** —
-        it doesn’t carry any extra data, so its allocation is minimal.
+      * A module capture (`&Mod.fun/arity`) has no environment. It carries no
+        extra data, so the allocation is minimal.
 
-      * An **anonymous closure** may **capture variables** from its environment.
-        If the captured data is large (e.g. big maps, structs, lists, configs),
-        every decorated call will create a new closure holding references to
-        those values, which can add GC pressure on hot paths.
+      * An anonymous closure may capture variables from its environment. If
+        the captured data is large (big maps, structs, lists, configs), every
+        decorated call creates a new closure holding references to those
+        values, which adds GC pressure on hot paths.
 
     ### Best practices
 
-      * Small lambdas are perfectly fine and idiomatic:
+      * Small lambdas are fine:
 
         ```elixir
         key: &(&1 && &1.id)
@@ -490,16 +468,16 @@ if Code.ensure_loaded?(Decorator.Define) do
         match: &match(&1, email)
         ```
 
-      * Prefer **module captures** for shared or non-trivial logic. They allocate
-        a fresh but **environment-free** function per call, which is very cheap:
+      * Prefer module captures for shared or non-trivial logic. They allocate
+        a fresh function per call, but with no environment, which is cheap:
 
         ```elixir
         key: &MyApp.Keygen.generate/1
         match: &__MODULE__.match_fun/2
         ```
 
-      * If you need access to the function arguments, use the
-        **decorator context** instead of capturing:
+      * If you need the function arguments, use the decorator context instead
+        of capturing them:
 
         ```elixir
         def match_fun(result, %Nebulex.Caching.Decorators.Context{args: [arg]}) do
@@ -510,9 +488,8 @@ if Code.ensure_loaded?(Decorator.Define) do
         def get_user(arg), do: Repo.get(User, arg.id)
         ```
 
-      * Capturing a small or static module attribute (e.g. `@config`) inside the
-        lambda is perfectly fine. The value is referenced from the environment,
-        not duplicated:
+      * Capturing a small or static module attribute (e.g. `@config`) inside
+        the lambda is fine. The value is referenced, not copied:
 
         ```elixir
         # Small config map
@@ -522,18 +499,18 @@ if Code.ensure_loaded?(Decorator.Define) do
         def get_user(id), do: Repo.get(User, id)
         ```
 
-      * If you do use lambdas, **keep captured data small**. Instead of closing
-        over large maps or configs, **fetch what you need inside a module
-        function**:
+      * If you do use lambdas, keep the captured data small. Instead of
+        closing over large maps or configs, fetch what you need inside a
+        module function:
 
         ```elixir
-        # ❌ Avoid: capturing the full config (large map) in the lambda
+        # Avoid: capturing the full config (large map) in the lambda
         @config %{ttl: :timer.hours(1), cache: MyApp.Cache, extra: %{...}}
 
         @decorate cacheable(key: id, match: &MyApp.Validator.valid?(&1, @config))
         def get_user(id), do: Repo.get(User, id)
 
-        # ✅ Better: fetch what you need inside the module function
+        # Better: fetch what you need inside the module function
         defmodule MyApp.Validator do
           def valid?(result) do
             # or from :persistent_term / ETS / any external source
@@ -549,32 +526,30 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ### When to care
 
-    Because Nebulex decorators run as often as your cached functions are called,
-    the option lambdas are evaluated on every call. However, the cost of
-    creating a small or environment-free function term per call is negligible
-    in most real-world scenarios.
+    The option lambdas run on every call of the decorated function, but
+    creating a small or environment-free function term per call costs very
+    little.
 
-    You only need to be mindful of this if:
+    You only need to care about this if:
 
-      * The function captures **large data structures** in its environment.
-      * Profiling shows decorator evaluation as a measurable hotspot.
+      * The function captures large data structures in its environment.
+      * Profiling shows decorator evaluation as a hotspot.
 
-    When in doubt, use a **module capture** for clarity and consistency — it's
-    the simplest, most allocation-friendly choice.
+    When in doubt, use a module capture.
 
     ## Error Handling Strategies
 
-    The `:on_error` option controls how decorators behave when cache operations
-    fail (e.g., connection lost, memory exhausted, etc.). It does NOT apply to
-    errors from your business logic; only to cache infrastructure errors.
+    The `:on_error` option controls what decorators do when a cache operation
+    fails (connection lost, memory exhausted, and so on). It does not apply to
+    errors raised by your own code, only to cache errors.
 
     ### `:on_error` with `cacheable`
 
-    **Option 1: `:nothing` (default)** - Graceful degradation
+    **Option 1: `:nothing` (default)** - Keep going
 
-    When a cache error occurs, the function still executes and returns its result
-    (just without caching). Perfect for non-critical caches where cache failures
-    shouldn't affect application functionality.
+    When a cache error occurs, the function still runs and returns its result,
+    just without caching. Use it for caches where a cache failure should not
+    break the application.
 
     ```elixir
     defmodule MyApp.Products do
@@ -594,10 +569,10 @@ if Code.ensure_loaded?(Decorator.Define) do
     MyApp.Products.get_product(1)  # Returns product either way
     ```
 
-    **Option 2: `:raise`** - Strict consistency
+    **Option 2: `:raise`** - Fail loudly
 
-    When a cache error occurs, an exception is raised. Useful for critical
-    caches where failures should be visible and prevent application flow.
+    When a cache error occurs, an exception is raised. Use it when a cache
+    failure must be visible and stop the operation.
 
     ```elixir
     defmodule MyApp.SessionCache do
@@ -623,7 +598,7 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ### `:on_error` with `cache_put` and `cache_evict`
 
-    **`:nothing`** - Ignores cache errors, function result still returned
+    **`:nothing`** - Ignores cache errors; the function result is still returned
 
     ```elixir
     @decorate cache_put(key: id, on_error: :nothing)
@@ -786,27 +761,23 @@ if Code.ensure_loaded?(Decorator.Define) do
     ## Decorator API
 
     @doc """
-    As the name implies, the `cacheable` decorator indicates storing in cache
-    the result of invoking a function.
+    The `cacheable` decorator stores the result of a function in the cache.
 
-    Each time a decorated function is invoked, the caching behavior will be
-    applied, checking whether the function has already been invoked for the
-    given arguments. A default algorithm uses the function arguments to compute
-    the key. Still, a custom key can be provided through the `:key` option,
-    or a custom key-generator function can replace the default one
-    (See ["Key Generation"](#module-key-generation) section in the module
-    documentation).
+    Each time the decorated function is called, the decorator checks whether
+    the function has already run for the given arguments. By default the key is
+    computed from the function arguments; you can provide your own key with the
+    `:key` option or replace the default key generator (see
+    ["Key Generation"](#module-key-generation) in the module documentation).
 
-    If no value is found in the cache for the computed key, the target function
-    will be invoked, and the returned value will be stored in the associated
-    cache. Note that what is cached can be handled with the `:match` option.
+    If there is no value in the cache for the key, the function runs and its
+    result is stored in the cache. The `:match` option controls what gets
+    cached.
 
     > #### **Read-through** pattern {: .info}
     >
-    > The `cacheable` decorator supports the **Read-through** pattern.
-    > The loader to retrieve the value from the system of record (SoR)
-    > is your function's logic, and the macro under the hood provides
-    > the rest.
+    > The `cacheable` decorator implements the read-through pattern. Your
+    > function is the loader that fetches the value from the system of record
+    > (SoR); the decorator does the rest.
 
     ## Options
 
@@ -843,10 +814,9 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Referenced keys
 
-    Referenced keys are handy when multiple keys keep the same value. For
-    example, let's imagine we have a schema `User` with multiple unique fields,
-    like `:id`, `:email`, and `:token`. We may have a module with functions
-    retrieving the user account by any of those fields, like so:
+    Referenced keys are for when several keys hold the same value. Say we have
+    a `User` schema with several unique fields: `:id`, `:email`, and `:token`.
+    A module may fetch the user account by any of them:
 
         defmodule MyApp.UserAccounts do
           use Nebulex.Caching, cache: MyApp.Cache
@@ -872,14 +842,12 @@ if Code.ensure_loaded?(Decorator.Define) do
           end
         end
 
-    As you notice, all three functions will store the same user record under a
-    different key. It could be more efficient in terms of memory space. Besides,
-    when the user record is updated, we have to invalidate the previously cached
-    entries, which means we have to specify in the `cache_evict` decorator all
-    the different keys associated with the cached user account.
+    All three functions store the same user record under a different key,
+    which wastes memory. And when the user record is updated, every cached
+    copy has to be invalidated, so the `cache_evict` decorator has to list all
+    the keys associated with the user account.
 
-    Using the referenced keys, we can address it better and more simply.
-    The module will look like this:
+    Referenced keys solve both problems. The module becomes:
 
         defmodule MyApp.UserAccounts do
           use Nebulex.Caching, cache: MyApp.Cache
@@ -905,22 +873,17 @@ if Code.ensure_loaded?(Decorator.Define) do
           end
         end
 
-    With the option `:references`, we are indicating to the `cacheable`
-    decorator to store the user id under the key `email` and the key `token`
-    (assuming the function returns a user record), and the user record itself
-    under the user id, which is the referenced key; if the function returns
-    `nil`, the decorator will cache nothing. This time, instead of storing the
-    same object three times, the decorator will cache it only once under the
-    user ID, and the other entries will keep a reference to it. When the
-    functions `get_user_account_by_email/1` or `get_user_account_by_token/1` are
-    are executed, the decorator will automatically handle it; under the hood,
-    it will fetch the referenced key given by `email` or `token` first, and
-    then get the user record under the referenced key.
+    With `:references`, the `cacheable` decorator stores the user record once,
+    under the user ID (the referenced key), and stores the user ID under the
+    `email` and `token` keys as references (assuming the function returns a
+    user record; if it returns `nil`, nothing is cached). When
+    `get_user_account_by_email/1` or `get_user_account_by_token/1` runs, the
+    decorator first fetches the reference under `email` or `token`, then
+    fetches the user record under the referenced key.
 
-    On the other hand, in the eviction function `update_user_account/1`, since
-    the user record is stored only once under the user's ID, we could set the
-    option `:key` to the user's ID, without specifying multiple keys like in
-    the previous case. However, there is a caveat:
+    Since the user record is stored only once, `update_user_account/2` can
+    evict just the user ID instead of listing every key. There is a caveat,
+    though:
 
     > #### **Caveat** {: .info}
     >
@@ -950,19 +913,26 @@ if Code.ensure_loaded?(Decorator.Define) do
         ...> })
         #=> %MyApp.UserAccounts.User{id: 1, email: "updated@test.com", ...}
 
-    The `update_user_account` function should have removed the user schema
-    associated with the `user.id` key (decorated with `cache_evict`) but not
-    the references. Therefore, if we call `get_user_account_by_email` again,
-    we will get the user with the updated email:
+    The `update_user_account` function evicts the user schema stored under
+    the `user.id` key (it is decorated with `cache_evict`) but not the
+    reference stored under `"me@test.com"`. Next, something re-caches the
+    user under its ID, for example a lookup by ID:
+
+        iex> MyApp.UserAccounts.get_user_account(1)
+        #=> %MyApp.UserAccounts.User{id: 1, email: "updated@test.com", ...}
+
+    The old reference now points at a fresh entry again. (Without this step
+    the reference would point at a missing entry, and the decorator would run
+    the function body instead.) If we call `get_user_account_by_email` with
+    the old email, the decorator follows the reference and returns the user
+    with the updated email:
 
         iex> user = MyApp.UserAccounts.get_user_account_by_email("me@test.com")
         #=> %MyApp.UserAccounts.User{id: 1, email: "updated@test.com", ...}
 
-    However, here we have an inconsistency because we are requesting a user with
-    the email `"me@test.com"` and we got a user with a different email
-    `"updated@test.com"` (the updated one). How can we avoid this? The answer
-    is to leverage the `:match` option to ensure consistency and correctness.
-    Let's provide a match function that helps us with it:
+    This is inconsistent: we asked for the user with email `"me@test.com"`
+    and got a user with a different email, `"updated@test.com"`. The fix is
+    a `:match` function:
 
         @decorate cacheable(
                     key: email,
@@ -976,46 +946,39 @@ if Code.ensure_loaded?(Decorator.Define) do
         defp match(%{email: email}, email), do: true
         defp match(_, _), do: false
 
-    With the solution above, the `cacheable` decorator only caches the user's
-    value if the email matches the one in the arguments. Otherwise, nothing is
-    cached, and the decorator evaluates the function's block. Previously, the
-    decorator was caching the user regardless of the requested email value.
-    With this fix, if we try the previous call:
+    Now the `cacheable` decorator caches the user only if the email matches
+    the argument. Otherwise nothing is cached and the function body runs.
+    With this fix, the previous call gives:
 
         iex> MyApp.UserAccounts.get_user_account_by_email("me@test.com")
         #=> nil
 
-    Since there is an email mismatch in the previous call, the decorator removes
-    the mismatch reference from the cache (eliminating the inconsistency) and
-    executes the function body, assuming it uses `MyApp.Repo.get_by/2`, `nil`
-    is returned because there is no such user in the database.
+    Because the email does not match, the decorator removes the stale
+    reference from the cache and runs the function body; assuming it uses
+    `MyApp.Repo.get_by/2`, it returns `nil` because there is no such user in
+    the database.
 
     > #### `:match` option {: .info}
     >
-    > The `:match` option can and should be used when using references to allow
-    > the decorator to remove inconsistent cache key references automatically.
+    > Use the `:match` option together with references so the decorator can
+    > remove stale references on its own.
 
     ### External referenced keys
 
-    Previously, we saw how to work with referenced keys but on the same cache,
-    like "internal references." Despite this being the typical case scenario,
-    there could be situations where you may want to reference a key stored in a
-    different or external cache. Why would I want to reference a key located in
-    a separate cache? There may be multiple reasons, but let's give a few
-    examples.
+    So far the references lived in the same cache as the values. Sometimes
+    you want a reference to point at a key in a different cache. Two common
+    reasons:
 
-      * One example is when you have a Redis cache; in such case, you likely
-        want to optimize the calls to Redis as much as possible. Therefore, you
-        should store the referenced keys in a local cache and the values in
-        Redis. This way, we only hit Redis to access the keys with the actual
-        values, and the decorator resolves the referenced keys locally.
+      * You have a Redis cache and want to reduce the calls to Redis. Store
+        the references in a local cache and the values in Redis; then Redis is
+        hit only for the actual values, and the references are resolved
+        locally.
 
-      * Another example is for keeping the cache key references isolated,
-        preferably locally. Then, apply a different eviction (or garbage
-        collection) policy for the references; one may want to expire the
-        references more often to avoid having dangling keys since the
-        `cache_evict` decorator doesn't remove the references automatically,
-        just the defined key (or keys). See the
+      * You want the references in their own cache (preferably local) so you
+        can give them a different eviction or garbage collection policy, for
+        example expiring them more often to avoid dangling keys, since the
+        `cache_evict` decorator removes only the given key (or keys), not the
+        references. See the
         ["Eviction of references"](#cache_evict/3-eviction-of-references)
         section below.
 
@@ -1056,15 +1019,14 @@ if Code.ensure_loaded?(Decorator.Define) do
           end
         end
 
-    The functions `get_user_account/1` and `update_user_account/2` use
+    The functions `get_user_account/1` and `update_user_account/1` use
     `RedisCache` to store the real value in Redis while
     `get_user_account_by_email/1` and `get_user_account_by_token/1` use
-    `LocalCache` to store the cache key references. Then, with the option
-    `references: &(&1 && keyref(&1.id, cache: RedisCache))` we are telling the
-    `cacheable` decorator the referenced key given by `&1.id` is located in the
-    cache `RedisCache`; the macro [`keyref/2`](`Nebulex.Caching.keyref/2`)
-    builds the required reference tuple for the external cache reference
-    underneath.
+    `LocalCache` to store the references. The option
+    `references: &(&1 && keyref(&1.id, cache: RedisCache))` tells the
+    `cacheable` decorator that the referenced key `&1.id` lives in
+    `RedisCache`; the [`keyref/2`](`Nebulex.Caching.keyref/2`) macro builds
+    the reference tuple for it.
 
     """
     @doc group: "Decorator API"
@@ -1078,10 +1040,9 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     > #### **Write-through** pattern {: .info}
     >
-    > The `cache_evict` decorator supports the **write-through** pattern. Your
-    > function provides the logic to write data to the system of record (SoR),
-    > and the decorator under the hood provides the rest. But in contrast with
-    > the `cache_put` decorator, the data is deleted from the cache instead of
+    > The `cache_evict` decorator fits the write-through pattern. Your function
+    > writes the data to the system of record (SoR), and the decorator does the
+    > rest. Unlike `cache_put`, the data is deleted from the cache instead of
     > updated.
 
     ## Options
@@ -1125,15 +1086,15 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     > #### Learn more {: .tip}
     >
-    > For comprehensive examples, real-world patterns, and adapter-specific
-    > features (including query helpers, entry tagging, and reference
-    > management), see the [Declarative Caching Guide](declarative-caching.html).
+    > For more examples and adapter-specific features (query helpers, entry
+    > tagging, reference management), see the
+    > [Declarative Caching Guide](declarative-caching.html).
 
     ## Eviction with a query
 
-    The `:query` option allows you to provide a query (or a function that
-    returns a query at runtime) to evict multiple cache entries based on
-    specific criteria. The query must be supported by the cache adapter.
+    The `:query` option takes a query (or a function that returns one at
+    runtime) and evicts every entry that matches it. The query must be
+    supported by the cache adapter.
 
     > #### Query syntax varies by adapter {: .warning}
     >
@@ -1143,15 +1104,11 @@ if Code.ensure_loaded?(Decorator.Define) do
     > If you're using a different adapter (e.g., Redis, Partitioned, etc.),
     > consult that adapter's documentation for the appropriate query format.
 
-    To explain how this works, let's use an example. Imagine you have a function
-    `delete_objects_by_tag` that receives a `tag` as an argument and deletes
-    all records matching the given tag from the system of record (SoR). You want
-    to evict those entries from the cache as well. This can be accomplished by
-    using a query to identify and evict all matching entries. However, writing
-    the query directly in the decorator can be verbose and hard to maintain,
-    especially for complex queries. Instead, you can use a function that
-    receives the decorator context and returns the required query to evict all
-    cached entries matching the given tag.
+    For example, say `delete_objects_by_tag` receives a `tag` and deletes all
+    records with that tag from the system of record (SoR). You want those
+    entries gone from the cache too, so you evict them with a query. Writing
+    the query inline in the decorator gets long, so use a function that
+    receives the decorator context and returns the query:
 
         @decorate cache_evict(query: &query_for_tag/1)
         def delete_objects_by_tag(tag) do
@@ -1164,7 +1121,7 @@ if Code.ensure_loaded?(Decorator.Define) do
           # would look like this:
           [
             {
-              {:entry, :"$1", %{tag: :"$2"}, :_, :_},
+              {:entry, :"$1", %{tag: :"$2"}, :_, :_, :_},
               [{:"=:=", :"$2", tag}],
               [true]
             }
@@ -1185,7 +1142,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         defp query_for_user(%{args: [user_id]} = _context) do
           [
             {
-              {:entry, :"$1", %{user_id: :"$2"}, :_, :_},
+              {:entry, :"$1", %{user_id: :"$2"}, :_, :_, :_},
               [{:"=:=", :"$2", user_id}],
               [true]
             }
@@ -1204,7 +1161,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         defp query_for_category_and_status(%{args: [category, status]}) do
           [
             {
-              {:entry, :"$1", %{category: :"$2", status: :"$3"}, :_, :_},
+              {:entry, :"$1", %{category: :"$2", status: :"$3"}, :_, :_, :_},
               [{:andalso, {:"=:=", :"$2", category}, {:"=:=", :"$3", status}}],
               [true]
             }
@@ -1218,7 +1175,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         @decorate cache_evict(
           query: [
             {
-              {:entry, :"$1", %{archived: true}, :_, :_},
+              {:entry, :"$1", %{archived: true}, :_, :_, :_},
               [],
               [true]
             }
@@ -1228,22 +1185,22 @@ if Code.ensure_loaded?(Decorator.Define) do
           # your logic to cleanup archived data from the SoR
         end
 
-    However, using a function is recommended for better readability and
-    maintainability, especially when the query depends on function arguments.
+    A function is still the better choice when the query depends on the
+    function arguments.
 
     ### Combining `:key` and `:query`
 
-    You can use both `:key` and `:query` options together to evict both specific
-    entries and entries matching a query pattern. When both options are provided,
-    the decorator executes the eviction in the following order:
+    You can use `:key` and `:query` together to evict specific entries and
+    the entries matching a query. When both are given, the decorator evicts in
+    this order:
 
-    1. **Query-based eviction** - First, entries matching the query are evicted.
-    2. **Key-based eviction** - Then, the specific key(s) are evicted.
+    1. Query-based eviction: entries matching the query are evicted first.
+    2. Key-based eviction: then the given key (or keys).
 
-    This is useful when you need to evict a primary entry along with related
-    entries. For example, when logging out a user, you might want to evict the
-    user's cache entry and all their active session entries (the examples below
-    assume you are using the `Nebulex.Adapters.Local` adapter):
+    Use it to evict a main entry along with related entries. For example, when
+    logging out a user you may want to evict the user's entry and all their
+    session entries (the examples below assume the `Nebulex.Adapters.Local`
+    adapter):
 
         @decorate cache_evict(key: user_id, query: &query_for_user_sessions/1)
         def logout_user(user_id) do
@@ -1255,7 +1212,7 @@ if Code.ensure_loaded?(Decorator.Define) do
           # Return a query that matches all session entries for the given user
           [
             {
-              {:entry, :"$1", %{user_id: :"$2", type: "session"}, :_, :_},
+              {:entry, :"$1", %{user_id: :"$2", type: "session"}, :_, :_, :_},
               [{:"=:=", :"$2", user_id}],
               [true]
             }
@@ -1278,7 +1235,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         defp query_for_category_products(%{args: [category]} = _context) do
           [
             {
-              {:entry, :"$1", %{category_id: :"$2"}, :_, :_},
+              {:entry, :"$1", %{category_id: :"$2"}, :_, :_, :_},
               [{:"=:=", :"$2", category.id}],
               [true]
             }
@@ -1287,29 +1244,26 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ### Best Practices
 
-    - **Keep query logic in separate functions** for reusability and cleaner
-      code.
-    - **Test queries independently** before using them in decorators to ensure
-      they match the expected entries.
-    - **Document query behavior** and the expected match criteria for future
-      maintainability.
-    - **Consider performance implications** when querying large datasets, as
-      some queries may require full cache scans.
-    - **Use both `:key` and `:query` when evicting hierarchical data** where
-      you need to remove both a parent entry and its related child entries.
+    - Keep query logic in separate functions so it can be reused and read on
+      its own.
+    - Test queries on their own before using them in decorators, to check they
+      match the entries you expect.
+    - Document what each query matches.
+    - Mind the cost on large caches; some queries scan the whole cache.
+    - Use both `:key` and `:query` for hierarchical data, where a parent entry
+      and its children must go together.
 
     ## Eviction of references
 
-    When the `cache_evict` decorator annotates a key (or keys) to evict, it
-    removes only the entry associated with that key. Therefore, if the key has
-    references (as created by the `:references` option in `cacheable`), those
-    are not automatically removed, which results in dangling keys. However,
-    there are multiple ways to evict references and avoid dangling keys:
+    The `cache_evict` decorator removes only the entry for the given key (or
+    keys). References to that key (created by the `:references` option of
+    `cacheable`) are not removed, so they become dangling keys. There are
+    several ways to evict references and avoid this:
 
     > #### See also {: .tip}
     >
-    > For comprehensive real-world examples and integration patterns, see the
-    > "Advanced Reference Cleanup with Tags and Queries" section in the
+    > For more examples, see the "Advanced Reference Cleanup with Tags and
+    > Queries" section in the
     > [Declarative Caching Guide](declarative-caching.html).
 
       * **Specify the key and its references explicitly** - Use the
@@ -1317,7 +1271,7 @@ if Code.ensure_loaded?(Decorator.Define) do
         For example, if you have:
 
         ```elixir
-        @decorate cacheable(key: email, references: & &1.id)
+        @decorate cacheable(key: email, references: &(&1 && &1.id))
         def get_user_by_email(email) do
           # get the user from the database ...
         end
@@ -1373,8 +1327,8 @@ if Code.ensure_loaded?(Decorator.Define) do
         ["External referenced keys"](#cacheable/3-external-referenced-keys)
         section below.
 
-      * **Combine multiple strategies** - You can combine the previous
-        approaches to create a more robust solution:
+      * **Combine multiple strategies** - The approaches above can be
+        combined:
 
         - Use `key: {:in, keys}` together with a TTL configuration to
           explicitly evict keys when possible while having automatic cleanup
@@ -1384,26 +1338,28 @@ if Code.ensure_loaded?(Decorator.Define) do
           configuration, then explicitly evict keys from both caches when
           you have access to all necessary arguments.
 
-        This layered approach provides both automatic cleanup through TTL
-        expiration and manual control when you have access to all the
-        necessary keys in your function arguments.
+        This way you get automatic cleanup through TTL expiration plus
+        explicit eviction whenever the function arguments give you all the
+        keys.
 
     ### Local Adapter: Advanced Reference Eviction
 
-    The `Nebulex.Adapters.Local` adapter provides powerful strategies for
-    automatic reference cleanup using QueryHelper, without needing to specify
-    each reference key individually.
+    The `Nebulex.Adapters.Local` adapter has two ways to clean up references
+    automatically using QueryHelper, without naming each reference key.
 
     #### Strategy 1: Tag-based reference grouping
 
-    Tag both the main key and its references with the same tag, then evict all
-    entries with that tag in one operation:
+    Tag the main entries and their references with the same tag, then evict
+    every entry with that tag in one operation. A tag is set when the entry
+    is written, so it can only come from the function arguments or a
+    constant; a lookup by email cannot tag its entry with the user ID. Use a
+    group tag for bulk cleanup:
 
         defmodule MyApp.UserAccounts do
           use Nebulex.Caching, cache: MyApp.Cache
           use Nebulex.Adapters.Local.QueryHelper
 
-          @decorate cacheable(key: id)
+          @decorate cacheable(key: id, opts: [tag: :users])
           def get_user_account(id) do
             # your logic ...
           end
@@ -1411,21 +1367,23 @@ if Code.ensure_loaded?(Decorator.Define) do
           @decorate cacheable(
                       key: email,
                       references: &(&1 && &1.id),
-                      opts: [tag: {:user, &(&1.id)}]
+                      opts: [tag: :users]
                     )
           def get_user_account_by_email(email) do
             # your logic ...
           end
 
-          @decorate cache_evict(key: user.id, query: &evict_by_user_tag/1)
-          def delete_user(user) do
-            # delete the user from the database ...
+          @decorate cache_evict(query: &evict_all_users/1)
+          def reload_user_accounts do
+            # reload the users from the source of record ...
           end
 
-          defp evict_by_user_tag(%{args: [user]}) do
-            match_spec tag: t, where: t == {:user, user.id}
+          defp evict_all_users(_context) do
+            match_spec tag: t, where: t == :users, select: true
           end
         end
+
+    To evict a single user and its references, use Strategy 2.
 
     #### Strategy 2: Direct reference queries with keyref_match_spec
 
@@ -1461,14 +1419,13 @@ if Code.ensure_loaded?(Decorator.Define) do
           end
         end
 
-    Both strategies provide automatic cleanup of all references without manually
-    specifying each reference key. Choose based on your needs:
+    Both clean up all references without naming each one. Choose based on
+    your needs:
 
-      * **Tag-based**: Best when you control reference creation upfront and want
-        a simple, declarative approach. Requires planning tags during caching.
-      * **Query-based**: More flexible for cases where references may exist
-        across different decorators or when references are created
-        conditionally.
+      * **Tag-based**: Best when you control how references are created.
+        Requires planning the tags up front.
+      * **Query-based**: Better when references are created by different
+        decorators or only under some conditions.
 
     For more details on QueryHelper and available query builders, see the
     [`Nebulex.Adapters.Local.QueryHelper`](https://hexdocs.pm/nebulex_local/Nebulex.Adapters.Local.QueryHelper.html)
@@ -1476,14 +1433,12 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Eviction of external references
 
-    As mentioned in the `cacheable` decorator's
-    ["External referenced keys"][ext-refs] section, an external reference is a
-    key (or reference) that lives in another cache store. For example, you might
-    have one cache to store only the references and another to store the actual
-    values. In these cases, when you annotate the eviction function, you want to
-    remove both the cached value and any references to it that may exist.
-    Therefore, you can use `{:in, keys}` in the `:key` option, adding the
-    references to be removed to the list. For example:
+    As described in the `cacheable` decorator's
+    ["External referenced keys"][ext-refs] section, an external reference is
+    a reference that lives in another cache, for example when one cache holds
+    only references and another holds the values. To evict both the value and
+    its references, use `{:in, keys}` in the `:key` option and add the
+    references to the list. For example:
 
     [ext-refs]: #cacheable/3-external-referenced-keys
 
@@ -1507,26 +1462,24 @@ if Code.ensure_loaded?(Decorator.Define) do
     Decorator indicating that a function triggers a
     [cache put](`c:Nebulex.Cache.put/3`) operation.
 
-    In contrast to the [`cacheable`](`cacheable/3`) decorator, this decorator
-    does not cause the decorated function to be skipped. Instead, it always
-    causes the function to be invoked and its result to be stored in the
-    associated cache if the condition given by the `:match` option matches
-    accordingly.
+    Unlike [`cacheable`](`cacheable/3`), this decorator never skips the
+    function. The function always runs, and its result is stored in the cache
+    when the `:match` option says so.
 
     > #### **Write-through** pattern {: .info}
     >
-    > The `cache_put` decorator supports the **write-through** pattern. Your
-    > function provides the logic to write data to the system of record (SoR),
-    > and the decorator under the hood provides the rest.
+    > The `cache_put` decorator implements the write-through pattern. Your
+    > function writes the data to the system of record (SoR), and the
+    > decorator does the rest.
 
     ## Use Cases
 
-    The `cache_put` decorator is ideal for scenarios where:
+    Use `cache_put` when:
 
-      * **Updating or modifying data** - After writing changes to the SoR,
-        update the cache with the new value.
-      * **Write-through caching** - Maintain consistency between SoR and cache
-        by updating the cache after successful writes.
+      * **Updating data** - After writing changes to the SoR, put the new
+        value in the cache.
+      * **Write-through caching** - Keep the cache in sync with the SoR by
+        updating it after each successful write.
 
     ## Key Differences from `cacheable`
 
@@ -1544,8 +1497,8 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## Match Function Behavior
 
-    The `:match` option is crucial for controlling when results are cached.
-    The match function can return:
+    The `:match` option controls when results are cached. The match function
+    can return:
 
       * **`true`** - Cache the result as-is.
       * **`false`** - Don't cache anything.
@@ -1554,11 +1507,11 @@ if Code.ensure_loaded?(Decorator.Define) do
       * **`{true, value, opts}`** - Cache the `value` with additional cache
         options (e.g., different TTL).
 
-    This is useful for:
+    Use it to:
 
-      * Caching only successful operations (e.g., `{:ok, result}`)
-      * Transforming the cached value
-      * Applying different cache options based on the result
+      * Cache only successful results (e.g., `{:ok, result}`)
+      * Change what gets cached
+      * Set different cache options depending on the result
 
     ## Examples
 
@@ -1568,8 +1521,10 @@ if Code.ensure_loaded?(Decorator.Define) do
 
         @decorate cache_put(key: id, opts: [ttl: :timer.hours(1)])
         def update_product(id, attrs) do
-          product = Repo.get(Product, id)
-          Repo.update(product, attrs)
+          Product
+          |> Repo.get!(id)
+          |> Product.changeset(attrs)
+          |> Repo.update()
         end
 
     ### Conditional Caching
@@ -1656,8 +1611,8 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     ## See Also
 
-    For real-world integration examples and comprehensive patterns, see
-    the [Declarative Caching Guide](declarative-caching.html).
+    For more examples, see the
+    [Declarative Caching Guide](declarative-caching.html).
     """
     @doc group: "Decorator API"
     def cache_put(attrs \\ [], block, context) do

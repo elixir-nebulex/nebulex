@@ -1,18 +1,14 @@
 if Code.ensure_loaded?(Decorator.Define) do
   defmodule Nebulex.Caching do
     @moduledoc """
-    At its core, the abstraction applies caching to Elixir functions, reducing
-    thus the number of executions based on the information available in the
-    cache. That is, each time a targeted function is invoked, the abstraction
-    will apply a caching behavior checking whether the function has been already
-    executed and its result cached for the given arguments. If it has, then the
-    cached result is returned without having to execute the actual function;
-    if it has not, then the function is executed, the result cached and returned
-    to the user so that, the next time the method is invoked, the cached result
-    is returned. This way, expensive functions (whether CPU or IO bound) can be
-    executed only once for a given set of parameters and the result reused
-    without having to actually execute the function again. The caching logic
-    is applied transparently without any interference to the invoker.
+    Applies caching to Elixir functions so they run fewer times. Each time a
+    decorated function is called, the decorator checks whether a result for
+    the given arguments is already in the cache. If it is, the cached result
+    is returned and the function body is skipped. If it is not, the function
+    runs, its result is stored in the cache, and the next call with the same
+    arguments gets the cached result. An expensive function (CPU or IO bound)
+    therefore runs once per set of arguments. The caller does not see any of
+    this; it calls the function as usual.
 
     See **`Nebulex.Caching.Decorators`** to learn more about the caching
     decorators and their usage.
@@ -31,18 +27,15 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     > #### `use Nebulex.Caching, opts` {: .info}
     >
-    > These options apply to all decorated functions in a module, but each
-    > decorator declaration can overwrite them. They act as a global or default
-    > configuration for the decorators. For example, if the cache is the same
-    > for all decorated functions in a module, one can configure it globally
-    > like this:
+    > These options are defaults for all decorated functions in the module;
+    > each decorator declaration can override them. For example, if every
+    > decorated function in a module uses the same cache, set it once:
     >
     > ```elixir
     > use Nebulex.Caching, cache: MyCache
     > ```
     >
-    > Therefore, you don't need to provide the `:cache` option at the decorator
-    > level.
+    > and leave the `:cache` option out of the decorator declarations.
     """
 
     alias Nebulex.Caching.{Decorators, Options}
@@ -74,8 +67,8 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     > #### Using `dynamic_cache` {: .info}
     >
-    > This macro is automatically imported and then available when using
-    > `use Nebulex.Caching`.
+    > `use Nebulex.Caching` imports this macro, so it is available in the
+    > module without further setup.
 
     ## Example
 
@@ -88,8 +81,9 @@ if Code.ensure_loaded?(Decorator.Define) do
           end
         end
 
-    See the **"`:cache` option"** section in the `Nebulex.Caching.Decorators`
-    module documentation for more information.
+    See the ["Cache configuration"](`m:Nebulex.Caching.Decorators#module-cache-configuration`)
+    section in the `Nebulex.Caching.Decorators` module documentation for more
+    information.
     """
     defmacro dynamic_cache(cache, name) do
       quote do
@@ -103,8 +97,8 @@ if Code.ensure_loaded?(Decorator.Define) do
 
     > #### Using `keyref` {: .info}
     >
-    > This macro is automatically imported and then available when using
-    > `use Nebulex.Caching`.
+    > `use Nebulex.Caching` imports this macro, so it is available in the
+    > module without further setup.
 
     ## Options
 
