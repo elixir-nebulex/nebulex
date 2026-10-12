@@ -19,8 +19,6 @@ SPDX-License-Identifier: MIT
 - Use `{:ok, result}` and `{:error, reason}` tuples for operations that can fail
 - Avoid raising exceptions for control flow
 - Use `with` for chaining operations that return `{:ok, _}` or `{:error, _}`
-- Bang functions (`!`) that explicitly raise exceptions on failure are acceptable (e.g., `File.read!/1`, `String.to_integer!/1`)
-- Avoid rescuing exceptions unless for a very specific case (e.g., cleaning up resources, logging critical errors)
 
 ## Common Mistakes to Avoid
 
@@ -32,7 +30,9 @@ SPDX-License-Identifier: MIT
 - Prefer `Enum` functions like `Enum.reduce` over recursion
 - When recursion is necessary, prefer to use pattern matching in function heads for base case detection
 - Using the process dictionary is typically a sign of unidiomatic code
-- Only use macros if explicitly requested
+- Do not introduce new macros when a function will do. Reuse what the repo
+  already has (core: `defcacheapi`, `defcommand`, decorators; adapters: the
+  behaviour's `__before_compile__/1` and any DSL the adapter already ships)
 - There are many useful standard library functions, prefer to use them where possible
 
 ## Function Design
@@ -76,48 +76,23 @@ Copyright (c) 2014 Chris McCord, licensed under the MIT License.
 -->
 ## Elixir guidelines
 
-- Elixir lists **do not support index based access via the access syntax**
-
-  **Never do this (invalid)**:
-
-      i = 0
-      mylist = ["blue", "green"]
-      mylist[i]
-
-  Instead, **always** use `Enum.at`, pattern matching, or `List` for index based list access, i.e.:
-
-      i = 0
-      mylist = ["blue", "green"]
-      Enum.at(mylist, i)
-
-- Elixir variables are immutable, but can be rebound, so for block expressions like `if`, `case`, `cond`, etc
-  you *must* bind the result of the expression to a variable if you want to use it and you CANNOT rebind the result inside the expression, i.e.:
-
-      # INVALID: we are rebinding inside the `if` and the result never gets assigned
-      if connected?(socket) do
-        socket = assign(socket, :val, val)
-      end
-
-      # VALID: we rebind the result of the `if` to a new variable
-      socket =
-        if connected?(socket) do
-          assign(socket, :val, val)
-        end
-
-- **Never** nest multiple modules in the same file as it can cause cyclic dependencies and compilation errors
-- **Never** use map access syntax (`changeset[:field]`) on structs as they do not implement the Access behaviour by default. For regular structs, you **must** access the fields directly, such as `my_struct.field` or use higher level APIs that are available on the struct if they exist, `Ecto.Changeset.get_field/2` for changesets
-- Elixir's standard library has everything necessary for date and time manipulation. Familiarize yourself with the common `Time`, `Date`, `DateTime`, and `Calendar` interfaces by accessing their documentation as necessary. **Never** install additional dependencies unless asked or for date/time parsing (which you can use the `date_time_parser` package)
-- Don't use `String.to_atom/1` on user input (memory leak risk)
-- Predicate function names should not start with `is_` and should end in a question mark. Names like `is_thing` should be reserved for guards
-- Elixir's built-in OTP primitives, such as `DynamicSupervisor` and `Registry`, require names in the child spec, such as `{DynamicSupervisor, name: MyApp.MyDynamicSup}`, then you can use `DynamicSupervisor.start_child(MyApp.MyDynamicSup, child_spec)`
+- Do not define multiple modules in the same file (it can cause cyclic dependencies and compilation errors). Nebulex core's `lib/nebulex/exceptions.ex` deliberately groups the exception modules; do not add further exceptions to that rule
+- Elixir's standard library has everything necessary for date and time manipulation. Familiarize yourself with the common `Time`, `Date`, `DateTime`, and `Calendar` interfaces by accessing their documentation as necessary. **Never** install additional dependencies unless asked
 - Use `Task.async_stream(collection, callback, options)` for concurrent enumeration with back-pressure. The majority of times you will want to pass `timeout: :infinity` as option
 
 ## Mix guidelines
 
-- Read the docs and options before using tasks (by using `mix help task_name`)
+- Use `mix help <task_name|module_name|module.function>` to access their documentation
 - To debug test failures, run tests in a specific file with `mix test test/my_test.exs` or run all previously failed tests with `mix test --failed`
-- `mix deps.clean --all` is **almost never needed**. **Avoid** using it unless you have good reason
 
+## Test guidelines
+
+- Always use `start_supervised!/1` to start processes in tests as it guarantees cleanup between tests
+- Avoid `Process.alive?/1` to check if a process died, use `Process.monitor/1` instead
+
+<!--
+Additional Elixir rules added by Nebulex
+-->
 ## Extra Elixir guidelines
 
 - The `in` operator in guards requires a compile-time known value on the right side (literal list or range)

@@ -205,7 +205,8 @@ The rules in this section may not be applied by the code formatter, but they are
   end
   ```
 
-- Use `do:` for single-line `if/unless` statements.
+- Use `do:` for single-line `if` statements. Do not use `unless`; it is
+  deprecated, so write `if not condition` or `if !condition` instead.
 
   ```elixir
   # preferred
@@ -322,7 +323,8 @@ The rules in this section may not be applied by the code formatter, but they are
 # Use punctuation for complete sentences.
 ```
 
-- Limit comment lines to 80 characters.
+- Limit comment lines to 80 characters (code is formatted at 100 columns;
+  see "Line Length" in `nebulex.md`).
 
 #### Comment Annotations
 

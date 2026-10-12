@@ -14,9 +14,8 @@ and have their own contribution rules.
 ## Before You Start
 
 1. Read `README.md`.
-2. Read the latest section of `CHANGELOG.md`.
-3. Read `usage-rules/workflow.md` (source of coding/review conventions used in
-   this repo).
+2. Follow the "Session Bootstrap" in `usage-rules/workflow.md`, the source
+   of the coding and review conventions used in this repo.
 
 ## Issues
 

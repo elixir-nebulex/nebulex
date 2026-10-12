@@ -2,8 +2,14 @@
 
 This guide explains why Nebulex exists, who uses it, how it is structured
 internally, and the non-negotiable design principles that govern every
-contribution. Read it at session start to establish project context, and
-refer back to it when making structural changes.
+contribution. Read the "Non-Negotiables" section at session start; read the
+rest before structural changes.
+
+This document describes the core package. In adapter repos, read "Why",
+"Who", and "Key Design Decisions" for context; the Core Layer table and
+Non-Negotiables #1, #3, #5, and #6 refer to the core repo, and the adapter's
+own `AGENTS.md` or architecture doc governs layout, gate command, and upkeep
+there (see "Scope" in `workflow.md`).
 
 ---
 
@@ -95,12 +101,14 @@ implementation; all storage logic lives in adapters.
 | `Nebulex.Cache.KV` | Key-value operations: `fetch`, `get`, `put`, `delete`, `take`, etc. |
 | `Nebulex.Cache.CompositeKV` | Composite KV operations (`get_and_update`, `update`, `fetch_or_store`, `get_or_store`), dispatched to the adapter's `Nebulex.Adapter.CompositeKV` callbacks |
 | `Nebulex.Cache.Queryable` | Query-based operations: `get_all`, `count_all`, `delete_all` |
-| `Nebulex.Cache.Transaction` | Optimistic locking and transactional operations |
+| `Nebulex.Cache.Transaction` | Transaction API wrappers (`transaction/2`, `in_transaction?/1`); locking semantics are adapter-defined (internal) |
 | `Nebulex.Cache.Observable` | Event streaming for cache entry changes |
 | `Nebulex.Cache.Info` | Stats and monitoring (`info/2`) |
-| `Nebulex.Cache.Options` | NimbleOptions-based validation for all cache options |
+| `Nebulex.Cache.Options` | NimbleOptions-based validation for all cache options; also exposes the shared runtime option names via `__runtime_shared_opts__/0` |
 | `Nebulex.Cache.Supervisor` | OTP supervision tree for cache processes |
-| `Nebulex.Cache.Registry` | Registry for dynamic caches |
+| `Nebulex.Cache.Registry` | Registry of running cache instances (name/pid to adapter meta), used for dynamic-cache lookup (internal) |
+| `Nebulex.Cache.Helpers` | `defcacheapi` macro that generates the cache API functions (internal) |
+| `Nebulex.Cache.QuerySpec` | NimbleOptions schema for query specs (internal) |
 | `Nebulex.Adapter` | Adapter behaviour definition and shared macros |
 | `Nebulex.Adapter.KV` | Callback spec for KV operations |
 | `Nebulex.Adapter.CompositeKV` | Callback spec for composite KV operations (required) and their default implementation |
@@ -112,14 +120,32 @@ implementation; all storage logic lives in adapters.
 | `Nebulex.Caching.Decorators` | `cacheable`, `cache_put`, `cache_evict` decorator implementations |
 | `Nebulex.Caching.Decorators.Runtime` | Runtime evaluation of cache operations, key generation, match logic |
 | `Nebulex.Caching.Decorators.Context` | Per-invocation decorator context (function name, args, decorator type) |
-| `Nebulex.Telemetry` | Telemetry span events emitted by cache operations |
-| `Nebulex.Event` | Cache entry event types for the Observable API |
+| `Nebulex.Caching.Options` | NimbleOptions schemas for `use Nebulex.Caching` and decorator options (internal) |
+| `Nebulex.Telemetry` | Telemetry span helpers used by cache commands (internal) |
+| `Nebulex.Telemetry.CacheEntryHandler` | Telemetry handler that turns command events into cache entry events for Observable listeners |
+| `Nebulex.Telemetry.CacheStatsCounterHandler` | Telemetry handler that aggregates stats via Erlang counters (backs `Nebulex.Adapters.Common.Info`) |
+| `Nebulex.Event` | Shared event types (`t/0`, `listener/0`, `filter/0`) for the Observable API |
+| `Nebulex.Event.CacheEntryEvent` | Cache entry event struct (`:inserted`, `:updated`, `:deleted`, `:expired`) |
+| `Nebulex.Error`, `Nebulex.KeyError`, `Nebulex.CacheNotFoundError`, `Nebulex.QueryError` | Exceptions (`lib/nebulex/exceptions.ex`) |
+| `Nebulex.Utils` | Shared helpers: `wrap_error/2`, `wrap_ok/1`, `unwrap_or_raise/1`, guards |
+| `Nebulex.Time` | Time utilities for TTL and expiration |
+| `Nebulex` | Top-level docs module |
+| `Mix.Tasks.Nbx`, `Mix.Tasks.Nbx.Gen.Cache` | Mix task namespace and the `mix nbx.gen.cache` generator |
+
+Modules with `@moduledoc false` are internal and not public API; that
+includes the `Nebulex.Cache.*` feature modules behind `use Nebulex.Cache`,
+`Nebulex.Caching.Decorators.Runtime`, and the ones marked "internal" above.
+The public surface is `Nebulex.Cache`, `Nebulex.Caching`, `Nebulex.Adapter.*`,
+`Nebulex.Adapters.*`, `Nebulex.Event.*`, the exceptions, `Nebulex.Utils`,
+and `Nebulex.Time`.
 
 ### Adapter Layer — separate packages
 
 Each adapter is its own Hex package. The core package ships only with
-`Nebulex.Adapters.Nil` (a no-op adapter used for benchmarking the abstraction
-layer itself) and `Nebulex.Adapters.Common.Info.Stats` (shared stats helpers).
+`Nebulex.Adapters.Nil` (a no-op adapter used for tests and for benchmarking
+the abstraction layer itself) and the shared `Nebulex.Adapters.Common.Info`
+(default `Nebulex.Adapter.Info` implementation) and
+`Nebulex.Adapters.Common.Info.Stats` (stats helpers) modules.
 
 For the canonical list of official adapters (package names, modules,
 and Hex/GitHub links), see `guides/introduction/nbx-adapters.md`. That
@@ -162,12 +188,14 @@ This decoupling means adapters evolve independently. A breaking change in an
 adapter does not require a core release. New adapters can be published by
 anyone without touching the core repository.
 
-### Optional dependencies
+### Minimal, mostly optional dependencies
 
-No dependency in `mix.exs` is required. `:telemetry`, `:decorator`, and all
-adapters are optional. This keeps the core footprint minimal for users who
-only need a subset of features. If a dependency is absent, the feature it
-enables is simply unavailable (no runtime error, no silent failure).
+The only required runtime dependency is `:nimble_options`. `:telemetry`,
+`:decorator`, and all adapters are optional. This keeps the core footprint
+minimal for users who only need a subset of features. If an optional
+dependency is absent, the feature it enables is simply unavailable (no
+runtime error, no silent failure). Adding a new required dependency is an
+architectural change; see Non-Negotiable #6.
 
 ### NimbleOptions for all option validation
 
@@ -180,11 +208,18 @@ rather than cryptic runtime failures.
 
 ### Telemetry as the observability contract
 
-The core emits consistent `[:nebulex, :cache, <operation>, :start/stop/exception]`
-Telemetry span events for every cache operation, regardless of which adapter
-is in use. Adapters may emit additional events but must not suppress or
+The core emits a Telemetry span (`:start`, `:stop`, `:exception`) for every
+cache command, regardless of which adapter is in use. The event name is
+`telemetry_prefix ++ [:command]`, where `:telemetry_prefix` defaults to the
+cache module name split into atoms (`MyApp.Cache` becomes
+`[:my_app, :cache]`). The metadata always includes `:adapter_meta`,
+`:command`, `:args`, and `:extra_metadata`; the stop event adds `:result`.
+The only fixed-name event is `[:nebulex, :cache, :init]`, emitted when a
+cache starts. Adapters may emit additional events but must not suppress or
 redefine core events. This guarantees that monitoring dashboards and
-telemetry handlers work across backend switches.
+telemetry handlers work across backend switches. See
+`Nebulex.Adapter.run_command/4` for command spans and
+`Nebulex.Cache.Supervisor` for the init event.
 
 ### Nil is a valid cache value
 
@@ -204,7 +239,8 @@ will not be merged, regardless of other merits.
 The core package must not import, alias, or depend on any adapter module at
 runtime. Shared utilities belong in `Nebulex.Adapters.Common.*` within the
 core, not in adapter packages. If you find yourself adding an adapter-specific
-module to the core, stop and reconsider.
+module to the core, stop and reconsider. In an adapter repo the same rule
+reads: never edit `deps/nebulex/`; propose the change in the core repo.
 
 ### 2. No breaking public API changes without a major version
 
@@ -217,36 +253,41 @@ one minor release.
 ### 3. Every public function must have a `@doc` and typespec
 
 Module documentation (`@moduledoc`) is required for every module. Public
-functions require `@doc` and `@spec`. This is enforced by `mix doctor` in CI
-and is not optional. Undocumented public API will not be merged.
+functions require `@doc` and `@spec`. In core, `mix doctor` enforces 100%
+`@moduledoc` and at least 80% `@doc` coverage (`.doctor.exs`); `@spec` and
+the remaining `@doc` coverage are enforced in review. Undocumented public
+API will not be merged.
 
 ### 4. New behaviour must have tests
 
 Any new feature, option, or code path must be accompanied by tests. For
 adapter-facing changes, tests belong in `test/shared/` using the `deftests`
-macro so the shared test suite covers all adapters consistently. For
-core-only changes, tests belong in `test/nebulex/`. A PR without tests for
-new behaviour will not be merged.
+macro so the shared test suite covers all adapters consistently. A shared
+behavioural test is a contract every adapter must satisfy; for behaviour
+adapters may legitimately not support, test it in `test/nebulex/` against
+`Nebulex.TestAdapter` instead. For core-only changes, tests belong in
+`test/nebulex/`. A PR without tests for new behaviour will not be merged.
 
-### 5. `mix precommit` must pass
+### 5. The canonical gate must pass
 
-All changes must pass the full CI suite locally before opening a PR:
+Authors run the repo's gate alias before opening a PR; reviewers rely on
+green CI:
 
 ```bash
 mix precommit
 ```
 
-This runs tests, coverage, Credo (strict), Dialyzer, Sobelow, `mix deps.audit`,
-and `mix doctor`.
+`workflow.md` ("Canonical Gate") lists exactly what the core alias runs.
 Green CI on the PR is a requirement, not a courtesy check.
 
 ### 6. Keep this document up to date
 
-After any structural change — new module, new adapter callback, new public
-option, new dependency, or changes to the layer boundaries — review this
-document and update it if needed. Architecture docs rot when nobody owns them.
-This is not a checkbox on every PR, but a conscious check: "did my change
-affect the architecture described here?"
+After any structural change — new module, new adapter callback, new
+dependency, a new option that changes the adapter contract, or changes to
+the layer boundaries — review the architecture doc of the repo you are in
+and update it if needed. Architecture docs rot when nobody owns them. This
+is not a checkbox on every PR, but a conscious check: "did my change affect
+the architecture described here?"
 
 ### 7. `mix docs` must produce no warnings
 
@@ -266,9 +307,9 @@ cause — do not suppress warnings.
 
 When in doubt about intent, consult these sources in order:
 
-1. `usage-rules/workflow.md` — contribution workflow and rule precedence
+1. `workflow.md` — contribution workflow and rule precedence
 2. This document — architectural decisions and non-negotiables
-3. `usage-rules/nebulex.md` — domain-specific patterns and pitfalls
+3. `nebulex.md` — domain-specific patterns and pitfalls
 4. Module `@moduledoc` and function `@doc` — local intent for each API
 5. `CHANGELOG.md` — history of decisions and the reasoning behind them
 6. The blog post ["Nebulex v3: A New Chapter for Caching in Elixir"][v3-post]
