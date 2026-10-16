@@ -145,6 +145,10 @@ jobs:
         run: mix dialyzer --format github
         if: ${{ matrix.dialyzer }}
 
+      - name: Check docs build without warnings
+        run: mix docs --warnings-as-errors
+        if: ${{ matrix.docs }}
+
       - name: Run documentation health check
         run: mix doctor
         if: ${{ matrix.docs }}

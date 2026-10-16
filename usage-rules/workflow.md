@@ -201,9 +201,10 @@ mix precommit
 In the core repo the alias runs, in order: `deps.unlock --check-unused`,
 `deps.audit`, `compile --warnings-as-errors`, `format --check-formatted`,
 `credo --strict`, `coveralls.html`, `sobelow --skip --exit Low`,
-`dialyzer --format short`, and `doctor`. CI runs the same checks
-individually (with `coveralls.json` and `dialyzer --format github`); lint,
-Sobelow, Dialyzer, and doctor run only on the newest matrix entry. Adapter
+`dialyzer --format short`, `docs --warnings-as-errors`, and `doctor`. CI
+runs the same checks individually (with `coveralls.json` and
+`dialyzer --format github`); lint, Sobelow, Dialyzer, docs, and doctor run
+only on the newest matrix entry. Adapter
 repos define their own alias (some still name it `test.ci`) with a subset
 of these steps.
 

@@ -94,6 +94,7 @@ defmodule Nebulex.MixProject do
         "coveralls.html",
         "sobelow --skip --exit Low",
         "dialyzer --format short",
+        "docs --warnings-as-errors",
         "doctor"
       ]
     ]
