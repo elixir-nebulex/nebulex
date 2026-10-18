@@ -5,10 +5,9 @@
 When rules conflict, prioritize them in the order listed.
 
 1. `workflow.md` — entry point (this file)
-2. `architecture.md` — core architecture & non-negotiables
+2. `architecture.md` — boundaries, design decisions, and non-negotiables
 3. `nebulex.md` — Nebulex-specific rules
 4. `elixir-style.md` — style guidelines
-5. `elixir.md` — core Elixir rules
 
 Human contributors have `CONTRIBUTING.md`; these files are the agent-facing
 source of the same conventions.
@@ -19,12 +18,14 @@ These are the rules reviewers reject most often. The full guides are
 `elixir-style.md` and `nebulex.md`; these apply even when you have not read
 them.
 
-1. In a multi-clause function, never follow a `do ... end` clause with a
-   `, do:` one-liner. Single-line clauses may only come first; if one
-   clause is multiline, make the later ones multiline too.
+1. All clauses of a function use the same form: all single-line (`, do:`)
+   or all multiline (`do ... end`). If one clause needs `do ... end`,
+   write every clause that way.
 2. Put a blank line before the final expression of a multiline function
    body, and write a pipeline that is the return value on multiple lines.
-3. Do not pipe a single call (`foo |> bar()`); call it directly.
+3. Do not pipe a single call from a plain value (`foo |> bar()`); call it
+   directly. A single pipe is fine when the input is itself a call
+   (`System.version() |> Version.parse()`).
 4. Code wraps at 100 columns; prose in docs and comments wraps at 80.
 5. Comments start with a capital letter and use punctuation; `##` marks a
    section, `#` a comment.
@@ -32,7 +33,8 @@ them.
    (`@type t() :: ...`).
 7. In tests, the expression under test goes on the left, the expected value
    on the right, and `==` is used when the expected value is fully known.
-8. Return `{:ok, value}` / `{:error, reason}`; never a bare `:error`.
+8. For cache-operation errors, return `{:error, reason}`, never a bare
+   `:error`. Follow the callback's documented success return.
 
 ## Scope: Core vs Adapter Repos
 
@@ -55,28 +57,33 @@ consume them from `deps/nebulex/usage-rules/`.
 
 At the start of each session:
 
-1. Run `git status --short` and `git log --oneline -20` to see local
-   modifications and recent changes. Leave unrelated local changes
-   untouched and do not stage them; mention them in your final report.
+1. Run `git status --short` to see local modifications. Leave unrelated
+   local changes untouched and do not stage them; mention them in your
+   final report.
 2. Read the "Non-Negotiables" section of `architecture.md`.
-3. Read `nebulex.md`.
 
-Read the rest of `architecture.md`, `elixir-style.md`, and `elixir.md` when
-the task touches their area (structural changes, style questions, general
-Elixir patterns).
+Then read what the task needs:
 
-If on a feature branch, also run:
+| Task | Read |
+|---|---|
+| Any Elixir change | "Non-Negotiable Style Rules" above; `elixir-style.md` for what they do not settle |
+| Cache API or adapter callbacks | `nebulex.md`: "Adapter Pattern", "Return Value Conventions", "Options and Validation", "Error Handling" |
+| Decorators | `nebulex.md`: "Decorators" |
+| Telemetry or events | `nebulex.md`: "Telemetry", "Observable API" |
+| Tests | `nebulex.md`: "Testing"; "Validation Commands" below |
+| Docs or guides | `nebulex.md`: "Documentation Standards" |
+| Structural changes | the rest of `architecture.md`; `nebulex.md`: "Backward Compatibility" |
+| Commits, PRs, reviews | "PR Workflow" and "Commit Messages" below |
 
-4. `git log --oneline main..HEAD` to see the branch's commits.
-5. `git diff main...HEAD` to understand the branch's full scope.
+When the task needs history or branch context:
 
-When relevant to the task:
-
-6. Read the `Unreleased` section of `CHANGELOG.md` for recent features,
-   breaking changes, and the project's direction.
-7. Check open issues and PRs with `gh issue list` and `gh pr list`.
-   If `gh` is unavailable, unauthenticated, or lacks token scopes, skip
-   this step and say so.
+3. `git log --oneline -20` for recent changes.
+4. On a feature branch, `git log --oneline main..HEAD` and
+   `git diff main...HEAD` for the branch's scope.
+5. The `Unreleased` section of `CHANGELOG.md` for recent features and
+   breaking changes.
+6. `gh issue list` and `gh pr list` for open work. If `gh` is unavailable,
+   unauthenticated, or lacks token scopes, skip this step and say so.
 
 ### Supported Versions
 
@@ -198,15 +205,9 @@ is the source of truth for what it runs.
 mix precommit
 ```
 
-In the core repo the alias runs, in order: `deps.unlock --check-unused`,
-`deps.audit`, `compile --warnings-as-errors`, `format --check-formatted`,
-`credo --strict`, `coveralls.html`, `sobelow --skip --exit Low`,
-`dialyzer --format short`, `docs --warnings-as-errors`, and `doctor`. CI
-runs the same checks individually (with `coveralls.json` and
-`dialyzer --format github`); lint, Sobelow, Dialyzer, docs, and doctor run
-only on the newest matrix entry. Adapter
-repos define their own alias (some still name it `test.ci`) with a subset
-of these steps.
+CI runs the same checks individually; the expensive ones (lint, Sobelow,
+Dialyzer, docs, doctor) run only on the newest matrix entry. Adapter repos
+define their own `precommit` alias.
 
 Green CI is a requirement, not a courtesy check (see `architecture.md`
 Non-Negotiable #5).

@@ -26,35 +26,6 @@ etc.) are separate Hex packages. The "Adapters" guide
 is the single source of truth for the adapter list; do not maintain a
 parallel list in rule files.
 
-## Core Repo Layout (core repo only)
-
-> `architecture.md` has the full module table and layer boundaries;
-> consult it for structural changes. The table below is a quick path
-> reference.
-
-| Path | Purpose |
-|------|---------|
-| `lib/nebulex/cache.ex` | Main Cache API (`use Nebulex.Cache`, `defcacheapi` calls) |
-| `lib/nebulex/cache/` | Cache feature modules (KV, CompositeKV, Queryable, Transaction, Observable, Info, Options) |
-| `lib/nebulex/adapter.ex` | Adapter behaviour, `defcommand`/`defcommandp`, `run_command/4` |
-| `lib/nebulex/adapter/` | Adapter behaviours (KV, CompositeKV, Queryable, Transaction, Observable, Info) |
-| `lib/nebulex/adapters/` | Modules shipped with core (Nil adapter, Common.Info helpers) |
-| `lib/nebulex/caching.ex` | `use Nebulex.Caching` entry point |
-| `lib/nebulex/caching/` | Decorators, Runtime, Context, Options |
-| `lib/nebulex/event/` | Cache event types and `CacheEntryEvent` struct |
-| `lib/nebulex/telemetry/` | Telemetry span helpers and handlers |
-| `lib/nebulex/exceptions.ex` | `Nebulex.Error`, `Nebulex.KeyError`, `Nebulex.CacheNotFoundError`, `Nebulex.QueryError` |
-| `lib/nebulex/utils.ex` | `wrap_error/2`, `wrap_ok/1`, `unwrap_or_raise/1`, guards |
-| `lib/mix/tasks/` | `mix nbx.gen.cache` |
-| `test/nebulex/` | Core tests; mirrors the `lib/nebulex/` directory layout |
-| `test/shared/` | Shared `deftests` suites, run by `test/nebulex/cache_test.exs` and by adapter repos |
-| `test/support/` | Test helpers (`Nebulex.CacheCase`, `Nebulex.TestAdapter`, test caches) |
-| `guides/` | User-facing guides (getting started, adapters, declarative caching, creating adapters, upgrading) |
-| `CHANGELOG.md` | Release history and breaking changes |
-
-`mix nbx.gen.cache -c MyApp.Cache` is the only generator. It takes only the
-`--cache`/`-c` option and always emits `Nebulex.Adapters.Local`.
-
 ## Adapter Repo Layout
 
 Adapter repos follow this shape (see `nebulex_local` and
@@ -119,8 +90,11 @@ end
   `Nebulex.Adapter.Transaction`, `Nebulex.Adapter.Observable`,
   `Nebulex.Adapter.Info` (`use Nebulex.Adapters.Common.Info` gives the
   default implementation).
-- Adapter callbacks MUST return `{:ok, value}` or `{:error, reason}` tuples
-  (see "Return Value Conventions").
+- Follow each callback's documented return contract (see "Return Value
+  Conventions"). For example, `init/1` returns
+  `{:ok, child_spec, adapter_meta}`; `KV.delete/3` returns `:ok`; and
+  `Queryable.execute/3` with `:delete_all` returns `{:ok, count}`. Both
+  deletion callbacks can return `{:error, reason}`.
 - Options reach the adapter mixed with Nebulex's own options. Never
   validate the whole keyword list strictly. On `init/1`, drop the cache
   compile and start options first:
@@ -158,7 +132,9 @@ defcommandp do_put(name, key, value, on_write, ttl, keep_ttl?, opts), command: :
   `{:error, %Nebulex.KeyError{}}` for missing keys.
 - Write operations MUST return `{:ok, true}` for success or `{:ok, false}` for
   conditional failures (e.g., `put_new`).
-- Delete operations MUST return `:ok` regardless of whether the key existed.
+- Single-key deletes (`delete/3`) return `:ok` whether or not the key
+  existed; query deletes (`execute/3` with `:delete_all`) return
+  `{:ok, count}`.
 - NEVER return bare `:error` atoms; always use `{:error, reason}` tuples.
 - Since v3, `nil` is a valid cache value. Never treat `nil` as a cache-miss
   sentinel. In `get_and_update/3`, returning `{current, nil}` stores `nil`;
@@ -353,6 +329,9 @@ wrap_error Nebulex.Error, reason: reason, command: :fetch_or_store, key: key
 - Group related tests in `describe` blocks named after the function
   (`describe "put/3"`).
 - Receive the cache under test from the context: `%{cache: cache}`.
+- Start processes with `start_supervised!/1` so they are cleaned up between
+  tests; to check that a process died, use `Process.monitor/1`, not
+  `Process.alive?/1`.
 - Test success and error paths, the bang and non-bang variants, and edge
   values: `nil`, `true`, `false`, empty collections.
 - Shared test data goes in module attributes or fixture functions, not
@@ -381,10 +360,9 @@ end
 
 ### Test Assertions
 
-- Put the expression under test on the left and the expected value on the
-  right. Use `==` when the expected value is fully known; pattern match only
-  to extract part of a larger structure. See "Extra Elixir guidelines" in
-  `elixir.md` for the full rule and examples.
+- Assertions follow "Testing" in `elixir-style.md`: expression under test
+  on the left, expected value on the right, `==` when the expected value is
+  fully known.
 - Use `assert_raise ErrorType, ~r"message pattern"` for exceptions.
 
 ## Documentation Standards
@@ -415,7 +393,6 @@ end
 - A new public option or a callback change must also be reflected in the
   guides that show it (core `guides/`: `creating-new-adapter.md` for
   callbacks, `getting-started.md` for the cache API).
-- After any doc change, run `mix docs`; it must produce no warnings.
 
 ### Code Comments
 
@@ -425,6 +402,21 @@ end
 - Mark internal functions and modules with `@doc false` / `@moduledoc false`.
 - Use `# Inline common instructions` followed by
   `@compile inline: [function_name: arity]` for hot-path helpers.
+
+## Elixir Specifics
+
+- Do not introduce new macros when a function will do. Reuse what the repo
+  already has (core: `defcacheapi`, `defcommand`, decorators; adapters: the
+  behaviour's `__before_compile__/1` and any DSL the adapter already ships).
+- One module per file. Core's `lib/nebulex/exceptions.ex` deliberately
+  groups the exception modules; do not extend that exception to other files.
+- The `in` operator in guards needs a compile-time list or range on the
+  right (`when x in [1, 2, 3]`, `when x in 1..10`); a variable raises
+  `ArgumentError`.
+- Never add a dependency unless asked; the standard library covers dates,
+  times, and most utilities.
+- `mix nbx.gen.cache -c MyApp.Cache` is the only generator. It takes only
+  the `--cache`/`-c` option and always emits `Nebulex.Adapters.Local`.
 
 ## Naming Conventions
 
@@ -436,18 +428,6 @@ end
   `do_`; predicates end in `?`.
 - Variables: `cache`, `adapter_meta`, `opts`, `key`/`keys`, `value`/`values`,
   `ttl`.
-
-## Code Organization (core repo only)
-
-- Main cache API: `lib/nebulex/cache.ex`; cache features:
-  `lib/nebulex/cache/<feature>.ex`; adapter behaviours:
-  `lib/nebulex/adapter/<feature>.ex`; decorators:
-  `lib/nebulex/caching/decorators.ex`; Mix tasks: `lib/mix/tasks/`.
-- Keep related functionality together (all KV operations in
-  `Nebulex.Cache.KV`), use nested modules for options and internals, and
-  keep public API separate from implementation.
-- `test/nebulex/` mirrors the `lib/nebulex/` directory layout;
-  behaviour-level coverage lives in `test/shared/`.
 
 ## Backward Compatibility
 

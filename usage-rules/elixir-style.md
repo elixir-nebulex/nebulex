@@ -114,20 +114,18 @@ The rules in this section may not be applied by the code formatter, but they are
 
 ### Expressions
 
-- Keep single-line `def` clauses of the same function together, but separate multiline `def`s with a blank line. For example:
+- All clauses of a function use the same form: all single-line (`do:`) or all multiline (`do ... end`). If one clause needs `do ... end`, write every clause that way. Keep single-line clauses together without blank lines; separate multiline clauses with a blank line. For example:
 
   ```elixir
+  # not preferred
   def some_function(nil), do: {:error, "No Value"}
   def some_function([]), do: :ok
 
   def some_function([first | rest]) do
     some_function(rest)
   end
-  ```
 
-- If you have more than one multiline `def`, do not use single-line `def`s. For example:
-
-  ```elixir
+  # preferred
   def some_function(nil) do
     {:error, "No Value"}
   end
@@ -140,9 +138,10 @@ The rules in this section may not be applied by the code formatter, but they are
     some_function(rest)
   end
 
-  def some_function([first | rest], opts) do
-    some_function(rest, opts)
-  end
+  # preferred - every clause fits on one line
+  def some_function(nil), do: {:error, "No Value"}
+  def some_function([]), do: :ok
+  def some_function([_ | rest]), do: some_function(rest)
   ```
 
 - Use the pipe operator to chain functions together. For example:
