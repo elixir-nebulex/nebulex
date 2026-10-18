@@ -60,14 +60,16 @@ At the start of each session:
 1. Run `git status --short` to see local modifications. Leave unrelated
    local changes untouched and do not stage them; mention them in your
    final report.
-2. Read the "Non-Negotiables" section of `architecture.md`.
+2. If `deps/` is missing, run `mix deps.get`.
+3. Read the "Non-Negotiables" section of `architecture.md` (in an adapter
+   repo, the adapter's own guide).
 
 Then read what the task needs:
 
 | Task | Read |
 |---|---|
-| Any Elixir change | "Non-Negotiable Style Rules" above; `elixir-style.md` for what they do not settle |
-| Cache API or adapter callbacks | `nebulex.md`: "Adapter Pattern", "Return Value Conventions", "Options and Validation", "Error Handling" |
+| Code changes (not docs-only) | "Non-Negotiable Style Rules" above; in `elixir-style.md`: "Expressions", "Modules", "Typespecs", "Testing", "Extra guidelines" |
+| Cache API, adapter callbacks, or adapter-specific functions | `nebulex.md`: "Adapter Pattern", "Return Value Conventions", "Options and Validation", "Error Handling" |
 | Decorators | `nebulex.md`: "Decorators" |
 | Telemetry or events | `nebulex.md`: "Telemetry", "Observable API" |
 | Tests | `nebulex.md`: "Testing"; "Validation Commands" below |
@@ -77,12 +79,12 @@ Then read what the task needs:
 
 When the task needs history or branch context:
 
-3. `git log --oneline -20` for recent changes.
-4. On a feature branch, `git log --oneline main..HEAD` and
+4. `git log --oneline -20` for recent changes.
+5. On a feature branch, `git log --oneline main..HEAD` and
    `git diff main...HEAD` for the branch's scope.
-5. The `Unreleased` section of `CHANGELOG.md` for recent features and
+6. The `Unreleased` section of `CHANGELOG.md` for recent features and
    breaking changes.
-6. `gh issue list` and `gh pr list` for open work. If `gh` is unavailable,
+7. `gh issue list` and `gh pr list` for open work. If `gh` is unavailable,
    unauthenticated, or lacks token scopes, skip this step and say so.
 
 ### Supported Versions
@@ -198,8 +200,10 @@ includes them (in core, `test/nebulex/cache_test.exs` via
 
 ### Canonical Gate
 
-Before pushing for review, run the repo's gate alias. `mix.exs` `aliases/0`
-is the source of truth for what it runs.
+Use the fast-iteration commands above while working. Run the repo's gate
+alias before pushing for review, or before reporting the work done when
+you will not push. `mix.exs` `aliases/0` is the source of truth for what it
+runs.
 
 ```bash
 mix precommit

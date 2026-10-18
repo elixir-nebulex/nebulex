@@ -37,12 +37,16 @@ Adapter repos follow this shape (see `nebulex_local` and
 | `lib/nebulex/adapters/<name>/options.ex` | NimbleOptions schemas and `validate_*_opts!` functions for the adapter's own options |
 | `test/shared/` | Adapter-specific `deftests` suites |
 | `test/support/` | Test caches for the adapter |
+| `test/nebulex/adapters/<name>_test.exs` | The adapter's test module: runs core's shared suites (`use Nebulex.CacheTestCase`) and the repo's own `test/shared/` suites, and holds the adapter-specific tests |
 | `test/test_helper.exs` | Loads core's `test/support/*.exs` and shared suites from the `nebulex` checkout |
 
 Core's `test/support/` and `test/shared/` are not in the Hex package.
 Adapter repos fetch them with `mix nbx.setup` and run tests with
 `NEBULEX_PATH=nebulex mix test` (CI does the same); the repo's `AGENTS.md`
-has the exact commands.
+has the exact commands. Before adding a test, check core's shared suites
+for existing coverage. Behaviour that every backend or configuration of the
+adapter must satisfy goes in the repo's `test/shared/`; behaviour specific
+to one adapter goes in its test module.
 
 ## Dependencies
 
@@ -334,6 +338,9 @@ wrap_error Nebulex.Error, reason: reason, command: :fetch_or_store, key: key
   `Process.alive?/1`.
 - Test success and error paths, the bang and non-bang variants, and edge
   values: `nil`, `true`, `false`, empty collections.
+- Assert that an entry is gone with `has_key?/2` or the `Nebulex.KeyError`,
+  not with `get!`: `nil` is a valid value, so a stored `nil` and a missing
+  key look the same to `get!`.
 - Shared test data goes in module attributes or fixture functions, not
   repeated literals.
 
@@ -386,7 +393,10 @@ end
   generated docs, e.g. `#{Nebulex.Cache.Options.start_link_options_docs()}`;
   do not hand-write option lists that duplicate a schema.
 - Include usage examples in module docs and doctests in function docs when
-  practical.
+  practical. An `iex>` example that needs a running cache is not a doctest;
+  keep it in the module docs only.
+- Refer to cache functions as `c:Nebulex.Cache.fun/arity`; that is how the
+  reference resolves in ExDoc.
 - In core, group related functions with `@doc group: "Group Name"` (see
   `lib/nebulex/cache.ex`).
 - Document Telemetry events with their measurements and metadata keys.
