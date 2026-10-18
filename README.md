@@ -212,6 +212,7 @@ end
 
 * [Getting Started][getting_started] - Learn how to set up and use Nebulex.
 * [Documentation][docs] - Complete API reference.
+* [Upgrading to v3.1][upgrading_to_v3_1] - Migration guide for v3.1.
 * [Upgrading to v3.0][upgrading_to_v3] - Migration guide for v3.0.
 * [Declarative caching][declarative_caching] - Declarative Caching: Patterns
   and Best Practices.
@@ -220,6 +221,7 @@ end
 * [Examples][examples] - Example applications.
 
 [examples]: https://github.com/elixir-nebulex/nebulex_examples
+[upgrading_to_v3_1]: https://hexdocs.pm/nebulex/v3-1.html
 [upgrading_to_v3]: https://hexdocs.pm/nebulex/v3-0.html
 [nebulex_streams]: https://github.com/elixir-nebulex/nebulex_streams
 [declarative_caching]: https://hexdocs.pm/nebulex/declarative-caching.html

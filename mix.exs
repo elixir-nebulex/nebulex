@@ -191,6 +191,7 @@ defmodule Nebulex.MixProject do
       "guides/learning/creating-new-adapter.md",
 
       # Upgrading
+      "guides/upgrading/v3.1.md",
       "guides/upgrading/v3.0.md"
     ]
   end
