@@ -176,6 +176,7 @@ defmodule Nebulex.Cache.QueryableTest do
       end
 
       test "ok: returns an empty list when the given key list is empty", %{cache: cache} do
+        assert cache.get_all(in: []) == {:ok, []}
         assert cache.get_all!(in: []) == []
       end
 
@@ -211,6 +212,8 @@ defmodule Nebulex.Cache.QueryableTest do
       end
 
       test "ok: returns an empty list when the given key list is empty", %{cache: cache} do
+        assert {:ok, stream} = cache.stream(in: [])
+        assert Enum.to_list(stream) == []
         assert cache.stream!(in: []) |> Enum.to_list() == []
       end
 
@@ -235,6 +238,7 @@ defmodule Nebulex.Cache.QueryableTest do
       end
 
       test "ok: returns 0 when the given key list is empty", %{cache: cache} do
+        assert cache.count_all(in: []) == {:ok, 0}
         assert cache.count_all!(in: []) == 0
       end
 
@@ -261,6 +265,7 @@ defmodule Nebulex.Cache.QueryableTest do
       end
 
       test "ok: returns 0 when the given key list is empty", %{cache: cache} do
+        assert cache.delete_all(in: []) == {:ok, 0}
         assert cache.delete_all!(in: []) == 0
       end
 

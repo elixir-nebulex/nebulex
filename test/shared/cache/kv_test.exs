@@ -336,9 +336,9 @@ defmodule Nebulex.Cache.KVTest do
         assert cache.delete(false) == :ok
         assert cache.delete(nil) == :ok
 
-        refute cache.get!(true)
-        refute cache.get!(false)
-        refute cache.get!(nil)
+        assert cache.has_key?(true) == {:ok, false}
+        assert cache.has_key?(false) == {:ok, false}
+        assert cache.has_key?(nil) == {:ok, false}
       end
     end
 
@@ -369,9 +369,9 @@ defmodule Nebulex.Cache.KVTest do
         assert cache.take(false) == {:ok, false}
         assert cache.take(nil) == {:ok, nil}
 
-        refute cache.get!(true)
-        refute cache.get!(false)
-        refute cache.get!(nil)
+        assert cache.has_key?(true) == {:ok, false}
+        assert cache.has_key?(false) == {:ok, false}
+        assert cache.has_key?(nil) == {:ok, false}
       end
 
       test "returns nil if the key does not exist in cache", %{cache: cache} do
