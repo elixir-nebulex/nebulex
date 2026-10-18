@@ -2,7 +2,7 @@ defmodule Nebulex.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-nebulex/nebulex"
-  @version "3.1.0-dev"
+  @version "3.1.0"
 
   def project do
     [

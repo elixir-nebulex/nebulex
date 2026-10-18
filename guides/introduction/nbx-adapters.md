@@ -36,7 +36,7 @@ reference, see the [Nebulex Cache API](`Nebulex.Cache`).
 > All the official adapters listed above support Nebulex v3. Nebulex v3.1
 > requires adapters built for v3.1, since they must implement
 > `Nebulex.Adapter.CompositeKV`; use the adapter releases that depend on
-> `{:nebulex, "~> 3.1"}`.
+> `{:nebulex, "~> 3.0"}`.
 
 ## Non-official adapters
 

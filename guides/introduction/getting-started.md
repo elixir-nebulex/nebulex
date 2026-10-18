@@ -34,7 +34,7 @@ defp deps do
   [
     {:nebulex, "~> 3.0"},
     # Use the official local cache adapter
-    {:nebulex_local, "~> 3.0"},
+    {:nebulex_local, "~> 3.1"},
     # Required for caching decorators (recommended)
     {:decorator, "~> 1.4"},
     # Required for telemetry events (recommended)
@@ -931,7 +931,7 @@ defp deps do
     # Use the official local cache adapter
     {:nebulex_local, "~> 3.0"},
     # Use the official distributed cache adapters
-    {:nebulex_distributed, "~> 3.0"},
+    {:nebulex_distributed, "~> 3.1"},
     # Required for caching decorators (recommended)
     {:decorator, "~> 1.4"},
     # Required for telemetry events (recommended)

@@ -4,8 +4,8 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased](https://github.com/elixir-nebulex/nebulex/tree/main)
-> [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.4...main)
+## [v3.1.0](https://github.com/elixir-nebulex/nebulex/tree/v3.1.0) (2026-10-18)
+> [Full Changelog](https://github.com/elixir-nebulex/nebulex/compare/v3.0.4...v3.1.0)
 
 ### Enhancements
 
@@ -48,6 +48,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   ([dajiaohuang](https://github.com/dajiaohuang)).
 - [Nebulex.Cache.Options] `register_event_listener/2` now validates the
   `:id` option.
+
+### Documentation
+
+- Added the ["Upgrading to v3.1"](https://hexdocs.pm/nebulex/v3-1.html)
+  guide.
 
 ### Backwards incompatible changes
 

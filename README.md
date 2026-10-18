@@ -66,7 +66,7 @@ def deps do
     {:nebulex, "~> 3.0"},
     {:nebulex_local, "~> 3.0"}, # Generational local cache adapter
     {:decorator, "~> 1.4"},     # Required for caching decorators
-    {:telemetry, "~> 1.3"}      # Required for telemetry events
+    {:telemetry, "~> 1.0"}      # Required for telemetry events
   ]
 end
 ```
@@ -74,11 +74,11 @@ end
 All dependencies are optional, including the adapters, so you only load what
 you need:
 
-  * For [declarative decorator-based caching][nbx_caching], add `:decorator`
-    (recommended).
+* For [declarative decorator-based caching][nbx_caching], add `:decorator`
+  (recommended).
 
-  * For Telemetry events, add `:telemetry` (recommended). See the
-    [Info API guide][info_api] for cache stats and metrics.
+* For Telemetry events, add `:telemetry` (recommended). See the
+  [Info API guide][info_api] for cache stats and metrics.
 
 Then run `mix deps.get`. To use another cache adapter, pick its dependency
 from the [adapters guide][nbx_adapters].
@@ -233,13 +233,13 @@ end
 To run only the tests:
 
 ```bash
-$ mix test
+mix test
 ```
 
 To run all the checks CI runs:
 
 ```bash
-$ mix precommit
+mix precommit
 ```
 
 The `mix precommit` alias runs the tests, coverage, Credo, Dialyzer, and the
@@ -256,7 +256,7 @@ Nebulex provides a set of basic benchmark tests using the library
 To run a benchmark test:
 
 ```bash
-$ mix bench
+mix bench
 ```
 
 > The benchmark uses the `Nebulex.Adapters.Nil` adapter, so it measures the
