@@ -5,6 +5,10 @@
 > by Christopher Adams, licensed under
 > [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/).
 
+The formatter and Credo do not check these rules; reviewers do. Generic
+Elixir conventions (naming, keyword-list and map syntax, struct syntax) are
+not repeated here.
+
 ## Formatting
 
 ### Whitespace
@@ -13,18 +17,6 @@
   For example:
 
   ```elixir
-  def some_function(some_data) do
-    some_data |> other_function() |> List.first()
-  end
-
-  def some_function do
-    result
-  end
-
-  def some_other_function do
-    another_result
-  end
-
   def a_longer_function do
     one
     two
@@ -34,14 +26,7 @@
   end
   ```
 
-- If the function head and `do:` clause are too long to fit on the same line, put `do:` on a new line, indented one level more than the previous line. For example:
-
-  ```elixir
-  def some_function([:foo, :bar, :baz] = args),
-    do: Enum.map(args, fn arg -> arg <> " is on a very long line!" end)
-  ```
-
-  When the `do:` clause starts on its own line, treat it as a multiline function by separating it with blank lines.
+- If the function head and `do:` clause are too long to fit on the same line, put `do:` on a new line, indented one level more than the previous line. When the `do:` clause starts on its own line, treat it as a multiline function by separating it with blank lines.
 
   ```elixir
   # not preferred
@@ -75,27 +60,6 @@
   another_string <> some_string
   ```
 
-  ```elixir
-  # also not preferred
-  something =
-    if x == 2 do
-      "Hi"
-    else
-      "Bye"
-    end
-  String.downcase(something)
-
-  # preferred
-  something =
-    if x == 2 do
-      "Hi"
-    else
-      "Bye"
-    end
-
-  String.downcase(something)
-  ```
-
 ### Parentheses
 
 - Use parentheses when defining a type.
@@ -109,8 +73,6 @@
   ```
 
 ## General guidelines
-
-The rules in this section may not be applied by the code formatter, but they are generally preferred practice.
 
 ### Expressions
 
@@ -182,28 +144,6 @@ The rules in this section may not be applied by the code formatter, but they are
   System.version() |> Version.parse()
   ```
 
-- Use parentheses when a `def` has arguments, and omit them when it doesn't. For example:
-
-  ```elixir
-  # not preferred
-  def some_function arg1, arg2 do
-    # body omitted
-  end
-
-  def some_function() do
-    # body omitted
-  end
-
-  # preferred
-  def some_function(arg1, arg2) do
-    # body omitted
-  end
-
-  def some_function do
-    # body omitted
-  end
-  ```
-
 - Use `do:` for single-line `if` statements. Do not use `unless`; it is
   deprecated, so write `if not condition` or `if !condition` instead.
 
@@ -212,205 +152,42 @@ The rules in this section may not be applied by the code formatter, but they are
   if some_condition, do: # some_stuff
   ```
 
-- Use `true` as the last condition of the `cond` special form when you need a clause that always matches.
-
-  ```elixir
-  # not preferred
-  cond do
-    1 + 2 == 5 ->
-      "Nope"
-
-    1 + 3 == 5 ->
-      "Uh, uh"
-
-    :else ->
-      "OK"
-  end
-
-  # preferred
-  cond do
-    1 + 2 == 5 ->
-      "Nope"
-
-    1 + 3 == 5 ->
-      "Uh, uh"
-
-    true ->
-      "OK"
-  end
-  ```
-
-### Naming
-
-- Use `snake_case` for atoms, functions and variables.
-
-  ```elixir
-  # not preferred
-  :"some atom"
-  :SomeAtom
-  :someAtom
-
-  someVar = 5
-
-  def someFunction do
-    ...
-  end
-
-  # preferred
-  :some_atom
-
-  some_var = 5
-
-  def some_function do
-    ...
-  end
-  ```
-
-- Use `CamelCase` for modules (keep acronyms like HTTP, RFC, XML uppercase).
-
-  ```elixir
-  # not preferred
-  defmodule Somemodule do
-    ...
-  end
-
-  defmodule Some_Module do
-    ...
-  end
-
-  defmodule SomeXml do
-    ...
-  end
-
-  # preferred
-  defmodule SomeModule do
-    ...
-  end
-
-  defmodule SomeXML do
-    ...
-  end
-  ```
-
-- Functions that return a boolean (`true` or `false`) should be named with a trailing question mark.
-
-  ```elixir
-  def cool?(var) do
-    String.contains?(var, "cool")
-  end
-  ```
-
-- Boolean checks that can be used in guard clauses (custom guards) should be named with an `is_` prefix.
-
-  ```elixir
-  defguard is_cool(var) when var == "cool"
-  defguard is_very_cool(var) when var == "very cool"
-  ```
-
-### Comments
-
-- Write expressive code and try to convey your program's intention through control-flow, structure and naming.
-
-- Comments longer than a word are capitalized, and sentences use punctuation. Use one space after periods.
-
-```elixir
-# not preferred
-# these lowercase comments are missing punctuation
-
-# preferred
-# Capitalization example
-# Use punctuation for complete sentences.
-```
-
-- Limit comment lines to 80 characters (code is formatted at 100 columns;
-  see "Line Length" in `nebulex.md`).
-
-#### Comment Annotations
-
-- Annotations should usually be written on the line immediately above the relevant code.
-
-- The annotation keyword is uppercase, and is followed by a colon and a space, then a note describing the problem.
-
-```elixir
-# TODO: Deprecate in v1.5.
-def some_function(arg), do: {:ok, arg}
-```
-
-- In cases where the problem is so obvious that any documentation would be redundant, annotations may be left with no note. This usage should be the exception and not the rule.
-
-```elixir
-start_task()
-
-# FIXME
-Process.sleep(5000)
-```
-
-- Use `TODO` to note missing features or functionality that should be added at a later date.
-
-- Use `FIXME` to note broken code that needs to be fixed.
-
-- Use `OPTIMIZE` to note slow or inefficient code that may cause performance problems.
-
-- Use `HACK` to note code smells where questionable coding practices were used and should be refactored away.
-
-- Use `REVIEW` to note anything that should be looked at to confirm it is working as intended. For example: `REVIEW: Are we sure this is how the client does X currently?`
-
-- Use other custom annotation keywords if it feels appropriate, but be sure to document them in your project's `README` or similar.
+- Use `true` as the last condition of the `cond` special form when you need a clause that always matches, not `:else`.
 
 ### Comment Constants
 
 - When defining a constant, pick a descriptive name that reflects the intention or usage of the constant and add a comment with a short description.
 
-**Not preferred:**
+  ```elixir
+  # not preferred
+  @retries 10
 
-```elixir
-@retries 10
-```
-
-**Preferred:**
-
-```elixir
-# Default HTTP retries
-@http_retries 10
-```
+  # preferred
+  # Default HTTP retries
+  @http_retries 10
+  ```
 
 - When the constant is a timeout in milliseconds, use `:timer` module instead of explicit value (e.g., `:timer.seconds/1`, `:timer.minutes/1`, `:timer.hours/1`).
 
-**Not preferred:**
+  ```elixir
+  # not preferred
+  # Default HTTP request timeout in milliseconds
+  @http_request_timeout 10_000
 
-```elixir
-# Default HTTP request timeout in milliseconds
-@http_request_timeout 10_000
-```
-
-**Preferred:**
-
-```elixir
-# Default HTTP request timeout in milliseconds
-@http_request_timeout :timer.seconds(10)
-```
+  # preferred
+  # Default HTTP request timeout in milliseconds
+  @http_request_timeout :timer.seconds(10)
+  ```
 
 - When the constant is a list of atoms or strings, a regex, or anything that can be expressed using Sigils, then use Sigils.
 
-**Not preferred:**
+  ```elixir
+  # not preferred
+  @user_types [:admin, :editor, :customer]
 
-```elixir
-# User types
-@user_types [:admin, :editor, :customer]
-
-# Supported country codes
-@user_types ["US", "ES", "CO"]
-```
-
-**Preferred:**
-
-```elixir
-# User types
-@user_types ~w(admin editor customer)a
-
-# Supported country codes
-@user_types ~w(US ES CO)
-```
+  # preferred
+  @user_types ~w(admin editor customer)a
+  ```
 
 ### Modules
 
@@ -530,112 +307,10 @@ Process.sleep(5000)
   end
   ```
 
-### Structs
-
-- Use a list of atoms for struct fields that default to `nil`, followed by the other keywords.
-
-  ```elixir
-  # not preferred
-  defstruct name: nil, params: nil, active: true
-
-  # preferred
-  defstruct [:name, :params, active: true]
-  ```
-
-- Omit square brackets when the argument of a `defstruct` is a keyword list.
-
-  ```elixir
-  # not preferred
-  defstruct [params: [], active: true]
-
-  # preferred
-  defstruct params: [], active: true
-
-  # required - brackets are not optional, with at least one atom in the list
-  defstruct [:name, params: [], active: true]
-  ```
-
-- If a struct definition spans multiple lines, put each element on its own line, keeping the elements aligned.
-
-  ```elixir
-  defstruct foo: "test",
-            bar: true,
-            baz: false,
-            qux: false,
-            quux: 1
-  ```
-
-  If a multiline struct requires brackets, format it as a multiline list:
-
-  ```elixir
-  defstruct [
-    :name,
-    params: [],
-    active: true
-  ]
-  ```
-
 ### Exceptions
 
 - Make exception names end with a trailing `Error`.
-
-  ```elixir
-  # not preferred
-  defmodule BadHTTPCode do
-    defexception [:message]
-  end
-
-  defmodule BadHTTPCodeException do
-    defexception [:message]
-  end
-
-  # preferred
-  defmodule BadHTTPCodeError do
-    defexception [:message]
-  end
-  ```
-
-- Use lowercase error messages when raising exceptions, with no trailing punctuation.
-
-  ```elixir
-  # not preferred
-  raise ArgumentError, "This is not valid."
-
-  # preferred
-  raise ArgumentError, "this is not valid"
-  ```
-
-### Collections
-
-- Always use the special syntax for keyword lists.
-
-  ```elixir
-  # not preferred
-  some_value = [{:a, "baz"}, {:b, "qux"}]
-
-  # preferred
-  some_value = [a: "baz", b: "qux"]
-  ```
-
-- Use the shorthand key-value syntax for maps when all of the keys are atoms.
-
-  ```elixir
-  # not preferred
-  %{:a => 1, :b => 2, :c => 0}
-
-  # preferred
-  %{a: 1, b: 2, c: 3}
-  ```
-
-- Use the verbose key-value syntax for maps if any key is not an atom.
-
-  ```elixir
-  # not preferred
-  %{"c" => 0, a: 1, b: 2}
-
-  # preferred
-  %{:a => 1, :b => 2, "c" => 0}
-  ```
+- Use lowercase error messages when raising exceptions, with no trailing punctuation: `raise ArgumentError, "this is not valid"`.
 
 ### Testing
 
