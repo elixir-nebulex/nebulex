@@ -6,7 +6,7 @@ defmodule Nebulex.CacheTestCase do
   @default_tests [
     Nebulex.Cache.KVTest,
     Nebulex.Cache.KVExpirationTest,
-    Nebulex.Cache.KVPropTest,
+    Nebulex.Cache.KVModelPropTest,
     Nebulex.Cache.CompositeKVTest,
     Nebulex.Cache.CompositeKVTelemetryTest,
     Nebulex.Cache.QueryableTest,

@@ -1,3 +1,7 @@
+# The model used by the shared property tests. It is loaded from here so that
+# adapter repos, which require this file, get it too.
+Code.require_file("cache_model.exs", __DIR__)
+
 defmodule Nebulex.CacheCase do
   @moduledoc false
 
