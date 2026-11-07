@@ -25,18 +25,33 @@ defmodule Nebulex.CacheModel do
     uniq_list_of(term(), min_length: 4, max_length: 9)
   end
 
+  # Options:
+  #
+  #   * `:monotonic_counters` - When `true`, every counter command in a
+  #     sequence uses the same `:default` and moves the value in the same
+  #     direction, so an existing counter never holds the default. Telemetry
+  #     can't tell such a counter from a new one (see `CacheEntryEvent`).
+  #
   @doc false
-  @spec commands([any()]) :: StreamData.t([command()])
-  def commands(pool) do
+  @spec commands([any()], keyword()) :: StreamData.t([command()])
+  def commands(pool, opts \\ []) do
     {counters, keys} = Enum.split(pool, 2)
 
-    list_of(command(keys, counters), max_length: 30)
+    if Keyword.get(opts, :monotonic_counters, false) do
+      bind(tuple({member_of([1, -1]), integer()}), fn {sign, default} ->
+        amount = map(positive_integer(), &(&1 * sign))
+
+        list_of(command(keys, counters, amount, constant(default)), max_length: 30)
+      end)
+    else
+      list_of(command(keys, counters, integer(), integer()), max_length: 30)
+    end
   end
 
   # Keys collide often because they come from a small pool. Counter commands
   # only touch the counter keys, and other writes never do, so `incr` never
   # lands on a value that is not an integer. Reads and deletes use any key.
-  defp command(keys, counters) do
+  defp command(keys, counters, amount, default) do
     key = member_of(keys)
     any_key = member_of(keys ++ counters)
     counter = member_of(counters)
@@ -52,8 +67,8 @@ defmodule Nebulex.CacheModel do
       tuple({constant(:get), any_key, value()}),
       tuple({constant(:delete), any_key}),
       tuple({constant(:take), any_key}),
-      tuple({constant(:incr), counter, integer(), integer()}),
-      tuple({constant(:decr), counter, integer(), integer()}),
+      tuple({constant(:incr), counter, amount, default}),
+      tuple({constant(:decr), counter, map(amount, &(-&1)), default}),
       tuple({constant(:get_all), key_list(any_key)}),
       constant({:count_all}),
       tuple({constant(:delete_all), key_list(any_key)})
