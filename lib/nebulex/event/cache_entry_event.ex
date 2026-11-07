@@ -16,10 +16,12 @@ defmodule Nebulex.Event.CacheEntryEvent do
       insert. The commands `put`, `put_new`, `put_all`, and `put_new_all`
       emit it, as do `incr` and `decr` when they create the counter. Note
       that for `put` and `put_all` there is no way to know whether the entry
-      existed before.
+      existed before. For `incr` and `decr` it is a guess based on the
+      `:default` option: if an existing counter holds the default value
+      before the call, the call is reported as `:inserted`.
     * `:updated` - Emitted when an existing entry changes. The commands
       `replace`, `expire`, and `touch` emit it, as do `incr` and `decr` when
-      the counter already exists.
+      the counter already exists (see the note on `:inserted`).
 
   """
   @type type() :: :deleted | :expired | :inserted | :updated
