@@ -58,9 +58,11 @@ includes every `Nebulex.Cache.*` feature module,
 
 Tests: `test/nebulex/` mirrors `lib/nebulex/`; `test/shared/` holds the
 `deftests` suites every adapter must pass; `test/support/` holds
-`Nebulex.CacheCase`, `Nebulex.TestAdapter`, and the test caches. Adapter
-repos fetch `test/shared/` and `test/support/` from a Nebulex checkout (they
-are not in the Hex package).
+`Nebulex.CacheCase`, `Nebulex.TestAdapter`, the test caches, and
+`Nebulex.CacheModel`, the map model and command generator behind the
+property tests (`cache_case.exs` loads it). Adapter repos fetch
+`test/shared/` and `test/support/` from a Nebulex checkout (they are not in
+the Hex package).
 
 The list of official adapters lives in `guides/introduction/nbx-adapters.md`;
 do not maintain a parallel list in rule files.
