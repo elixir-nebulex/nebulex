@@ -7,7 +7,7 @@ defmodule Nebulex.Cache.KVCounterPropTest do
     # The laws compare two calls on two keys that start in the same state,
     # so the expected values never re-implement the counter arithmetic.
 
-    describe "incr/3 and decr/3" do
+    describe "counter laws" do
       property "incr on a missing key behaves as if the key held the default",
                %{cache: cache} do
         check all [missing, stored] <- uniq_list_of(term(), length: 2),

@@ -8,7 +8,7 @@ defmodule Nebulex.Cache.KVModelPropTest do
 
     describe "KV and Queryable commands" do
       property "any command sequence agrees with the map model", %{cache: cache} do
-        check all commands <- CacheModel.commands() do
+        check all pool <- CacheModel.key_pool(), commands <- CacheModel.commands(pool) do
           CacheModel.run!(cache, commands)
         end
       end

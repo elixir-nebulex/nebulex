@@ -9,7 +9,6 @@ defmodule Nebulex.CacheModel do
   # fix the docs or the model deliberately.
 
   import ExUnit.Assertions
-  import ExUnitProperties, only: [gen: 2]
   import StreamData
 
   @typedoc "A command, run against both the cache and the model"
@@ -21,13 +20,17 @@ defmodule Nebulex.CacheModel do
   ## Generators
 
   @doc false
-  @spec commands() :: StreamData.t([command()])
-  def commands do
-    gen all pool <- uniq_list_of(term(), min_length: 4, max_length: 9),
-            {counters, keys} = Enum.split(pool, 2),
-            commands <- list_of(command(keys, counters), max_length: 30) do
-      commands
-    end
+  @spec key_pool() :: StreamData.t([any()])
+  def key_pool do
+    uniq_list_of(term(), min_length: 4, max_length: 9)
+  end
+
+  @doc false
+  @spec commands([any()]) :: StreamData.t([command()])
+  def commands(pool) do
+    {counters, keys} = Enum.split(pool, 2)
+
+    list_of(command(keys, counters), max_length: 30)
   end
 
   # Keys collide often because they come from a small pool. Counter commands
@@ -67,7 +70,9 @@ defmodule Nebulex.CacheModel do
   end
 
   # Values include `nil`, which is a valid cache value.
-  defp value do
+  @doc false
+  @spec value() :: StreamData.t(any())
+  def value do
     one_of([constant(nil), term()])
   end
 
@@ -183,6 +188,12 @@ defmodule Nebulex.CacheModel do
         model
       end)
 
+    assert_cache!(cache, model)
+  end
+
+  @doc false
+  @spec assert_cache!(module(), t()) :: t()
+  def assert_cache!(cache, model) do
     assert Enum.sort(cache.get_all!()) == Enum.sort(model)
     assert cache.count_all!() == map_size(model)
 
