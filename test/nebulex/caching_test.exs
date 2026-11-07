@@ -1056,6 +1056,16 @@ defmodule Nebulex.CachingTest do
         evict_with_txn_and_error_cache(1)
       end
     end
+
+    test "evaluates the key and query functions once per call" do
+      assert cacheable_with_txn_and_counted_key(1) == 1
+      assert cacheable_with_txn_and_counted_key(1) == 1
+      assert put_with_txn_and_counted_key(2) == 2
+      assert evict_with_txn_and_counted_query(3) == 3
+
+      assert Process.get(:key_calls) == 4
+      assert Process.get(:query_calls) == 1
+    end
   end
 
   ## Annotated Functions
@@ -1474,7 +1484,39 @@ defmodule Nebulex.CachingTest do
     x
   end
 
+  @decorate cacheable(key: &__MODULE__.counted_key/1, transaction: true)
+  def cacheable_with_txn_and_counted_key(x) do
+    x
+  end
+
+  @decorate cache_put(key: &__MODULE__.counted_key/1, transaction: true)
+  def put_with_txn_and_counted_key(x) do
+    x
+  end
+
+  @decorate cache_evict(
+              query: &__MODULE__.counted_query/1,
+              key: &__MODULE__.counted_key/1,
+              transaction: true
+            )
+  def evict_with_txn_and_counted_query(x) do
+    x
+  end
+
   ## Helpers
+
+  # Key and query functions that count their calls in the caller's process.
+  def counted_key(%{args: [x | _]}) do
+    _ = Process.put(:key_calls, Process.get(:key_calls, 0) + 1)
+
+    x
+  end
+
+  def counted_query(_context) do
+    _ = Process.put(:query_calls, Process.get(:query_calls, 0) + 1)
+
+    nil
+  end
 
   # Custom key-generator function
   def generate_key(arg), do: arg
