@@ -1710,6 +1710,10 @@ if Code.ensure_loaded?(Decorator.Define) do
       # Build key generation block
       keygen_block = keygen_block(decorator, attrs, use_opts)
 
+      # The cache_evict key also carries the query, if any.
+      key_block =
+        if decorator == :cache_evict, do: cache_evict_key(attrs, keygen_block), else: keygen_block
+
       # Get the options to be given to the cache commands
       opts_var = Keyword.get_lazy(attrs, :opts, fn -> Keyword.fetch!(use_opts, :opts) end)
 
@@ -1725,13 +1729,13 @@ if Code.ensure_loaded?(Decorator.Define) do
           decorator,
           block,
           attrs,
-          keygen_block,
+          action_key(key_block, txn_enabled?),
           on_error,
           Keyword.get_lazy(attrs, :match, fn ->
             Keyword.get(use_opts, :match, &__MODULE__.default_match/1)
           end)
         )
-        |> maybe_add_txn_wrapper(attrs, keygen_block, on_error, txn_enabled?)
+        |> maybe_add_txn_wrapper(key_block, on_error, txn_enabled?)
 
       quote do
         # Set common vars
@@ -1830,13 +1834,18 @@ if Code.ensure_loaded?(Decorator.Define) do
       end
     end
 
-    defp action_block(:cacheable, block, attrs, keygen, on_error, match) do
+    # With a transaction, the wrapper evaluates the key before the action runs,
+    # so the action gets the evaluated key instead of evaluating it again.
+    defp action_key(_key, true), do: quote(do: {:"$nbx_evaluated_key", txn_key})
+    defp action_key(key, false), do: key
+
+    defp action_block(:cacheable, block, attrs, key, on_error, match) do
       references = Keyword.get(attrs, :references)
 
       quote do
         Runtime.eval_cacheable(
           cache,
-          unquote(keygen),
+          unquote(key),
           unquote(references),
           opts,
           unquote(match),
@@ -1846,13 +1855,13 @@ if Code.ensure_loaded?(Decorator.Define) do
       end
     end
 
-    defp action_block(:cache_put, block, _attrs, keygen, on_error, match) do
+    defp action_block(:cache_put, block, _attrs, key, on_error, match) do
       quote do
         result = unquote(block)
 
         Runtime.eval_cache_put(
           cache,
-          unquote(keygen),
+          unquote(key),
           result,
           opts,
           unquote(on_error),
@@ -1863,10 +1872,9 @@ if Code.ensure_loaded?(Decorator.Define) do
       end
     end
 
-    defp action_block(:cache_evict, block, attrs, keygen, on_error, _match) do
+    defp action_block(:cache_evict, block, attrs, key, on_error, _match) do
       before_invocation? = get_boolean(attrs, :before_invocation)
       all_entries? = get_boolean(attrs, :all_entries)
-      key = cache_evict_key(attrs, keygen)
 
       quote do
         Runtime.eval_cache_evict(
@@ -1889,20 +1897,18 @@ if Code.ensure_loaded?(Decorator.Define) do
       end
     end
 
-    defp maybe_add_txn_wrapper(block, _attrs, _keygen, _on_error, false) do
+    defp maybe_add_txn_wrapper(block, _key, _on_error, false) do
       quote do
         unquote(block)
       end
     end
 
-    defp maybe_add_txn_wrapper(block, attrs, keygen, on_error, true) do
-      key = cache_evict_key(attrs, keygen)
-
+    defp maybe_add_txn_wrapper(block, key, on_error, true) do
       quote do
         context = Context.get()
         cache = Runtime.eval_cache(cache, context)
-        key = Runtime.eval_key(unquote(key), context)
-        txn_keys = Runtime.txn_keys(key)
+        txn_key = Runtime.eval_key(unquote(key), context)
+        txn_keys = Runtime.txn_keys(txn_key)
 
         result =
           Runtime.run_cmd(

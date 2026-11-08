@@ -82,6 +82,11 @@ defmodule Nebulex.Caching.Decorators.Runtime do
   @spec eval_key(any(), Context.t()) :: any()
   def eval_key(key, ctx)
 
+  # The key was already evaluated (e.g., by the transaction wrapper).
+  def eval_key({:"$nbx_evaluated_key", key}, _ctx) do
+    key
+  end
+
   # cache_evict: only a query is provided
   def eval_key({:"$nbx_query", q}, ctx) do
     {:query, eval_key(q, ctx)}

@@ -85,6 +85,21 @@ defmodule Nebulex.Cache.InfoStatsTest do
       end
     end
 
+    test "decr on a missing key counts as a write" do
+      assert Cache.decr!(:counter, 5, default: 10) == 5
+      assert Cache.decr!(:counter) == 4
+
+      assert Cache.info!(:stats) == %{
+               hits: 0,
+               misses: 0,
+               writes: 1,
+               evictions: 0,
+               expirations: 0,
+               deletions: 0,
+               updates: 1
+             }
+    end
+
     test "deletions" do
       entries = for x <- 1..10, do: {x, x}
       :ok = Cache.put_all!(entries)

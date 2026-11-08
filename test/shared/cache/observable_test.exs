@@ -130,6 +130,35 @@ defmodule Nebulex.Cache.ObservableTest do
         assert cache.unregister_event_listener!(listener) == :ok
       end
 
+      test "ok: decr on a missing key emits an inserted event", %{
+        cache: cache,
+        name: name,
+        listener: listener
+      } do
+        :ok = cache.register_event_listener!(listener)
+
+        inserted =
+          CacheEntryEvent.new(
+            pid: Adapter.lookup_meta(name).pid,
+            cache: cache,
+            name: name,
+            type: :inserted,
+            target: {:key, :counter},
+            command: :decr,
+            metadata: %{extra_metadata: %{}}
+          )
+
+        assert cache.decr!(:counter, 5, default: 10) == 5
+        assert_receive ^inserted
+
+        updated = %{inserted | type: :updated}
+
+        assert cache.decr!(:counter) == 4
+        assert_receive ^updated
+      after
+        assert cache.unregister_event_listener!(listener) == :ok
+      end
+
       test "ok: registers a listener with filter", %{cache: cache, name: name, listener: listener} do
         filter = &unquote(__MODULE__).my_filter/1
 

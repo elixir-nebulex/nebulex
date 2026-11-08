@@ -141,8 +141,8 @@ defmodule Nebulex.Telemetry.CacheEntryHandler do
          event_attrs,
          config
        ) do
-    {command, offset} = if amount >= 0, do: {:incr, -1}, else: {:decr, 1}
-    type = if result + amount * offset === default, do: :inserted, else: :updated
+    command = if amount >= 0, do: :incr, else: :decr
+    type = if result - amount === default, do: :inserted, else: :updated
 
     [
       target: {:key, key},

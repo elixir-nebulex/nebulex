@@ -151,9 +151,7 @@ defmodule Nebulex.Telemetry.CacheStatsCounterHandler do
          result: {:ok, result},
          adapter_meta: %{stats_counter: ref}
        }) do
-    offset = if amount >= 0, do: -1, else: 1
-
-    if result + amount * offset === default do
+    if result - amount === default do
       :ok = Stats.incr(ref, :writes)
     else
       :ok = Stats.incr(ref, :updates)
